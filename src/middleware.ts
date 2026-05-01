@@ -1,19 +1,25 @@
 /**
- * Next.js middleware — placeholder for next-intl + auth gating.
+ * Next.js middleware — next-intl locale negotiation (D-02 / D-03).
  *
- * Wave 3 dependency: requires src/i18n/routing.ts (created in Plan 01-07).
- * Until Plan 07 lands, this re-export is intentionally a stub so other plans
- * (Plan 05 Better Auth, Plan 11 CallerContext) can reference the file path
- * without circular-import friction.
+ * Replaces the Plan 01 stub. Mounts createMiddleware(routing) at every non-API,
+ * non-_next, non-static path, which:
+ *   - detects the request locale per routing.localeDetection (Accept-Language)
+ *   - sets a cookie so subsequent navigation honors the choice
+ *   - rewrites/redirects between '/x' (default 'nl') and '/en/x', '/fr/x'
  *
- * Plan 01-07 will replace this with a fully wired createMiddleware() call
- * that uses defineRouting + locale negotiation per D-02 / D-03.
+ * Plan 11 (CallerContext) wraps this with auth gating once Better Auth is live.
  *
- * Reference: .planning/phases/01-fundament/01-07-next-intl-routing-and-catalogs-PLAN.md
+ * Reference:
+ *   - .planning/phases/01-fundament/01-RESEARCH.md §Middleware (lines 1437-1450)
+ *   - https://next-intl-docs.vercel.app/docs/routing/middleware
  */
-export { default } from 'next-intl/middleware';
+import createMiddleware from 'next-intl/middleware';
+import { routing } from '@/i18n/routing';
+
+export default createMiddleware(routing);
 
 export const config = {
-  // Match all paths except api, _next assets, _vercel internals, and files with extensions.
+  // Match everything except api, trpc, _next, _vercel, and static files (anything
+  // with a literal '.' in the path, which excludes assets like favicon.ico, robots.txt).
   matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
 };
