@@ -3,16 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-05-01T09:16:33.283Z"
+last_updated: "2026-05-01T12:00:00.000Z"
 ---
 
 # Project State — VTTL Topsportplatform
 
 ## Current Status
 
-Phase: Not started
-Active Phase: —
-Last Action: Project initialized
+Phase: 1 — Fundament
+Active Phase: 01-fundament
+Last Action: Phase 1 context gathered — 20 implementation decisions captured across 6 gray areas
+
+Resume: `.planning/phases/01-fundament/01-CONTEXT.md`
 
 ## Project Reference
 
@@ -25,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Fundament | ⬜ Not started |
+| 1 | Fundament | 🔄 Context gathered (ready to plan) |
 | 2 | Identiteit & Bestanden | ⬜ Not started |
 | 3 | Kalender | ⬜ Not started |
 | 4 | Kerndomein | ⬜ Not started |
