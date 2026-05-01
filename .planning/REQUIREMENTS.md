@@ -98,7 +98,7 @@
 - [ ] **TOURN-02**: Only technical director can create and edit tournaments
 - [ ] **TOURN-03**: Tournament final ranking per player (level 1 result): winnaar/finalist/laatste 4/laatste 8/laatste 16/laatste 32/laatste 64/laatste 128/groepsfase
 - [ ] **TOURN-04**: Per-match result (level 2): ronde (finale/.../groepsfase), tegenstander (vrij tekst), ranking (numeriek), datum, score, gewonnen/verloren (toggle), optionele video link
-- [ ] **TOURN-05**: Tournament results (both levels) entered by the player themselves only, for own results only — enforced at API layer
+- [ ] **TOURN-05**: Tournament results (both levels) entered by the player, by trainers in the player's academy, or by TD — `entered_by` field tracks attribution; ownership enforced at API layer (see DOM-RESULT-02)
 - [ ] **TOURN-06**: Historical results browsable without pagination forcing export; both levels separately queryable
 
 ---
@@ -189,6 +189,85 @@
 
 - [ ] **SEARCH-01**: Global search finds players by name, tournaments by date, trainers by name — scoped to caller's visibility
 - [ ] **SEARCH-02**: Dutch full-text search with accent-insensitive matching (`pg_trgm` + `unaccent` extensions)
+
+---
+
+### SEC — Security & Authentication Hardening
+
+- [ ] **SEC-01**: All session cookies are `httpOnly`, `Secure`, `SameSite=Lax` (Better Auth defaults — verified in audit)
+- [ ] **SEC-02**: CSRF protection on every state-changing tRPC mutation (built-in tRPC CSRF helper)
+- [ ] **SEC-03**: Re-authentication required for sensitive actions: linking parent-child, viewing full medical record, exporting personal data, executing erasure
+- [ ] **SEC-04**: Auth tokens never written to logs — pino redact filter on `req.headers.authorization`, `req.headers.cookie`, `*.password`
+- [ ] **SEC-05**: Password reset links expire in 1 hour; magic links in 15 minutes; reset tokens single-use
+- [ ] **SEC-06**: Login rate limit: 5 failed attempts per account per 15 minutes (Better Auth)
+- [ ] **SEC-07**: API rate limit: 100 req/min per user, 1000 req/min per IP — enforced at tRPC middleware
+- [ ] **SEC-08**: File upload rate limit: 10 uploads/min per user, 100/day
+- [ ] **SEC-09**: Broadcast rate limit: 1 broadcast/hour per user, max 5 concurrent platform-wide
+
+---
+
+### VALID — Input & File Validation
+
+- [ ] **VALID-01**: File size limits enforced server-side: 5MB medical documents, 2MB profile photos, no v1 video uploads (external URLs only)
+- [ ] **VALID-02**: File type validation by magic bytes (file signature) using `file-type` npm package — never trust extension alone
+- [ ] **VALID-03**: Whitelist of allowed MIME types per upload endpoint (PDF + JPEG/PNG for medical; JPEG/PNG only for profile photos)
+- [ ] **VALID-04**: Malware scanning on uploads via VirusTotal API or ClamAV — file quarantined until scan passes
+- [ ] **VALID-05**: Uploads served with strict `Content-Type` and `Content-Disposition: attachment` to prevent browser execution
+- [ ] **VALID-06**: All user input validated server-side via Zod schemas; no trust in client validation
+- [ ] **VALID-07**: Unique constraints prevent duplicate concurrent writes: `(player_id, session_id)` on participation, `(player_id, tournament_id, round, opponent, date)` on match results
+- [ ] **VALID-08**: Idempotency keys on POST endpoints accept a client-provided UUID; duplicate UUIDs within 24h are rejected as no-ops
+
+---
+
+### OPS — Observability & Operations
+
+- [ ] **OPS-01**: Structured JSON logging via pino with PII redaction (names, emails, phone, medical fields all stripped)
+- [ ] **OPS-02**: Log retention: 30 days application logs, 90 days audit logs, 6 years medical access audit
+- [ ] **OPS-03**: External log aggregation (Logflare, Axiom, or self-hosted Grafana Loki on Hetzner) — EU residency required
+- [ ] **OPS-04**: Application metrics tracked: request latency (p50/p95/p99), tRPC procedure duration, database query time, error rate per endpoint
+- [ ] **OPS-05**: Database slow-query log enabled at 500ms threshold; slow queries reviewed weekly during build phase
+- [ ] **OPS-06**: Alerting configured for: error rate > 1%, p95 latency > 1s on calendar/dashboard, database connection saturation > 80%
+- [ ] **OPS-07**: Daily automatic backups via Supabase Pro PITR (point-in-time recovery enabled)
+- [ ] **OPS-08**: Documented RTO ≤ 4 hours, RPO ≤ 1 hour
+- [ ] **OPS-09**: Monthly restore drill: backup restored to staging Supabase project, row counts and integrity validated, timing documented
+- [ ] **OPS-10**: Medical records archived monthly to encrypted offsite storage with 30-year retention (Belgian patient rights law)
+- [ ] **OPS-11**: SPF, DKIM, DMARC configured on `vttl.be` mail domain before first transactional email is sent
+- [ ] **OPS-12**: Transactional email via Mailgun EU or SendGrid EU — never the application server SMTP
+
+---
+
+### MIG — Migration & Schema Evolution
+
+- [ ] **MIG-01**: Drizzle Kit migrations are versioned and never edited after commit; new changes always create new migrations
+- [ ] **MIG-02**: Schema changes follow expand-contract pattern: add → backfill → switch reads → drop (each a separate deploy)
+- [ ] **MIG-03**: Backfill queries process in batches of 1000 rows with 100ms delay to avoid table locks
+- [ ] **MIG-04**: All migrations tested against a production-sized staging database before production deploy
+- [ ] **MIG-05**: Migration rollback procedure documented per migration; zero-downtime is the target
+
+---
+
+### DOM — Domain-Specific Workflows (Refinements)
+
+- [ ] **DOM-RESULT-01**: Player can edit own tournament results within 48h of entry; later edits require TD approval
+- [ ] **DOM-RESULT-02**: Trainers in player's academy and TD can also enter results on player's behalf (`entered_by` field tracks attribution) — relaxes TOURN-05
+- [ ] **DOM-RESULT-03**: Edit history table records every change to a result: `(result_id, edited_by, old_values, new_values, edit_reason, timestamp)`
+- [ ] **DOM-RESULT-04**: Result lifecycle states: `draft → confirmed → published`; only `confirmed` and `published` results count in ambition vs. actuals comparison
+- [ ] **DOM-RANK-01**: `ranking_entries` table includes `source` column: `'manual'` | `'federation_official'` (v1 = manual only; federation sync deferred to v2)
+- [ ] **DOM-CAT-01**: `age_category_history` table tracks category changes per player with `effective_from` and `effective_to` dates
+- [ ] **DOM-CAT-02**: Tournament category validation uses player's category as of the tournament's start date, not current category
+- [ ] **DOM-SPAR-AVAIL-01**: Sparring partners maintain availability blocks on their personal calendar; session creation warns if partner is unavailable on the chosen date
+- [ ] **DOM-MED-CONFLICT-01**: When a training session is created with participants, system checks for overlapping medical events and warns the trainer
+- [ ] **DOM-MED-CONFLICT-02**: Attendance marking defaults to "afwezig met geldige reden" when player has overlapping medical event
+- [ ] **DOM-EVAL-VIS-01**: Evaluation visibility flags: `visible_to_player` (default false), `visible_to_parent` (default false), `visible_to_other_trainers` (default false) — trainer/TD must explicitly publish
+- [ ] **DOM-EVAL-VIS-02**: Separate `evaluation_internal_notes` field never visible to player or parent regardless of visibility flags
+
+---
+
+### MSG-CLARIFICATION — Messaging Channel Strategy (Resolved)
+
+- [ ] **MSG-CHANNEL-01**: In-app messaging is the primary channel for all roles including parents; email is fallback notification only
+- [ ] **MSG-CHANNEL-02**: Read receipts apply only to in-app messages; email notifications carry "open in app to confirm read" link
+- [ ] **MSG-CHANNEL-03**: Safety-critical communications (injury updates, urgent schedule changes) use in-app message + email + require affirmative RSVP, not just read receipt
 
 ---
 

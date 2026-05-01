@@ -152,6 +152,56 @@ Every player's complete development picture — training quality, competition re
 | Ambitions at player/year/tournament-type level | Enables meaningful comparison: ambition vs. actual result per competition type | — Pending |
 | AI video analysis deferred from full v1 | Complex ML infrastructure; video linking (manual) ships in v1, analysis in v2 | — Pending |
 | Scan uploads: open question | Conflicting signals in brief — deferred in physical section, required in medical section | — Pending |
+| Database on Supabase Postgres (EU) | Managed Postgres with built-in RLS support, EU residency (Frankfurt), automatic backups, pg_cron and pgcrypto available; Storage and Realtime on same platform reduce operational surface | — Pending |
+| Tournament result entry expanded beyond player-only | Operational reality: trainers at tournaments often log results on player's behalf; enforce ownership at API but allow player + assigned trainer + TD | — Pending |
+| Sparring partner v1 = TD-managed register only | "Discovery / style filtering" features deferred to v2 — out of v1 scope per critical review | — Pending |
+| Training-load × ranking correlation overlay deferred | Statistical noise too high at v1 data density (subjective 1–5 scores, ~50–200 users, < 2 seasons of history) | — Pending |
+| Email is fallback channel, in-app messaging is primary | Resolves contradiction between email-as-primary-for-parents claim and in-app messaging requirement; read receipts work in-app only | — Pending |
+
+## Open Questions Requiring Resolution Before / During Phase 1
+
+1. **Scope-spanning blessure-scan upload** (RISK-01)
+   - Brief is contradictory: deferred in physical-tracking section, required in medical-events section
+   - V1 proposed: allow scan uploads in medical events with strict access (Art. 9 isolation, signed URLs, 5-min TTL) — defer "physical scan library" to v2
+
+2. **Belgium Ranking direction** (RISK-02)
+   - World/European rankings: lower value = better (rank 1 is best)
+   - Belgium ranking: confirm with VTTL whether stored as rank position (lower = better) or as a points value (higher = better) — affects all comparison logic
+
+3. **Medical data access matrix** (NEW)
+   - Define explicitly per role × per medical record type:
+     - Coach (trainer): traffic-light injury status only? Or full event metadata?
+     - Parent of minor: full record? Or summary?
+     - Player: own full record always
+     - Sparring partner: never any medical visibility
+   - Required before Phase 5 (medical follow-up implementation)
+
+4. **Consent lifecycle** (NEW)
+   - Under-16 → 16 transition: prompt athlete to provide own consent on 16th birthday; preserve guardian consent record as historical proof of lawful processing
+   - Withdrawal of consent: defines what happens to existing data per category (photos anonymized, evaluations retained but minus photo, medical events anonymized but events retained for sport safety)
+   - Required before Phase 1 (schema design)
+
+5. **Tournament result dispute workflow** (NEW)
+   - Player edits own result within 48h: allowed
+   - After 48h: requires TD approval
+   - Trainer enters result on player's behalf at tournament: allowed if linked to player's academy
+   - Result lifecycle: `draft → confirmed → published`; only `confirmed`+ feed into rankings comparison
+   - Required before Phase 4 (tournaments + results)
+
+6. **Federation ranking vs. internal ranking source-of-truth** (NEW)
+   - V1: manual entry is source of truth; UI labels rankings as "Manueel ingevoerd, controleer tegen officiële bron"
+   - V2: ITTF API sync (pending API access agreement)
+   - Required: `source` column on `ranking_entries` table from Phase 4
+
+7. **Evaluation visibility per role** (NEW)
+   - Default: trainer + TD only
+   - Trainer/TD explicitly publishes to player and/or parent
+   - Internal observations field never published, regardless of visibility flag
+   - Required before Phase 5 (evaluations)
+
+8. **Sparring partner availability calendar** (NEW)
+   - V1: sparring partners maintain their own availability blocks; session creation warns on overlap
+   - Required before Phase 5 (sparring partners)
 
 ## Evolution
 

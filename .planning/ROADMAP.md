@@ -8,14 +8,16 @@
 
 | Fase | Naam | UI? | Parallel? | Vereisten |
 |------|------|-----|-----------|-----------|
-| 1 | Fundament | Nee | Nee | AUTH-01..05, USER-01..05, GDPR-01..08 |
-| 2 | Identiteit & Bestanden | Ja | Nee | PLAYER-01..07, TRAINER-01..03, FILE-01..05 |
-| 3 | Kalender | Ja | Nee | CAL-01..08 |
-| 4 | Kerndomein | Ja | Ja (intern) | TRAIN-01..06, TOURN-01..06, RANK-01..07 |
-| 5 | Uitgebreid domein | Ja | Ja (intern) | SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04 |
-| 6 | Communicatie | Ja | Nee | MSG-01..05 |
-| 7 | Synthese | Ja | Nee | VIEW-01..05, SEARCH-01..02 |
-| 8 | Kwaliteit & Release | Nee | Ja (intern) | CAL-06 (ICS), productieklaar |
+| 1 | Fundament | Beperkt | Nee | AUTH-01..05, USER-01..05, GDPR-01..08, SEC-01..09, OPS-01..06, MIG-01..05 |
+| 2 | Identiteit & Bestanden | Ja | Nee | PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02 |
+| 3 | Kalender | Ja | Nee | CAL-01..08, VALID-07..08 |
+| 4 | Kerndomein | Ja | Ja (intern) | TRAIN-01..06, TOURN-01..06, RANK-01..07, DOM-RESULT-01..04, DOM-RANK-01 |
+| 5 | Uitgebreid domein | Ja | Ja (intern) | SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04, DOM-SPAR-AVAIL-01, DOM-MED-CONFLICT-01..02, DOM-EVAL-VIS-01..02 |
+| 6 | Communicatie | Ja | Nee | MSG-01..05, MSG-CHANNEL-01..03 |
+| 7 | Synthese | Ja | Nee | VIEW-01..05, SEARCH-01..02, GDPR-05..06 |
+| 8 | Kwaliteit & Release | Nee | Ja (intern) | CAL-06 (ICS), OPS-07..12, productieklaar |
+
+**Stack-update:** Database, Storage en Realtime draaien op **Supabase (Pro tier, EU/Frankfurt)**. App-deployment blijft op **Coolify/Hetzner**. Alle migraties, RLS-policies en schema-definities staan in **Drizzle-code** (geen Supabase Dashboard-config) zodat de portabiliteit behouden blijft. Auth blijft **Better Auth** (tegen de Supabase Postgres database).
 
 ---
 
@@ -25,9 +27,10 @@
 Het fundament is klaar wanneer een technisch directeur kan inloggen met een gescopede sessie, RLS alle data afschermt op databaseniveau, en het GDPR-schema klaar staat voor alle vervolgfasen.
 
 ### Vereisten
-AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, USER-01, USER-02, USER-03, USER-04, USER-05, GDPR-01, GDPR-02, GDPR-03, GDPR-04, GDPR-07, GDPR-08
+AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06, MIG-01..05
 
 > GDPR-05 en GDPR-06 (portabiliteitsexport + wissing-UI) worden technisch ontworpen in deze fase maar als UI afgewerkt in Fase 7.
+> OPS-07..12 (backup-drills, monitoring-alerts, SPF/DKIM/DMARC, transactionele e-mail) worden in Fase 8 als release-kwaliteit afgewerkt; de infrastructuur (Supabase Pro PITR, Pino logging, structuur) staat hier al.
 
 ### Succescriteria
 1. Een technisch directeur kan inloggen; na browserherstart is de sessie nog actief.
@@ -37,16 +40,57 @@ AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, USER-01, USER-02, USER-03, USER-04,
 5. Een testgebruiker jonger dan 16 jaar kan geen account voltooien zonder een gekoppeld ouderaccount met gegeven toestemming.
 
 ### Kerntaken
-- Databasemigratiebestand 001: volledige schemadefinitie — `users`, `sessions`, `roles`, `academy_memberships`, `parent_child_links`, lookup-tabellen (status A/B/C, academies, tornooitypes, rankingtypes, trainingtypes, organisaties, uitkomstlevels), `consent_records`, `audit_log`
-- Databasemigratiebestand 002: medisch-geïsoleerde tabelgroep — `medical_events`, `medical_documents` met eigen RLS-policies en auditeer-trigger
-- PostgreSQL RLS inschakelen op alle tabellen; `players_visible_to(caller_id)` hulpfunctie schrijven
-- CallerContext implementeren als tRPC-middleware: `{ userId, role, academyIds, linkedPlayerIds }` injecteerbaar in elke query
-- Better Auth configureren: e-mail+wachtwoord login, sessiemanagement, wachtwoordreset via e-mail
-- AUTH-04/AUTH-05: TD-paneel voor gebruikersbeheer (accounts aanmaken, activeren, deactiveren, rollen toewijzen)
-- GDPR-toestemmingsmodel implementeren: gelaagde toestemming bij registratie (operationele data, medische verwerking, foto/video-gebruik) met versie + tijdstip
+
+**Infrastructuur (Supabase + Coolify):**
+- Supabase Pro project aanmaken in EU/Frankfurt-regio; PITR inschakelen; databasen-credentials in Coolify Secrets
+- Coolify-applicatie configureren voor de Next.js-app op Hetzner CX31 — verbindt met Supabase via Postgres-URL
+- Drizzle Kit initialiseren tegen Supabase Postgres (geen Supabase JS SDK in app-code; portabel blijven)
+- Supabase Storage buckets aanmaken: `profiles/`, `evaluations/`, `medical/`, `messages/` — RLS-policies in Drizzle-migraties
+
+**Database & schema:**
+- Migratie 001: kerntabellen — `users`, `sessions`, `roles`, `academy_memberships`, `parent_child_links`, lookup-tabellen (status A/B/C, academies, tornooitypes, rankingtypes, trainingtypes, organisaties, uitkomstlevels), `consent_records`, `audit_log`, `medical_access_audit`
+- Migratie 002: medisch-geïsoleerde tabelgroep — `medical_events`, `medical_documents` met eigen RLS-policies, `pgcrypto`-encryptie op gevoelige velden, audit-trigger voor schrijfacties (lees-audit via app-laag in Fase 5)
+- Migratie 003: idempotentie-tabel — `idempotency_keys (key, user_id, created_at)` voor VALID-08
+- PostgreSQL RLS inschakelen op alle gevoelige tabellen; `players_visible_to(caller_id, caller_role)` SQL-functie volgens PITFALLS-ADDITIONS.md schema
+- `TIMESTAMPTZ` + UTC-conventie afdwingen via Drizzle-schema-helpers + lint-regel
+
+**Auth & sessies (Better Auth):**
+- Better Auth configureren tegen Supabase Postgres: e-mail+wachtwoord login, sessiemanagement, wachtwoordreset
+- SEC-01: cookies `httpOnly`, `Secure`, `SameSite=Lax` (Better Auth defaults — auditeren)
+- SEC-02: CSRF-bescherming op alle state-changing tRPC-mutaties
+- SEC-03: re-auth-vereiste voor gevoelige acties (parent-child koppelen, medische records bekijken, data exporteren, wissing uitvoeren)
+- SEC-05: wachtwoordreset-links 1 uur geldig; magic links 15 min; eenmalig gebruik
+- SEC-06: 5 mislukte logins per account per 15 min lockout (Better Auth)
+
+**CallerContext:**
+- tRPC-middleware: `{ userId, role, academyIds, linkedPlayerIds }` — academyIds en linkedPlayerIds gecached in JWT-claim, ververst bij login en bij expliciete invalidatie (max staleness 15 min)
+- Integratietests per rol-resource-combinatie verplicht voor Fase 2 mag starten
+
+**Rate limiting (SEC-07..09):**
+- tRPC-middleware `rateLimit` gebruikt Upstash Redis (EU) of in-memory token-bucket op Coolify
+- Per-user 100 req/min, per-IP 1000 req/min
+- File upload 10/min per user, 100/dag
+- Broadcast 1/uur per user, max 5 gelijktijdig platformbreed
+
+**GDPR-fundament:**
+- Gelaagde toestemming bij registratie: operationele data, medische verwerking, foto/video-gebruik — opslaan met versie + tijdstip + actor
 - Belgisch minderjarigen-toestemmingspad (< 16 jaar): ouderaccount verplicht vóór activering speleraccount
-- `TIMESTAMPTZ` + UTC-conventie afdwingen via Drizzle-schema-interceptor of lint-regel
-- Technische documentatie: erasurestrategie (anonimiseer vs. verwijder) vastleggen vóór eerste migratie
+- Erasurestrategie (anonimiseer vs. verwijder) vastleggen in tech-doc vóór eerste migratie
+
+**Observability-fundament (OPS-01..06):**
+- Pino structured logging met redact-filter op `req.headers.authorization`, `req.headers.cookie`, `*.password`, `*.email`, `*.phone`, `*.medical_*`
+- Logflare/Axiom EU-configuratie of self-hosted Loki op Hetzner — toepassingslogs uit de DB
+- Sentry EU configureren met `beforeSend` PII-stripper
+- Drizzle query-interceptor voor latency-metrics; basisalerting in Better Stack/UptimeRobot voor `/api/health`
+- Supabase slow-query-log inschakelen op 500ms threshold
+
+**Migratie-governance (MIG-01..05):**
+- Drizzle-migraties versiebeheer-policy: nooit committed migraties bewerken; altijd nieuwe migratie
+- Expand-contract-pattern documenteren met voorbeeld in tech-doc
+- Backfill-script-template (batches van 1000, 100ms delay) als utility
+
+**TD UI (beperkt):**
+- AUTH-04/05: gebruikersbeheer-paneel — accounts aanmaken, activeren, deactiveren, rollen toewijzen, parent-child koppelen, trainer-academie koppelen
 
 ### Afhankelijkheden
 Geen — dit is de basis.
@@ -55,9 +99,11 @@ Geen — dit is de basis.
 - **RISK-SCHEMA**: Elke fout in de RLS-policies of het medisch isolatieontwerp vereist latere migraties die geïmplementeerde features kunnen doorbreken. Het schema moet in één keer goed zijn.
 - **RISK-CALLERCONTEXT**: Een onjuist gevulde CallerContext lekt data via later gebouwde routers. Valideer met integratietests per rol vóór Fase 2.
 - **RISK-CONSENT**: Het toestemmingsmodel moet GDPR Art. 7 + 8 dekken; juridische review aanbevolen vóór productie.
+- **RISK-RLS-PERF**: Genest `EXISTS` in RLS-policies kan N²-gedrag veroorzaken. Beperk policy-nesting tot 1–2 niveaus; voor diepere hiërarchieën val terug op service-laag-filtering. Loadtest met realistische dataset vóór Fase 2.
+- **RISK-SUPABASE-LOCK**: Supabase als managed dienst introduceert lock-in. Mitigatie: alle schemas/RLS/migraties in Drizzle-code; geen Supabase JS SDK in app-code; standaard Postgres-URL connectie. Migratie naar Neon of self-hosted blijft bounded (< 1 dag).
 
 ### Parallelliseerbaar?
-Nee — alle teams werken op hetzelfde kritieke pad: schema → RLS → auth → CallerContext.
+Nee — alle teams werken op hetzelfde kritieke pad: Supabase-setup → schema → RLS → auth → CallerContext → SEC/OPS/MIG-fundament.
 
 ### UI?
 Beperkt — alleen de login-pagina, wachtwoordreset-flow, en het TD-gebruikersbeheer-paneel. Geen complexe UI.
@@ -70,7 +116,7 @@ Beperkt — alleen de login-pagina, wachtwoordreset-flow, en het TD-gebruikersbe
 Het platform heeft volledige speler- en trainerprofielen met foto-upload en correct gescopede bestandstoegang, zodat het dagelijks beheer van de spelerslijst operationeel is.
 
 ### Vereisten
-PLAYER-01, PLAYER-02, PLAYER-03, PLAYER-04, PLAYER-05, PLAYER-06, PLAYER-07, TRAINER-01, TRAINER-02, TRAINER-03, FILE-01, FILE-02, FILE-03, FILE-04, FILE-05
+PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02
 
 ### Succescriteria
 1. Een technisch directeur kan een volledig spelerprofiel aanmaken met foto; het profiel is direct zichtbaar in de spelerslijst.
@@ -80,16 +126,46 @@ PLAYER-01, PLAYER-02, PLAYER-03, PLAYER-04, PLAYER-05, PLAYER-06, PLAYER-07, TRA
 5. Noodcontactgegevens zijn aanwezig op het profiel van elke minderjarige speler — het systeem blokkeert opslaan als dit ontbreekt.
 
 ### Kerntaken
+
+**Schema:**
 - Drizzle-schema voor `players` en `trainers` (alle velden uit PLAYER-01..04, TRAINER-01..02)
 - Junction-tabel `trainer_academy_links` (N-op-N)
-- tRPC-routers: `player.create`, `player.update`, `player.get`, `player.list`; `trainer.create`, `trainer.update`, `trainer.get`, `trainer.list`
-- Cloudflare R2-opslagconfiguratie: twee buckets/prefixen — `profiles/` (toegankelijk voor geauthenticeerde gebruikers met rol) en `medical/` (striktere policies, Fase 5)
-- Server-side getekende URL-generatie voor alle bestandsdownloads (FILE-01)
-- Foto-uploadflow via server-side presigned POST → R2 → UUID-bestandsnaam (FILE-04)
-- Spelersprofiel-UI: formulier met alle velden, foto-upload-widget, academie-dropdown (lookup), statusveld
+- `age_category_history (player_id, age_category, category_year, effective_from, effective_to)` — DOM-CAT-01
+- Schema-constraint: `players.club` (vrij tekst) en `players.academy_id` (FK naar lookup) zijn aparte velden — DOM-CAT-02 + PLAYER-03
+
+**Bestandsopslag (Supabase Storage):**
+- Buckets `profiles/` (semi-publiek, geauthenticeerde toegang) en `medical/` (Fase 5, strikt) — al aangemaakt in Fase 1
+- Bucket-RLS-policies in Drizzle-migraties: profielfoto's zichtbaar voor eigen + TD + scope-trainer; nooit publiek
+- Server-side getekende URL-generatie via Supabase SDK (server-only) voor alle downloads — TTL 1 uur voor profielfoto's (FILE-01)
+- Upload-flow: client → server-side validatie → upload via Supabase Storage server-side client → UUID-bestandsnaam (FILE-04)
+
+**File validation (VALID-01..06):**
+- Server-side bestandsgrootte-validatie: 2MB voor profielfoto's
+- Magic-bytes-validatie via `file-type` npm-package — extensie-vertrouwen verboden (VALID-02)
+- MIME-whitelist per endpoint: alleen JPEG en PNG voor profielfoto-upload (VALID-03)
+- Malware-scan integratie via VirusTotal API of ClamAV daemon — bestand quarantaine tot scan slaagt (VALID-04)
+- Headers `Content-Type` strikt + `Content-Disposition: attachment` op downloads (VALID-05)
+- Zod-schema-validatie op alle tRPC-mutaties; geen client-side trust (VALID-06)
+
+**tRPC-routers:**
+- `player.create`, `player.update`, `player.get`, `player.list` — CallerContext-scoped
+- `trainer.create`, `trainer.update`, `trainer.get`, `trainer.list`
+- `file.upload` — server-side validatie + Supabase Storage upload + DB-record
+- `file.getSignedUrl` — RBAC-check vóór URL-generatie
+
+**Leeftijdscategorie-historiek:**
+- Bij update van `age_category` op een speler: nieuwe rij in `age_category_history`, vorige rij krijgt `effective_to`
+- Tournament-validatie in Fase 4 leest van deze historiek voor de tournooi-startdatum
+
+**UI:**
+- Spelersprofiel-UI: formulier met alle velden, foto-upload-widget, academie-dropdown (lookup), statusveld, noodcontactsectie
 - Trainerprofiel-UI: formulier, diploma-dropdown, pedagogische kwalificatie-toggle, academiekoppelingen
 - Spelerslijst-UI: tabelweergave met scoping op basis van CallerContext
-- Validatie: club ≠ academie schema-afdwinging (PLAYER-03); noodcontact verplicht voor minderjarigen (PLAYER-06)
+
+**Validatie-regels:**
+- Club ≠ academie schema-afdwinging (PLAYER-03)
+- Noodcontact verplicht voor minderjarigen (PLAYER-06)
+- Leeftijdscategorie en categoriejaar expliciet opgeslagen, niet afgeleid (PLAYER-04 — DOM-CAT-01 historiek)
 
 ### Afhankelijkheden
 Fase 1 volledig afgerond — CallerContext, RLS, en auth zijn vereist.
@@ -97,6 +173,8 @@ Fase 1 volledig afgerond — CallerContext, RLS, en auth zijn vereist.
 ### Risico's
 - **RISK-FILE-SCOPE**: Getekende URL-generatie heeft server-side rolvalidatie nodig bij elke URL-aanvraag. Toegangscontrole mag niet vertrouwen op URL-vervalingtijden alleen.
 - **RISK-PHOTO-PII**: Profielfoto's zijn persoonsgegevens onder GDPR; apart opslaan in `profiles/`-prefix met eigen policy (FILE-03) is verplicht — niet samen met medische documenten.
+- **RISK-MALWARE**: Bestandsuploads zonder magic-byte-validatie en malware-scan zijn een aanvalsvector. Lever VALID-02 + VALID-04 vóór de eerste upload-endpoint live gaat.
+- **RISK-CAT-HISTORY**: Leeftijdscategorie-wijzigingen midden in een seizoen (DOM-CAT-01) moeten correct doorwerken in tornooi-validatie. Test grenswaarden: speler die op tornooi-startdatum exact 17 wordt.
 
 ### Parallelliseerbaar?
 Nee — speler- en trainerprofielen zijn fundamenteel voor alle vervolgdomeinen.
@@ -156,7 +234,7 @@ Ja — de meest complexe UI-component van het hele project (FullCalendar-integra
 De drie centrale sportdomeinen — trainingen, toernooien en rankings — zijn volledig operationeel, zodat een speler zijn dagelijkse training kan registreren, toernooiresultaten kan invoeren en de rangschikking-evolutie kan zien.
 
 ### Vereisten
-TRAIN-01, TRAIN-02, TRAIN-03, TRAIN-04, TRAIN-05, TRAIN-06, TOURN-01, TOURN-02, TOURN-03, TOURN-04, TOURN-05, TOURN-06, RANK-01, RANK-02, RANK-03, RANK-04, RANK-05, RANK-06, RANK-07
+TRAIN-01..06, TOURN-01..06, RANK-01..07, DOM-RESULT-01..04, DOM-RANK-01
 
 ### Succescriteria
 1. Een trainer kan een wekelijks terugkerende groepstraining aanmaken; individuele afwijkingen (annulering, tijdswijziging) zijn mogelijk zonder de hele reeks te verwijderen.
@@ -176,15 +254,19 @@ TRAIN-01, TRAIN-02, TRAIN-03, TRAIN-04, TRAIN-05, TRAIN-06, TOURN-01, TOURN-02, 
 **Toernooimodule (parallel uitvoerbaar):**
 - Schema: `tournaments`, `tournament_results` (eindrangschikking niveau 1), `match_results` (per wedstrijd niveau 2)
 - 9-niveaus uitkomst-lookup: winnaar/finalist/laatste 4/8/16/32/64/128/groepsfase — centrale lookup-tabel
-- tRPC-routers: `tournament.create` (TD only), `tournament.list`, `result.enterFinalRanking` (eigen speler only), `result.enterMatchResult` (eigen speler only)
-- API-gate: eigenaarschapsvalidatie via CallerContext op elk `result.*`-endpoint
-- UI: toernooilijst, eindrangschikking-invoer, per-wedstrijd invoer (ronde, tegenstander, score, video-link)
+- Resultaat-lifecycle (DOM-RESULT-04): `status` enum `'draft' | 'confirmed' | 'published'` — alleen `confirmed`+ tellen mee in ambitievergelijking
+- Edit-historiek (DOM-RESULT-03): `result_edit_history (result_id, edited_by, old_values, new_values, edit_reason, timestamp)`
+- tRPC-routers: `tournament.create` (TD only), `tournament.list`, `result.enterFinalRanking`, `result.enterMatchResult`, `result.edit` (binnen 48u door speler; daarna TD-approval), `result.confirmDraft` (TD)
+- API-gate (DOM-RESULT-02): toelaatbare invoerders zijn de speler zelf, een trainer in de academie van de speler, of de TD — `entered_by` veld traceert wie
+- VALID-07: unieke index `(player_id, tournament_id, round, opponent, date)` op match_results — voorkomt dubbele invoer
+- VALID-08: idempotency key check op POST-endpoint
+- UI: toernooilijst, eindrangschikking-invoer, per-wedstrijd invoer (ronde, tegenstander, score, video-link), edit-binnen-48u-knop, TD-confirm-paneel
 
 **Rankingmodule (parallel uitvoerbaar):**
-- Schema: `ranking_entries` (speler, type, datum, waarde) — pure tijdreeks, geen flat field op `players`
+- Schema: `ranking_entries` (speler, type, datum, waarde, **source**) — pure tijdreeks; `source` enum `'manual' | 'federation_official'` (DOM-RANK-01); v1 = `manual` only
 - Rankingtype-metadata: richting (lager = beter voor wereld/Europees; te bevestigen voor België — RISK-02)
 - tRPC-routers: `ranking.addEntry`, `ranking.getHistory`, `ranking.getCurrentByType`
-- UI: ranking-invoerformulier, lijndiagram per type (FullCalendar-stijl of recharts/chart.js)
+- UI: ranking-invoerformulier, lijndiagram per type (recharts of chart.js); duidelijke label "Manueel ingevoerd, controleer tegen officiële bron"
 
 ### Afhankelijkheden
 Fase 1 en Fase 3 (kalenderinfrastructuur en polymorfisch event-model volledig operationeel).
@@ -208,7 +290,7 @@ Ja — drie aparte formulieren + lijst-UI's + één lijndiagram.
 Alle ondersteunende sportdomeinen — sparringpartners, ambities, evaluaties, medische opvolging, vergaderingen, stages en evaluatiegesprekken — zijn operationeel, waarmee het dagelijkse sportbeheerpakket compleet is.
 
 ### Vereisten
-SPAR-01, SPAR-02, SPAR-03, SPAR-04, AMB-01, AMB-02, AMB-03, AMB-04, EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, EVAL-06, MED-01, MED-02, MED-03, MED-04, MED-05, MED-06, AGE-01, AGE-02, AGE-03, AGE-04
+SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04, DOM-SPAR-AVAIL-01, DOM-MED-CONFLICT-01..02, DOM-EVAL-VIS-01..02
 
 ### Succescriteria
 1. Een TD kan een sparringpartner aanmaken en koppelen aan meerdere trainingssessies; een sparringpartner ziet na login alleen zijn/haar eigen kalenderevents.
@@ -221,9 +303,12 @@ SPAR-01, SPAR-02, SPAR-03, SPAR-04, AMB-01, AMB-02, AMB-03, AMB-04, EVAL-01, EVA
 
 **Sparringpartners (parallel uitvoerbaar):**
 - Schema: `sparring_partners`-tabel (naam, foto, telefoon, e-mail); junction `session_sparring_partners` al aangemaakt in Fase 4
-- tRPC-routers: `sparringPartner.create` (TD only), `sparringPartner.update`, `sparringPartner.list`
+- Beschikbaarheidsblokken: `sparring_partner_availability (partner_id, blocked_from, blocked_until, reason)` — DOM-SPAR-AVAIL-01
+- tRPC-routers: `sparringPartner.create` (TD only), `sparringPartner.update`, `sparringPartner.list`, `sparringPartner.setAvailability`, `sparringPartner.checkAvailability(partnerId, dateRange)`
 - SPAR-04: CallerContext-check in `calendar.list` voor sparringpartnerrol — alleen eigen sessies
-- UI: sparringpartner-register (lijst + formulier), koppeling aan sessies
+- Sessie-aanmaakflow waarschuwt bij overlap met onbeschikbaarheid; vereist expliciete bevestiging om te overschrijven
+- Notificatie wanneer een sparringpartner een datum blokkeert die al gekoppeld is aan een sessie
+- UI: sparringpartner-register (lijst + formulier), beschikbaarheidskalender, koppeling aan sessies
 
 **Ambities (parallel uitvoerbaar):**
 - Schema: `ambitions` (speler, jaar, tornooitype, minimum-uitkomstniveau)
@@ -232,17 +317,20 @@ SPAR-01, SPAR-02, SPAR-03, SPAR-04, AMB-01, AMB-02, AMB-03, AMB-04, EVAL-01, EVA
 - UI: ambities-formulier per jaar per tornooitype, vergelijkingstabel (ambitie vs. resultaat)
 
 **Evaluaties (parallel uitvoerbaar):**
-- Schema: `evaluations`, `evaluation_scores` (FK naar `evaluation_points` + snapshot-labelveld), `evaluation_points` (configureerbaar, soft-delete)
-- tRPC-routers: `evaluation.create`, `evaluation.list`, `evaluationPoint.configure` (TD only)
+- Schema: `evaluations` met visibility-vlaggen (`visible_to_player`, `visible_to_parent`, `visible_to_other_trainers` — alle default `false` per DOM-EVAL-VIS-01), `evaluation_internal_notes` (apart veld, nooit gepubliceerd — DOM-EVAL-VIS-02), `evaluation_scores` (FK naar `evaluation_points` + snapshot-labelveld), `evaluation_points` (configureerbaar, soft-delete)
+- tRPC-routers: `evaluation.create` (default privé), `evaluation.publish` (vereist expliciete keuze welke flags aan), `evaluation.list` (gefilterd op visibility + caller), `evaluationPoint.configure` (TD only)
 - EVAL-03: snapshot-logica — bij aanmaken evaluatie, kopieer huidige label naar `evaluation_scores.label_snapshot`
-- Bijlage-upload: via R2, getekende URL, toegankelijk voor trainer + TD + betrokken speler (FILE-05)
-- UI: evaluatieformulier, configuratiescherm evaluatiepunten (TD), spelersevaluatielijst
+- Bijlage-upload: via Supabase Storage `evaluations/`-bucket, getekende URL, toegankelijk voor trainer + TD + betrokken speler (FILE-05)
+- UI: evaluatieformulier met visibility-keuze bij publiceren, configuratiescherm evaluatiepunten (TD), spelersevaluatielijst (alleen gepubliceerde zichtbaar voor speler/ouder)
 
 **Medische opvolging (parallel uitvoerbaar):**
-- Schema: `medical_events` (al ontworpen in Fase 1, nu gevuld); `medical_documents` (bijlagen, aparte bucket-prefix)
-- tRPC-routers: `medical.create`, `medical.update`, `medical.list` — alleen eigen of TD-scope
-- MED-04: `medical.getInjuryStatus`-endpoint retourneert uitsluitend traffic-light enum (groen/oranje/rood); nooit medische vrije tekst
-- GDPR-04: audit-log trigger al aanwezig uit Fase 1; valideer dat elke `medical.list`-aanroep schrijft
+- Schema: `medical_events` (al ontworpen in Fase 1, nu gevuld); `medical_documents` (bijlagen, Supabase Storage `medical/`-prefix met strikte RLS)
+- tRPC-routers: `medical.create`, `medical.update`, `medical.list` — alleen eigen of TD-scope; SEC-03 re-authentication-check voor volledige fiche
+- `medicalProcedure` middleware schrijft elke read naar `medical_access_audit` (CRIT-7) — async via job queue om medische reads niet te blokkeren
+- MED-04: `medical.getInjuryStatus`-endpoint retourneert uitsluitend traffic-light enum (groen/oranje/rood); nooit medische vrije tekst — voor coachrol
+- DOM-MED-CONFLICT-01: bij aanmaken trainingssessie, server-side check op overlappende `medical_events` voor elke deelnemer; waarschuwing aan trainer met namen + tijden, expliciete bevestiging vereist
+- DOM-MED-CONFLICT-02: aanwezigheidsmarkering defaultwaarde "afwezig met geldige reden" bij overlappende medische events
+- Getekende URL TTL voor medische scans: 5 min, max 1 refresh per sessie, vereist re-authenticatie bij refresh
 - MED-06: scan/document-upload — beslissing RISK-01 afdwingen vóór implementatie
 
 **Agenda-evenementtypen (parallel uitvoerbaar):**
@@ -274,7 +362,7 @@ Ja — vijf afzonderlijke formuliersets + de vergadering accept/decline-flow.
 Intern berichtenverkeer is operationeel — trainers en de TD kunnen spelers en groepen bereiken; spelers ontvangen in-app-meldingen en optionele e-mailmeldingen.
 
 ### Vereisten
-MSG-01, MSG-02, MSG-03, MSG-04, MSG-05
+MSG-01..05, MSG-CHANNEL-01..03
 
 ### Succescriteria
 1. Een TD stuurt een bericht naar "alle spelers met status A"; alle betrokken spelers ontvangen het bericht in hun inbox zonder dat de zender wacht.
@@ -289,9 +377,11 @@ MSG-01, MSG-02, MSG-03, MSG-04, MSG-05
 - Asynchroon groepsverzenden via job queue (geen blocking HTTP-request); bevestig verzending als "in behandeling" aan zender
 - Ongelezen-teller: gecachete kolom `unread_count` op gebruiker, bijgewerkt via database-trigger of job — geïndexeerd (MSG-04)
 - tRPC-routers: `message.send`, `message.reply`, `message.forward`, `message.listInbox`, `message.listSent`, `message.markRead`
-- In-app-melding via Soketi (self-hosted): push event bij nieuw bericht naar geabonneerde gebruiker
-- E-mailmelding: optioneel per gebruiker, via transactionele e-maildienst (EU-gebaseerd) — gebruikersvoorkeur opgeslagen
-- Bijlage-upload: R2 + getekende URL, aparte prefix `messages/`
+- In-app-melding via **Supabase Realtime**: client abonneert op nieuwe rijen in `message_recipients` gefilterd op eigen user_id; RLS-aware (geen lekken)
+- E-mailmelding: fallback per gebruiker, via Mailgun EU of SendGrid EU — gebruikersvoorkeur opgeslagen; in-app blijft primaire kanaal (MSG-CHANNEL-01)
+- MSG-CHANNEL-02: leesbevestigingen werken alleen in-app; e-mail bevat link "open in app om te bevestigen"
+- MSG-CHANNEL-03: veiligheidskritieke berichten (blessure-updates, dringende roosterwijzigingen) sturen in-app + e-mail + vereisen affirmative RSVP, niet alleen leesbevestiging
+- Bijlage-upload: Supabase Storage `messages/`-prefix + getekende URL
 - UI: inbox, verzonden berichten, berichtopsteller met ontvangerselectie (individueel + groep), reply/forward, bijlage-upload, ongelezen-badge in navigatie
 
 ### Afhankelijkheden
@@ -299,7 +389,7 @@ Fase 1 (gebruikers en rollen), Fase 2 (speler-/trainersprofielen voor ontvangers
 
 ### Risico's
 - **RISK-GROUP-SEND**: Groepsverzending naar grote groepen (bijv. alle spelers + alle trainers) kan honderden rijen genereren. Job queue is verplicht; synchrone verzending is geen optie.
-- **RISK-REALTIME**: Soketi vereist een aparte service-implementatie op Coolify. Test de WebSocket-verbinding vroeg — fallback naar polling als Soketi niet stabiel is.
+- **RISK-REALTIME**: Supabase Realtime is managed maar vereist correcte RLS-policies; subscriptions die geen rijen mogen lezen falen stil. Loadtest met realistische rolmix.
 
 ### Parallelliseerbaar?
 Nee — berichtenverkeer vereist de volledige gebruikers-, profiel- en groepsinfrastructuur.
@@ -359,7 +449,7 @@ Ja — de meest samengestelde UI van het project: tabblad-router, dashboard met 
 Het platform is productierijp: ICS-export werkt, prestatietests zijn geslaagd, de GDPR DPIA is uitgevoerd, de beveiligingsaudit is afgerond, en de applicatie draait stabiel op Coolify/Hetzner.
 
 ### Vereisten
-CAL-06 (ICS-export), plus niet-functionele vereisten: prestaties, beveiliging, GDPR DPIA, productie-deployment.
+CAL-06 (ICS-export), OPS-07..12, plus niet-functionele vereisten: prestaties, beveiliging, GDPR DPIA, productie-deployment.
 
 > Alle v1 functionele vereisten zijn afgedekt in Fasen 1–7. Fase 8 is de kwaliteitspoort naar productie.
 
@@ -371,16 +461,42 @@ CAL-06 (ICS-export), plus niet-functionele vereisten: prestaties, beveiliging, G
 5. De productieomgeving op Hetzner/Coolify draait met automatische HTTPS, databaseback-ups elke 6 uur, en een gedocumenteerd rollback-procedure.
 
 ### Kerntaken
-- CAL-06: ICS/iCal-exportendpoint per gebruiker — genereer `.ics` op basis van `calendar_events` binnen de CallerContext-scope
+
+**ICS-export (CAL-06):**
+- ICS/iCal-exportendpoint per gebruiker — genereer `.ics` op basis van `calendar_events` binnen de CallerContext-scope
 - Valideer ICS-output in Outlook 365, Google Calendar, Apple Calendar
-- Loadtest met k6 of Locust: kalenderweergave, spelersprofiel, dashboard-query — P95-drempelwaarden documenteren
+- Per-user persistent feed-URL voor live abonnementen (vs. eenmalige download) — v1 = eenmalige download; live feed v2 (ICS-SUBSCRIBE)
+
+**Performance:**
+- Loadtest met k6: kalenderweergave (50 concurrent users, 200 events/week), broadcast-send, dashboard-query, RBAC-RLS-doorlooptijden — P95-drempelwaarden documenteren
 - Database query-analyse: EXPLAIN ANALYZE op kritieke queries (kalender, dashboard, zoeken); indices toevoegen/aanpassen
-- GDPR DPIA: documenteer gegevensverwerkingsactiviteiten, gegevenscategorieën, bewaartermijnen, rechtsgrondslagen, betrokken verwerkers (Cloudflare, Hetzner), betrokkenenrechten
-- Beveiligingsaudit: OWASP Top 10 beoordeling — focus op injectie, broken access control, security misconfiguration, cryptographic failures
-- Productie-Coolify-configuratie: SSL/TLS (Let's Encrypt), PostgreSQL met dagelijkse back-ups naar offsite opslag, omgevingsvariabelen via Coolify Secrets, health checks
-- Monitoring: applicatie-foutlogging (Sentry of gelijkwaardig), database-prestatiestatistieken, uptime-monitoring
-- DPA-verificatie: bevestig dat Data Processing Agreements zijn afgesloten met Cloudflare (R2) en Hetzner
+- RLS-loadtest expliciet: geneste `EXISTS`-policies onder realistische dataset (200 spelers, 5 jaar history) — bevestig N²-gedrag uit RISK-RLS-PERF afwezig
+
+**Backup & DR (OPS-07..10):**
+- OPS-07: Supabase Pro PITR-configuratie geverifieerd; dagelijkse snapshots actief
+- OPS-08: RTO ≤ 4u, RPO ≤ 1u gedocumenteerd in runbook
+- OPS-09: Restore-drill uitvoeren — backup naar staging Supabase project, integriteitsvalidatie, timing geregistreerd; documenteer als maandelijkse routine
+- OPS-10: Medische records archiveringsroute naar versleutelde offsite-opslag (S3-compatibel met 30-jaar retention) — `pg_cron`-job
+
+**Email-infra (OPS-11..12):**
+- SPF, DKIM, DMARC DNS-records configureren op `vttl.be` vóór eerste transactionele e-mail
+- Mailgun EU of SendGrid EU configureren; nooit vanuit applicatieserver SMTP
+- Deliverability-test: testberichten naar Gmail, Outlook, Apple Mail; spamclassificatie controleren
+
+**GDPR DPIA & beveiligingsaudit:**
+- DPIA: documenteer verwerkingsactiviteiten, gegevenscategorieën, bewaartermijnen, rechtsgrondslagen, betrokken verwerkers (**Supabase**, Hetzner, Mailgun, Sentry, ggf. Cloudflare), betrokkenenrechten
+- DPA-verificatie: ondertekende DPA's met Supabase, Hetzner, e-maildienst, Sentry EU
+- Beveiligingsaudit: OWASP Top 10 — focus op injectie, broken access control, security misconfiguration, cryptographic failures, IDOR-tests per rol
+
+**Productie-deployment:**
+- Coolify-configuratie: SSL/TLS (Let's Encrypt), Secrets via Coolify, health checks, automatic deploys vanaf `main`
+- Database = Supabase Pro (geen lokale Postgres in productie)
+- Monitoring-dashboards in Better Stack of Grafana — alle alerts uit OPS-04..06 actief
+- Documenteer rollback-procedure (Coolify rollback + database PITR)
+
+**Closure:**
 - Definitieve UX-revisie: taalconsistentie (Dutch-only), foutberichten in het Nederlands, formuliervalidatieteksten
+- Documenteer alle open vragen uit PROJECT.md (1–8) als opgeloste of uitgestelde v2-items
 - Documenteer RISK-01 (scan-uploads) en RISK-02 (Belgium Ranking-richting) als opgeloste of uitgestelde v2-items
 
 ### Afhankelijkheden
@@ -390,6 +506,8 @@ Alle Fasen 1–7 volledig en productioneel stabiel.
 - **RISK-DPIA-DELAY**: De DPIA vereist juridische input en kan niet volledig intern worden uitgevoerd. Plan externe DPO-review minimaal 2 weken voor de geplande livegang.
 - **RISK-ICS-COMPAT**: ICS-formaat heeft subtiele compatibiliteitsproblemen tussen kalenderclients. Test vroeg in de fase; gebruik een gevalideerde ICS-bibliotheek.
 - **RISK-PERF-SURPRISE**: Prestatieknelpunten verschijnen vaak pas bij realistisch testdatavolume. Vul de database met representatief volume (bijv. 100 spelers × 3 jaar data) vóór de loadtest.
+- **RISK-RESTORE-UNTESTED**: Backups zonder restore-drill zijn theorie. Voer minstens één volledige drill uit vóór livegang en documenteer de timing.
+- **RISK-EMAIL-DELIVERABILITY**: Eerste batches transactionele e-mail kunnen in spam belanden zonder correcte SPF/DKIM/DMARC-instellingen. Test 2 weken vooraf, niet op livegang-dag.
 
 ### Parallelliseerbaar?
 Ja — ICS-implementatie, loadtesting, DPIA-documentatie en beveiligingsaudit kunnen parallel lopen.
