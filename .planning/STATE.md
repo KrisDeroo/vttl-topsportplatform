@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 1
-last_updated: "2026-05-01T15:19:03.677Z"
+last_updated: "2026-05-02T00:15:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 18
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 11
 ---
 
 # Project State — VTTL Topsportplatform
@@ -18,10 +18,10 @@ progress:
 
 Phase: 1 — Fundament
 Active Phase: 01-fundament
-Last Action: Phase 1 plans ready — 18 plans across 8 waves, plan-checker PASS (iteration 2)
+Last Action: Wave 1 complete (01-01 setup-tooling, 01-17 wave-0 test infrastructure). Wave 2 dispatching (5 plans: 01-02, 01-07, 01-09, 01-10, 01-18).
 
 Resume: `/gsd-execute-phase 1` (run `/clear` first for a fresh context window)
-Artifacts: `.planning/phases/01-fundament/` (CONTEXT.md, RESEARCH.md, VALIDATION.md, 18 PLAN.md files)
+Artifacts: `.planning/phases/01-fundament/` (CONTEXT.md, RESEARCH.md, VALIDATION.md, 18 PLAN.md files, 2 SUMMARY.md files)
 
 ## Project Reference
 
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Fundament | 🔄 Plans ready (ready to execute) |
+| 1 | Fundament | 🔄 In progress (2/18 plans, Wave 1 complete) |
 | 2 | Identiteit & Bestanden | ⬜ Not started |
 | 3 | Kalender | ⬜ Not started |
 | 4 | Kerndomein | ⬜ Not started |
@@ -57,4 +57,4 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 - Lookups: codes in DB, labels via i18n catalogs; proper nouns not translated
 
 ---
-*Last updated: 2026-05-01 after initialization*
+*Last updated: 2026-05-02 — Wave 1 complete (Next.js bootstrap + wave-0 RED test scaffolding); Wave 2 next.*

@@ -35,7 +35,7 @@ Het fundament is klaar wanneer een technisch directeur kan inloggen met een gesc
 **Plans:** 18 plans in 8 waves (parallel-able where files don't overlap; see each plan's `depends_on` and `files_modified` for the precise ordering).
 
 Plans:
-- [ ] 01-01-setup-tooling-PLAN.md — Next.js 15 init + TypeScript + ESLint + env validation + Drizzle Kit config
+- [x] 01-01-setup-tooling-PLAN.md — Next.js 15 init + TypeScript + ESLint + env validation + Drizzle Kit config
 - [ ] 01-02-drizzle-schema-migration-001-core-PLAN.md — Migration 001: users (locale + role enums), sessions, lookups, memberships, consent_records, audit_log, idempotency_keys + Postgres role separation
 - [ ] 01-03-drizzle-schema-migration-002-medical-PLAN.md — Migration 002: medical_events, medical_documents, medical_access_audit + pgcrypto + write-time audit trigger
 - [ ] 01-04-rls-policies-and-functions-PLAN.md — Migration 002b: current_user_id/role STABLE wrappers, players_visible_to SECURITY DEFINER, RLS policies on every sensitive table
@@ -51,7 +51,7 @@ Plans:
 - [ ] 01-14-health-endpoints-PLAN.md — /api/health/live (process-only) + /api/health/ready (DB + Redis with 2s timeout)
 - [ ] 01-15-td-admin-ui-user-management-PLAN.md — admin.user.* router (CRUD + activate/deactivate/role/parent/academy) + UserTable Server Component + tRPC client
 - [ ] 01-16-drizzle-push-blocking-PLAN.md — **[BLOCKING]** Apply migrations 0000–0003 to dev/staging Supabase + 8 post-migration smoke checks
-- [ ] 01-17-wave-0-test-infrastructure-PLAN.md — Vitest + Playwright + testcontainers + RBAC matrix (D-11) + RLS direct-query + chaos rate-limit + e2e specs (RED on day one)
+- [x] 01-17-wave-0-test-infrastructure-PLAN.md — Vitest + Playwright + testcontainers + RBAC matrix (D-11) + RLS direct-query + chaos rate-limit + e2e specs (RED on day one)
 - [ ] 01-18-migration-governance-docs-PLAN.md — Migration runbook + erasure strategy + backfill utility + protect-migrations CI guard + TIMESTAMPTZ ESLint rule
 
 
