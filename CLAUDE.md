@@ -9,8 +9,8 @@ An operational elite sports management platform for the Flemish Table Tennis Lea
 
 ### Constraints
 
-- **Language**: Dutch UI — all labels, copy, and documentation in Dutch/Flemish
-- **Privacy/GDPR**: Medical data, parent-child links, and role scoping must be technically enforced; consent tracking required
+- **Language**: Multilingual UI — Nederlands (nl, default), English (en), Frans (fr). All user-facing labels, copy, validation messages, transactional emails, and consent text must be available in all three locales before production. Per-user `preferred_locale` persisted; lookup display via i18n message catalogs (codes in DB, labels in catalogs); proper nouns (academy names, club names, person names) not translated. Backend logs and source code remain English.
+- **Privacy/GDPR**: Medical data, parent-child links, and role scoping must be technically enforced; consent tracking required (consent text versioned per locale; legal review per language)
 - **Usability**: Platform must be operationally strong from day one — not an MVP skeleton. Calendar and player view are the two most critical daily-use surfaces
 - **Calendar**: Week view (Outlook-style) is mandatory for v1; must support all event types with color coding
 - **Data integrity**: Lookups (status, academy, tournament type, ranking type, etc.) must be centrally managed, not free-text

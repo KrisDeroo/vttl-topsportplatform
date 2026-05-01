@@ -118,7 +118,7 @@ Every player's complete development picture — training quality, competition re
 
 **Domain:** Elite table tennis development, Flemish league (VTTL). Multi-academy structure with a central topsport school plus provincial academies.
 
-**Language:** Dutch/Flemish primary interface language.
+**Language:** Three-language UI — Nederlands (nl, default), English (en), Frans (fr). VTTL is the Flemish federation, but elite sport involves French-speaking athletes/coaches and international visitors. Default for new accounts and anonymous visitors is `nl`; browser `Accept-Language` used as fallback hint.
 
 **Regulatory:** GDPR compliance mandatory. Medical data is sensitive personal data (special category under GDPR Art. 9). Role-scoped visibility must be technically enforced, not just UI-level.
 
@@ -134,8 +134,8 @@ Every player's complete development picture — training quality, competition re
 
 ## Constraints
 
-- **Language**: Dutch UI — all labels, copy, and documentation in Dutch/Flemish
-- **Privacy/GDPR**: Medical data, parent-child links, and role scoping must be technically enforced; consent tracking required
+- **Language**: Multilingual UI — Nederlands (nl, default), English (en), Frans (fr). All user-facing labels, copy, validation messages, transactional emails, and consent text must be available in all three locales before production. Per-user `preferred_locale` persisted; lookup display via i18n message catalogs (codes in DB, labels in catalogs); proper nouns (academy names, club names, person names) not translated. Backend logs and source code remain English.
+- **Privacy/GDPR**: Medical data, parent-child links, and role scoping must be technically enforced; consent tracking required (consent text versioned per locale; legal review per language)
 - **Usability**: Platform must be operationally strong from day one — not an MVP skeleton. Calendar and player view are the two most critical daily-use surfaces
 - **Calendar**: Week view (Outlook-style) is mandatory for v1; must support all event types with color coding
 - **Data integrity**: Lookups (status, academy, tournament type, ranking type, etc.) must be centrally managed, not free-text
@@ -157,6 +157,9 @@ Every player's complete development picture — training quality, competition re
 | Sparring partner v1 = TD-managed register only | "Discovery / style filtering" features deferred to v2 — out of v1 scope per critical review | — Pending |
 | Training-load × ranking correlation overlay deferred | Statistical noise too high at v1 data density (subjective 1–5 scores, ~50–200 users, < 2 seasons of history) | — Pending |
 | Email is fallback channel, in-app messaging is primary | Resolves contradiction between email-as-primary-for-parents claim and in-app messaging requirement; read receipts work in-app only | — Pending |
+| Three-language UI: nl/en/fr with nl default | Belgium is multilingual — VTTL is the Flemish federation but elite sport involves French-speaking athletes/coaches and international visitors. Dutch-only would exclude valid users. | — Pending |
+| Lookups: codes-in-DB + i18n message catalogs | Language-neutral keys (`status_a`, `tournament_wtt_star`) decoupled from display labels; proper nouns (academy/club/person names) stored once, not translated. Cleaner schema, no per-locale denormalization. | — Pending |
+| i18n infrastructure built in Phase 1 (not deferred) | `users.preferred_locale`, Better Auth email templates per locale, consent text versioned per locale must exist before first user registers — otherwise migration + re-consent is required later. | — Pending |
 
 ## Open Questions Requiring Resolution Before / During Phase 1
 

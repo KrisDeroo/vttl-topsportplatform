@@ -8,29 +8,32 @@
 
 | Fase | Naam | UI? | Parallel? | Vereisten |
 |------|------|-----|-----------|-----------|
-| 1 | Fundament | Beperkt | Nee | AUTH-01..05, USER-01..05, GDPR-01..08, SEC-01..09, OPS-01..06, MIG-01..05 |
-| 2 | Identiteit & Bestanden | Ja | Nee | PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02 |
+| 1 | Fundament | Beperkt | Nee | AUTH-01..05, USER-01..05, GDPR-01..08, SEC-01..09, OPS-01..06, MIG-01..05, I18N-01..05, I18N-07, I18N-09, I18N-11 |
+| 2 | Identiteit & Bestanden | Ja | Nee | PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02, I18N-06, I18N-08 |
 | 3 | Kalender | Ja | Nee | CAL-01..08, VALID-07..08 |
 | 4 | Kerndomein | Ja | Ja (intern) | TRAIN-01..06, TOURN-01..06, RANK-01..07, DOM-RESULT-01..04, DOM-RANK-01 |
 | 5 | Uitgebreid domein | Ja | Ja (intern) | SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04, DOM-SPAR-AVAIL-01, DOM-MED-CONFLICT-01..02, DOM-EVAL-VIS-01..02 |
 | 6 | Communicatie | Ja | Nee | MSG-01..05, MSG-CHANNEL-01..03 |
 | 7 | Synthese | Ja | Nee | VIEW-01..05, SEARCH-01..02, GDPR-05..06 |
-| 8 | Kwaliteit & Release | Nee | Ja (intern) | CAL-06 (ICS), OPS-07..12, productieklaar |
+| 8 | Kwaliteit & Release | Nee | Ja (intern) | CAL-06 (ICS), OPS-07..12, I18N-10 (catalog coverage), productieklaar |
 
 **Stack-update:** Database, Storage en Realtime draaien op **Supabase (Pro tier, EU/Frankfurt)**. App-deployment blijft op **Coolify/Hetzner**. Alle migraties, RLS-policies en schema-definities staan in **Drizzle-code** (geen Supabase Dashboard-config) zodat de portabiliteit behouden blijft. Auth blijft **Better Auth** (tegen de Supabase Postgres database).
 
+**Talen-update:** Het platform is **drietalig (nl/en/fr)** met `nl` als default. UI-strings via **`next-intl`** message catalogs (`messages/nl.json`, `messages/en.json`, `messages/fr.json`). Lookup-tabellen slaan codes op (geen labels); display via i18n-keys. Eigennamen (academies, clubs, personen) niet vertaald. Backend-logs en source-code blijven Engels. Consent-tekst per locale versioned, juridische review per taal vóór livegang. Volledige i18n-infrastructuur (DB-kolom, e-mailtemplates × 3, consent × 3) wordt in Fase 1 gebouwd om latere migratie + re-consent te vermijden.
+
 ---
 
-## Fase 1 — Fundament
+## Phase 1: Fundament
 
 ### Doel
 Het fundament is klaar wanneer een technisch directeur kan inloggen met een gescopede sessie, RLS alle data afschermt op databaseniveau, en het GDPR-schema klaar staat voor alle vervolgfasen.
 
 ### Vereisten
-AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06, MIG-01..05
+AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06, MIG-01..05, I18N-01..05, I18N-07, I18N-09, I18N-11
 
 > GDPR-05 en GDPR-06 (portabiliteitsexport + wissing-UI) worden technisch ontworpen in deze fase maar als UI afgewerkt in Fase 7.
 > OPS-07..12 (backup-drills, monitoring-alerts, SPF/DKIM/DMARC, transactionele e-mail) worden in Fase 8 als release-kwaliteit afgewerkt; de infrastructuur (Supabase Pro PITR, Pino logging, structuur) staat hier al.
+> I18N-06 (proper-noun handling) en I18N-08 (Zod-error i18n keys) komen in Fase 2 zodra de eerste echte forms verschijnen. I18N-10 (catalog-coverage gate) komt in Fase 8.
 
 ### Succescriteria
 1. Een technisch directeur kan inloggen; na browserherstart is de sessie nog actief.
@@ -38,6 +41,7 @@ AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06,
 3. Een directe PostgreSQL-query als niet-eigenaar op `medical_events` retourneert nul rijen — RLS blokkeert zonder uitzondering.
 4. De `audit_log` bevat een leesregistratie bij elke toegang tot een medisch record, met actor, actie, tijdstip en IP.
 5. Een testgebruiker jonger dan 16 jaar kan geen account voltooien zonder een gekoppeld ouderaccount met gegeven toestemming.
+6. Een gebruiker registreert in nl/en/fr; bevestigingse-mail komt aan in de gekozen taal; consent-records bevatten de exacte tekst van die taal en versie. Wisselen van locale na login update `users.preferred_locale` en past direct aan voor volgende e-mails.
 
 ### Kerntaken
 
@@ -92,6 +96,16 @@ AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06,
 **TD UI (beperkt):**
 - AUTH-04/05: gebruikersbeheer-paneel — accounts aanmaken, activeren, deactiveren, rollen toewijzen, parent-child koppelen, trainer-academie koppelen
 
+**i18n-fundament (I18N-01..05, I18N-07, I18N-09, I18N-11):**
+- `next-intl` configureren in App Router; `messages/nl.json`, `messages/en.json`, `messages/fr.json` aanmaken (login/auth/registratie/consent + algemene chrome-strings volstaan voor Fase 1)
+- Migratie 001 uitbreiden met `users.preferred_locale` enum (`nl`/`en`/`fr`, default `nl`, NOT NULL)
+- Locale-resolutie middleware: explicit user pref → session locale (anonymous switcher) → `Accept-Language` → `nl`
+- Better Auth e-mailtemplates per locale (verify-email, password-reset, magic-link) — 3 sets met gedeelde merge-vars
+- Consent-flow: `consent_records` schema bevat `policy_version`, `locale`, en de exacte getoonde tekst (snapshot voor GDPR-bewijs); 3 versies van elk consent-document opstellen (operationeel, medisch, foto/video) — juridische review per taal ingepland vóór productie
+- `Intl` / `date-fns` locale-config in app: `nl-BE`, `en-GB`, `fr-BE`; weekstart maandag in alle drie
+- Locale-switcher in chrome (header of footer); bij login update direct `users.preferred_locale`
+- Convention: source-code, comments, pino-logs en error-codes blijven Engels; geen NL/FR strings in backend-code
+
 ### Afhankelijkheden
 Geen — dit is de basis.
 
@@ -101,6 +115,8 @@ Geen — dit is de basis.
 - **RISK-CONSENT**: Het toestemmingsmodel moet GDPR Art. 7 + 8 dekken; juridische review aanbevolen vóór productie.
 - **RISK-RLS-PERF**: Genest `EXISTS` in RLS-policies kan N²-gedrag veroorzaken. Beperk policy-nesting tot 1–2 niveaus; voor diepere hiërarchieën val terug op service-laag-filtering. Loadtest met realistische dataset vóór Fase 2.
 - **RISK-SUPABASE-LOCK**: Supabase als managed dienst introduceert lock-in. Mitigatie: alle schemas/RLS/migraties in Drizzle-code; geen Supabase JS SDK in app-code; standaard Postgres-URL connectie. Migratie naar Neon of self-hosted blijft bounded (< 1 dag).
+- **RISK-I18N-LEGAL**: Consent-tekst per taal moet juridisch geldig zijn onder Belgische GDPR-implementatie. Een vertaling die afwijkt van de NL-tekst kan toestemming ongeldig maken. Mitigatie: brontekst in NL definitief opstellen; vertaling door of geverifieerd door juridisch geschoolde NL→FR/EN-vertaler; alle drie versies parallel ondertekenen in versie 1.0 vóór livegang.
+- **RISK-I18N-DRIFT**: Drie message catalogs raken uit sync zodra strings worden toegevoegd zonder vertaling. Mitigatie: CI-gate (I18N-10) in Fase 8; tot die tijd ontbrekende keys zichtbaar maken via fail-loud fallback in dev (geen stille EN-fallback).
 
 ### Parallelliseerbaar?
 Nee — alle teams werken op hetzelfde kritieke pad: Supabase-setup → schema → RLS → auth → CallerContext → SEC/OPS/MIG-fundament.
@@ -110,13 +126,13 @@ Beperkt — alleen de login-pagina, wachtwoordreset-flow, en het TD-gebruikersbe
 
 ---
 
-## Fase 2 — Identiteit & Bestanden
+## Phase 2: Identiteit & Bestanden
 
 ### Doel
 Het platform heeft volledige speler- en trainerprofielen met foto-upload en correct gescopede bestandstoegang, zodat het dagelijks beheer van de spelerslijst operationeel is.
 
 ### Vereisten
-PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02
+PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02, I18N-06, I18N-08
 
 ### Succescriteria
 1. Een technisch directeur kan een volledig spelerprofiel aanmaken met foto; het profiel is direct zichtbaar in de spelerslijst.
@@ -167,6 +183,12 @@ PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02
 - Noodcontact verplicht voor minderjarigen (PLAYER-06)
 - Leeftijdscategorie en categoriejaar expliciet opgeslagen, niet afgeleid (PLAYER-04 — DOM-CAT-01 historiek)
 
+**i18n in Fase 2 (I18N-06, I18N-08):**
+- Lookup-codes voor academies, leeftijdscategorieën, statuut, trainerdiploma's worden in `messages/{nl,en,fr}.json` voorzien als display-labels (codes blijven taal-neutraal in DB)
+- Eigennamen-conventie afdwingen: academienamen ("Topsportschool", "Academy Antwerpen") en clubnamen worden 1× opgeslagen in canonical vorm en niet vertaald — coachnaam in fr-UI ziet er identiek uit als in nl-UI
+- Zod-validatieboodschappen voor speler-/trainerformulieren als i18n-keys (geen hardcoded strings); client rendert in actieve locale
+- Datepickers gebruiken `date-fns` met user locale; placeholder en formaat vary per locale (`dd/MM/yyyy` voor nl-BE en fr-BE, `dd/MM/yyyy` voor en-GB)
+
 ### Afhankelijkheden
 Fase 1 volledig afgerond — CallerContext, RLS, en auth zijn vereist.
 
@@ -184,7 +206,7 @@ Ja — spelersprofiel-formulier, trainerprofiel-formulier, spelerslijst, foto-up
 
 ---
 
-## Fase 3 — Kalender
+## Phase 3: Kalender
 
 ### Doel
 De kalender is de centrale dagelijkse werkvlakte van het platform; na deze fase kunnen alle gebruikersrollen hun gescopede agenda zien en kunnen de eerste evenementtypen worden aangemaakt.
@@ -228,7 +250,7 @@ Ja — de meest complexe UI-component van het hele project (FullCalendar-integra
 
 ---
 
-## Fase 4 — Kerndomein
+## Phase 4: Kerndomein
 
 ### Doel
 De drie centrale sportdomeinen — trainingen, toernooien en rankings — zijn volledig operationeel, zodat een speler zijn dagelijkse training kan registreren, toernooiresultaten kan invoeren en de rangschikking-evolutie kan zien.
@@ -284,7 +306,7 @@ Ja — drie aparte formulieren + lijst-UI's + één lijndiagram.
 
 ---
 
-## Fase 5 — Uitgebreid domein
+## Phase 5: Uitgebreid domein
 
 ### Doel
 Alle ondersteunende sportdomeinen — sparringpartners, ambities, evaluaties, medische opvolging, vergaderingen, stages en evaluatiegesprekken — zijn operationeel, waarmee het dagelijkse sportbeheerpakket compleet is.
@@ -356,7 +378,7 @@ Ja — vijf afzonderlijke formuliersets + de vergadering accept/decline-flow.
 
 ---
 
-## Fase 6 — Communicatie
+## Phase 6: Communicatie
 
 ### Doel
 Intern berichtenverkeer is operationeel — trainers en de TD kunnen spelers en groepen bereiken; spelers ontvangen in-app-meldingen en optionele e-mailmeldingen.
@@ -378,7 +400,7 @@ MSG-01..05, MSG-CHANNEL-01..03
 - Ongelezen-teller: gecachete kolom `unread_count` op gebruiker, bijgewerkt via database-trigger of job — geïndexeerd (MSG-04)
 - tRPC-routers: `message.send`, `message.reply`, `message.forward`, `message.listInbox`, `message.listSent`, `message.markRead`
 - In-app-melding via **Supabase Realtime**: client abonneert op nieuwe rijen in `message_recipients` gefilterd op eigen user_id; RLS-aware (geen lekken)
-- E-mailmelding: fallback per gebruiker, via Mailgun EU of SendGrid EU — gebruikersvoorkeur opgeslagen; in-app blijft primaire kanaal (MSG-CHANNEL-01)
+- E-mailmelding: fallback per gebruiker, via Mailgun EU of SendGrid EU — gebruikersvoorkeur opgeslagen; in-app blijft primaire kanaal (MSG-CHANNEL-01); systeemnotificatie-templates per locale (`users.preferred_locale` van ontvanger bepaalt template — niet die van zender)
 - MSG-CHANNEL-02: leesbevestigingen werken alleen in-app; e-mail bevat link "open in app om te bevestigen"
 - MSG-CHANNEL-03: veiligheidskritieke berichten (blessure-updates, dringende roosterwijzigingen) sturen in-app + e-mail + vereisen affirmative RSVP, niet alleen leesbevestiging
 - Bijlage-upload: Supabase Storage `messages/`-prefix + getekende URL
@@ -399,7 +421,7 @@ Ja — de volledige berichteninterface is een substantieel UI-onderdeel.
 
 ---
 
-## Fase 7 — Synthese
+## Phase 7: Synthese
 
 ### Doel
 De spelersweergave brengt alle domeinen samen op één werkblad per speler met tabbladen; het globale zoekvenster en de GDPR-export/wissingsinterface zijn operationeel.
@@ -443,7 +465,7 @@ Ja — de meest samengestelde UI van het project: tabblad-router, dashboard met 
 
 ---
 
-## Fase 8 — Kwaliteit & Release
+## Phase 8: Kwaliteit & Release
 
 ### Doel
 Het platform is productierijp: ICS-export werkt, prestatietests zijn geslaagd, de GDPR DPIA is uitgevoerd, de beveiligingsaudit is afgerond, en de applicatie draait stabiel op Coolify/Hetzner.
@@ -494,10 +516,16 @@ CAL-06 (ICS-export), OPS-07..12, plus niet-functionele vereisten: prestaties, be
 - Monitoring-dashboards in Better Stack of Grafana — alle alerts uit OPS-04..06 actief
 - Documenteer rollback-procedure (Coolify rollback + database PITR)
 
+**i18n release-gate (I18N-10):**
+- CI-check op 100% catalog-coverage voor `nl`, `en`, `fr` (geen ontbrekende keys, geen stille EN-fallback in user-facing surfaces)
+- ICS-export `SUMMARY` en `DESCRIPTION` velden gebruiken de locale van de ontvanger
+- Deliverability-test transactionele e-mail in alle 3 locales (NL, EN, FR templates testen op Gmail/Outlook/Apple Mail per taal)
+- Juridisch ondertekende consent-tekst in alle 3 locales (final review met DPO en juridische adviseur)
+
 **Closure:**
-- Definitieve UX-revisie: taalconsistentie (Dutch-only), foutberichten in het Nederlands, formuliervalidatieteksten
+- Definitieve UX-revisie: taalconsistentie per locale (NL/EN/FR), foutberichten in actieve locale, formuliervalidatieteksten via i18n-keys
 - Documenteer alle open vragen uit PROJECT.md (1–8) als opgeloste of uitgestelde v2-items
-- Documenteer RISK-01 (scan-uploads) en RISK-02 (Belgium Ranking-richting) als opgeloste of uitgestelde v2-items
+- Documenteer RISK-01 (scan-uploads), RISK-02 (Belgium Ranking-richting), RISK-I18N-LEGAL en RISK-I18N-DRIFT als opgeloste of uitgestelde v2-items
 
 ### Afhankelijkheden
 Alle Fasen 1–7 volledig en productioneel stabiel.

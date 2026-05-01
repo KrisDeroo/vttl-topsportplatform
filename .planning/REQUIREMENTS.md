@@ -188,7 +188,7 @@
 ### SEARCH — Global Search
 
 - [ ] **SEARCH-01**: Global search finds players by name, tournaments by date, trainers by name — scoped to caller's visibility
-- [ ] **SEARCH-02**: Dutch full-text search with accent-insensitive matching (`pg_trgm` + `unaccent` extensions)
+- [ ] **SEARCH-02**: Full-text search with accent-insensitive matching across nl/en/fr (`pg_trgm` + `unaccent` extensions; queries operate on canonical name fields — proper nouns are not translated, so single-index strategy works for all locales)
 
 ---
 
@@ -233,6 +233,22 @@
 - [ ] **OPS-10**: Medical records archived monthly to encrypted offsite storage with 30-year retention (Belgian patient rights law)
 - [ ] **OPS-11**: SPF, DKIM, DMARC configured on `vttl.be` mail domain before first transactional email is sent
 - [ ] **OPS-12**: Transactional email via Mailgun EU or SendGrid EU — never the application server SMTP
+
+---
+
+### I18N — Internationalization (nl/en/fr)
+
+- [ ] **I18N-01**: UI supports three locales: Nederlands (`nl`, default), English (`en`), Frans (`fr`); user can switch locale from the UI; selection persisted on the user record
+- [ ] **I18N-02**: `users.preferred_locale` column (enum: `'nl' | 'en' | 'fr'`, default `'nl'`, NOT NULL) — created in Phase 1
+- [ ] **I18N-03**: Locale resolution chain at request time: explicit user preference → session locale (anonymous switcher) → `Accept-Language` header → default `'nl'`
+- [ ] **I18N-04**: Transactional email (auth, password reset, magic link, notifications) sent in the recipient's `preferred_locale`; templates stored per locale with shared template metadata
+- [ ] **I18N-05**: Lookup tables store language-neutral codes (e.g., `status_a`, `tournament_wtt_star`, `training_type_group`); display labels resolved via i18n message catalogs at render time — never store translated labels in lookup rows
+- [ ] **I18N-06**: Proper nouns are not translated: academy names ("Topsportschool", "Academy Antwerpen"), club names, person names, tournament event names are stored once in their canonical form and rendered identically across locales
+- [ ] **I18N-07**: Date, time, and number formatting uses `Intl` / `date-fns` with the user's locale (`nl-BE`, `en-GB`, `fr-BE`); week starts on Monday in all three locales
+- [ ] **I18N-08**: All Zod validation messages are emitted as i18n keys, not hardcoded strings; client renders the localized text
+- [ ] **I18N-09**: Consent text (operational data, medical processing, photo/video use) is versioned per locale: each `consent_records` row stores `policy_version`, `locale`, and the exact text shown at consent time; legal review required per language before any locale goes live
+- [ ] **I18N-10**: Translation completeness gate before any new locale is released to production: 100% string coverage check in CI (no missing keys, no fallback-to-English in user-facing surfaces); `nl` and `en` ship at v1; `fr` ships when its catalog is complete and consent text is legally reviewed
+- [ ] **I18N-11**: Backend logs (pino), source code, comments, error codes, and database column names remain English regardless of UI locale — system observability is single-language
 
 ---
 
@@ -291,7 +307,6 @@
 - Gamification / badges — condescending in elite sport
 - Customizable drag-and-drop dashboards — high complexity, low value
 - Wearable / biometric integration — requires sports science team, out of scope
-- Multi-language UI (FR/EN) — Dutch only; externalize strings in single `nl.json` for future extraction
 - Automated training plan generation — liability, insufficient data density in v1
 - External ITTF API integration — confirm API access terms before building
 
@@ -396,7 +411,18 @@
 | VIEW-04 | Phase 7 — Synthese | SQL aggregation, no N+1 |
 | VIEW-05 | Phase 7 — Synthese | 5-min dashboard cache |
 | SEARCH-01 | Phase 7 — Synthese | global search, caller-scoped |
-| SEARCH-02 | Phase 7 — Synthese | pg_trgm + unaccent, accent-insensitive |
+| SEARCH-02 | Phase 7 — Synthese | pg_trgm + unaccent, accent-insensitive (nl/en/fr) |
+| I18N-01 | Phase 1 — Fundament | locale switcher infrastructure (UI added per phase) |
+| I18N-02 | Phase 1 — Fundament | `users.preferred_locale` column |
+| I18N-03 | Phase 1 — Fundament | locale resolution middleware |
+| I18N-04 | Phase 1 — Fundament | Better Auth transactional email templates × 3 locales |
+| I18N-05 | Phase 1 — Fundament | lookup-codes schema; per-phase catalogs as lookups land |
+| I18N-06 | Phase 2 — Identiteit & Bestanden | proper-noun handling for academy/club/person names |
+| I18N-07 | Phase 1 — Fundament | `Intl` / `date-fns` locale config; reused across phases |
+| I18N-08 | Phase 2 — Identiteit & Bestanden | Zod-error i18n keys; first real forms appear here |
+| I18N-09 | Phase 1 — Fundament | versioned consent text per locale (legal review × 3) |
+| I18N-10 | Phase 8 — Kwaliteit & Release | release gate — 100% catalog coverage check in CI |
+| I18N-11 | Phase 1 — Fundament | logging/source-code English convention (pino redact already English) |
 
 ---
 
