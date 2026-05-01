@@ -116,7 +116,8 @@ describe('BullMQ worker template — D-15', () => {
     await import('@/server/workers/index');
 
     expect(workerCtor).toHaveBeenCalledTimes(1);
-    const opts = workerCtor.mock.calls[0]?.[2] as
+    const call = workerCtor.mock.calls[0] as unknown as unknown[];
+    const opts = call?.[2] as
       | {
           concurrency?: number;
           settings?: { backoffStrategy?: (n: number) => number };

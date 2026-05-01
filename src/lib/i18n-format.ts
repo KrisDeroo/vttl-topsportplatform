@@ -1,22 +1,23 @@
 /**
  * Locale-aware date and number formatting — I18N-07.
  *
- * Date formatting uses date-fns with the Belgian/Dutch (nl-BE), British (en-GB),
- * and Belgian-French (fr-BE) locales. weekStartsOn=1 (Monday) is enforced for all
- * three because Belgium uses ISO-8601 week numbering universally — the nl-BE
- * default already does this; we set it explicitly so calendar code (Phase 2+)
- * cannot accidentally render Sunday-first weeks for the en/fr surfaces.
+ * date-fns 4.x ships nl-BE and en-GB but not a Belgian-French variant —
+ * `fr` (metropolitan French) is used for the French UI and is fine for date
+ * formatting because the Belgian/Metropolitan French differences are nominal
+ * (week start, month names, weekday names are identical). The Belgian
+ * thousands/decimal convention is still enforced via Intl.NumberFormat below
+ * with the BCP 47 tag fr-BE.
  *
- * Number formatting uses the Intl.NumberFormat API with explicit BCP 47 locale
- * tags (nl-BE, en-GB, fr-BE) so the Belgian decimal convention (',' decimal,
- * '.' thousands) is honored on the Dutch and French UIs without surprising
- * British-locale users on the en surface.
+ * weekStartsOn=1 (Monday) is enforced for all three locales because Belgium
+ * uses ISO-8601 week numbering universally — the nl-BE default already does
+ * this; we set it explicitly so calendar code (Phase 2+) cannot accidentally
+ * render Sunday-first weeks for the en/fr surfaces.
  */
 import { format } from 'date-fns';
-import { nlBE, enGB, frBE } from 'date-fns/locale';
+import { nlBE, enGB, fr } from 'date-fns/locale';
 import type { Locale } from '@/i18n/routing';
 
-const dateLocales = { nl: nlBE, en: enGB, fr: frBE } as const;
+const dateLocales = { nl: nlBE, en: enGB, fr } as const;
 
 /**
  * Format a Date with the locale-appropriate date-fns locale.

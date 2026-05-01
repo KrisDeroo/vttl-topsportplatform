@@ -17,19 +17,19 @@ describe('tstz helper — GDPR-08', () => {
     const col = tstz('created_at');
     // Drizzle PgTimestamp builders expose `dataType: 'timestamp'` plus
     // `withTimezone: true | false` and `mode`.
-    expect((col as { config: { dataType: string } }).config.dataType).toMatch(/timestamp/i);
-    expect((col as { config: { withTimezone: boolean } }).config.withTimezone).toBe(true);
-    expect((col as { config: { mode: string } }).config.mode).toBe('date');
+    expect((col as unknown as { config: { dataType: string } }).config.dataType).toMatch(/timestamp/i);
+    expect((col as unknown as { config: { withTimezone: boolean } }).config.withTimezone).toBe(true);
+    expect((col as unknown as { config: { mode: string } }).config.mode).toBe('date');
   });
 
   it('applies defaultNow when requested', () => {
     const col = tstz('created_at', { defaultNow: true });
-    expect((col as { config: { hasDefault: boolean } }).config.hasDefault).toBe(true);
+    expect((col as unknown as { config: { hasDefault: boolean } }).config.hasDefault).toBe(true);
   });
 
   it('does NOT apply defaultNow when not requested', () => {
     const col = tstz('updated_at');
     // hasDefault is false (or undefined) when no .defaultNow() was applied.
-    expect((col as { config: { hasDefault?: boolean } }).config.hasDefault).toBeFalsy();
+    expect((col as unknown as { config: { hasDefault?: boolean } }).config.hasDefault).toBeFalsy();
   });
 });

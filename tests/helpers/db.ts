@@ -52,13 +52,16 @@ export interface RawPgAsAppUserArgs {
   params?: readonly unknown[];
 }
 
-export async function rawPgAsAppUser<TRow = Record<string, unknown>>(
+export async function rawPgAsAppUser<TRow extends Record<string, unknown> = Record<string, unknown>>(
   args: RawPgAsAppUserArgs,
 ): Promise<
   | TRow[]
   | {
       client: import('pg').Client;
-      query: <T = unknown>(text: string, params?: readonly unknown[]) => Promise<{ rows: T[] }>;
+      query: <T extends Record<string, unknown> = Record<string, unknown>>(
+        text: string,
+        params?: readonly unknown[],
+      ) => Promise<{ rows: T[] }>;
       [Symbol.asyncDispose]: () => Promise<void>;
     }
 > {
@@ -90,7 +93,10 @@ export async function rawPgAsAppUser<TRow = Record<string, unknown>>(
   // Long-lived: caller manages disposal via `await using`.
   return {
     client,
-    async query<T = unknown>(text: string, params?: readonly unknown[]) {
+    async query<T extends Record<string, unknown> = Record<string, unknown>>(
+      text: string,
+      params?: readonly unknown[],
+    ) {
       return client.query<T>(text, params as unknown[] | undefined);
     },
     [Symbol.asyncDispose]: async () => {
