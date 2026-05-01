@@ -63,7 +63,7 @@ must_haves:
       provides: "Direct SQL test that medical_events returns 0 rows for trainer role"
       contains: "medical_events"
     - path: "tests/integration/email-locale.test.ts"
-      provides: "Mocks Mailgun fetch; asserts subject + body match user's preferred_locale (nl/en/fr)"
+      provides: "Mocks the Resend SDK; asserts subject + body match user's preferred_locale (nl/en/fr)"
       contains: "preferredLocale"
     - path: "tests/e2e/register-with-consent.spec.ts"
       provides: "Full e2e: register → verify email → 3 consents (operational/medical/photo_video) → login redirect"
@@ -668,7 +668,7 @@ Output: A complete test harness (vitest + playwright + testcontainers) and 8+ te
       await page.fill('[name=name]', 'Test User');
       await page.fill('[name=dateOfBirth]', '1990-01-01');
       await page.click('button[type=submit]');
-      // Mailgun mock (Plan 06 + tests/e2e/setup) intercepts and exposes the verify URL
+      // Resend SDK mock (Plan 06 + tests/e2e/setup) intercepts emails.send and exposes the verify URL
       // For now this test is RED.
     });
 

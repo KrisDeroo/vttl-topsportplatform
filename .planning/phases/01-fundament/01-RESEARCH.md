@@ -155,7 +155,7 @@ The technical risk is concentrated in three places. First, RLS performance: deep
 | Async job execution | Worker process (separate Coolify service) | Edge (Upstash Redis queue) | BullMQ pulls from Upstash; isolated from web tier |
 | Health checks | Frontend Server (Route Handler) | Database + Edge | `/live` is process-only; `/ready` probes DB + Redis |
 | Audit log writes | API (tRPC middleware) | Worker (async via BullMQ) | Synchronous for security-critical (consent); async for read-audit (medical Phase 5) |
-| Email sending (verify, reset) | Frontend Server (Better Auth hook) | External (Mailgun/SendGrid EU) | Server triggers; provider does delivery |
+| Email sending (verify, reset) | Frontend Server (Better Auth hook) | External (Resend EU-region) | Server triggers; Resend SDK delivers; abstraction at `src/server/email/send.ts` |
 | Observability | Frontend Server + Worker (pino) | External (Logflare/Axiom EU) | Local pino emits JSON; external aggregator stores + queries |
 | TD user-management UI | Browser/Client (RSC + Server Action) | API (tRPC admin router) | Server Components for read; Server Actions or tRPC mutations for write |
 
@@ -332,7 +332,7 @@ vttl-topsport/
     │   │   └── jobs/
     │   │       └── consent-version-bump.ts  # example job
     │   └── email/
-    │       ├── send.ts           # Mailgun/SendGrid wrapper
+    │       ├── send.ts           # Resend wrapper (EU-region)
     │       └── templates/
     │           ├── verify-email/
     │           │   ├── nl.tsx
@@ -457,9 +457,8 @@ export const env = createEnv({
     UPSTASH_REDIS_REST_URL: z.string().url(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(20),
     REDIS_URL: z.string().url(),                      // ioredis URL (BullMQ — separate Upstash TCP/TLS endpoint OR self-hosted)
-    MAILGUN_API_KEY: z.string().optional(),
-    MAILGUN_DOMAIN: z.string().optional(),
-    SENDGRID_API_KEY: z.string().optional(),          // either Mailgun OR SendGrid
+    RESEND_API_KEY: z.string().min(1),                // Resend EU-region (eu-west-1)
+    EMAIL_FROM: z.string().email(),                   // Verified sender, e.g. noreply@vttl.be
     SENTRY_DSN: z.string().url().optional(),
     LOG_LEVEL: z.enum(['fatal','error','warn','info','debug','trace']).default('info'),
     NODE_ENV: z.enum(['development','test','production']).default('development'),
@@ -476,9 +475,8 @@ export const env = createEnv({
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     REDIS_URL: process.env.REDIS_URL,
-    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY,
-    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN,
-    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM,
     SENTRY_DSN: process.env.SENTRY_DSN,
     LOG_LEVEL: process.env.LOG_LEVEL,
     NODE_ENV: process.env.NODE_ENV,
@@ -1671,59 +1669,56 @@ Endpoints protected by `requireFreshSession` middleware (parent-child link, medi
 
 ### Provider config
 
-Choose **Mailgun EU** or **SendGrid EU** — both have signed DPAs and EU data residency. Recommend Mailgun (simpler API, region selectable in dashboard). [VERIFIED: Mailgun docs — `https://api.eu.mailgun.net/v3/...`].
+**Resend (EU-region, Frankfurt)** is the chosen provider. Account must be provisioned with `eu-west-1` so all recipient PII stays in EU datacenters. Signed DPA via [resend.com/legal/dpa](https://resend.com/legal/dpa). Single-provider implementation in Phase 1; the abstraction at `src/server/email/send.ts` makes a future swap to Mailgun/SendGrid/SES a one-file change. Templates use **React Email components** (`@react-email/components`) for cleaner locale-specific composition.
 
 ### `src/server/email/send.ts`
 
 ```ts
+import { Resend } from 'resend';
+import { render } from '@react-email/render';
 import { env } from '@/lib/env';
 import type { Locale } from '@/i18n/routing';
+import VerifyNl from './templates/verify-email/nl';
+// ... (eight more imports for verify/reset/magic/consent × nl/en/fr)
 
 type Template = 'verify-email' | 'password-reset' | 'magic-link' | 'consent-version-bump';
 
-export async function sendEmailLocalized(args: {
-  to: string;
-  locale: Locale;
-  template: Template;
-  data: Record<string, unknown>;
-}) {
-  const subject = SUBJECTS[args.template][args.locale];
-  const html = await renderTemplate(args.template, args.locale, args.data);
-
-  const res = await fetch(`https://api.eu.mailgun.net/v3/${env.MAILGUN_DOMAIN}/messages`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`api:${env.MAILGUN_API_KEY}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      from: `VTTL Topsport <noreply@vttl.be>`,
-      to: args.to,
-      subject,
-      html,
-      'h:Reply-To': 'support@vttl.be',
-    }),
-  });
-  if (!res.ok) throw new Error(`mailgun_${res.status}`);
-}
-
 const SUBJECTS: Record<Template, Record<Locale, string>> = {
-  'verify-email': { nl: 'Bevestig je e-mailadres', en: 'Verify your email', fr: 'Confirmez votre adresse e-mail' },
-  'password-reset': { nl: 'Stel je wachtwoord opnieuw in', en: 'Reset your password', fr: 'Réinitialisez votre mot de passe' },
-  'magic-link': { nl: 'Je inloglink', en: 'Your login link', fr: 'Votre lien de connexion' },
-  'consent-version-bump': { nl: 'Bijgewerkte voorwaarden', en: 'Updated terms', fr: 'Conditions mises à jour' },
+  'verify-email':         { nl: 'Bevestig je e-mailadres',           en: 'Verify your email',          fr: 'Confirmez votre adresse e-mail' },
+  'password-reset':       { nl: 'Stel je wachtwoord opnieuw in',     en: 'Reset your password',        fr: 'Réinitialisez votre mot de passe' },
+  'magic-link':           { nl: 'Je inloglink',                      en: 'Your login link',            fr: 'Votre lien de connexion' },
+  'consent-version-bump': { nl: 'Bijgewerkte voorwaarden',           en: 'Updated terms',              fr: 'Conditions mises à jour' },
 };
 
-async function renderTemplate(template: Template, locale: Locale, data: Record<string, unknown>) {
-  // React-email or simple string-template; plain string-template is sufficient for Phase 1
-  const mod = await import(`./templates/${template}/${locale}`);
-  return mod.render(data);
+const COMPONENTS = {
+  'verify-email':   { nl: VerifyNl, en: VerifyEn, fr: VerifyFr },
+  // ... three more templates
+};
+
+let _client: Resend | null = null;
+export function getResendClient() { return (_client ??= new Resend(env.RESEND_API_KEY)); }
+export function __resetResendClientForTest() { _client = null; }
+
+export async function sendEmailLocalized(args: {
+  to: string; locale: Locale; template: Template; data: Record<string, unknown>;
+}) {
+  const subject = SUBJECTS[args.template]?.[args.locale];
+  if (!subject) throw new Error(`email_unknown_template_or_locale:${args.template}:${args.locale}`);
+
+  const Component = COMPONENTS[args.template][args.locale];
+  const html = await render(Component(args.data as any));
+
+  const { data, error } = await getResendClient().emails.send({
+    from: env.EMAIL_FROM, to: args.to, replyTo: 'support@vttl.be', subject, html,
+  });
+  if (error) throw new Error(`resend_${(error as any).statusCode ?? 'unknown'}`);
+  return { provider: 'resend' as const, id: data?.id ?? null };
 }
 ```
 
 ### Template structure
 
-Each template = three files (`nl.tsx`, `en.tsx`, `fr.tsx`) exporting a `render(data)` function. Subject + body strings hard-coded in the template file (NOT in `messages/*.json`) so non-engineers can edit emails per locale without touching the i18n catalog.
+Each template = three files (`nl.tsx`, `en.tsx`, `fr.tsx`) — React Email components. Default-exported component receives typed `data` props; named-export `subject` constant mirrors the SUBJECTS map for static analysis. Subject + body strings hard-coded in the template file (NOT in `messages/*.json`) so non-engineers can edit emails per locale without touching the i18n catalog. React Email's `<Html>`, `<Body>`, `<Heading>`, `<Link>` components ensure consistent inlined styles for cross-client rendering (Outlook, Gmail, Apple Mail).
 
 ---
 
@@ -2323,7 +2318,7 @@ npx drizzle-kit introspect
   - Resources: users, consent_records, medical_events, audit_log, parent_child_links
   - Each cell asserts (allowed | denied | not_applicable) with explicit 200/403 expectation
 - [ ] `tests/rls/direct-query.test.ts` — uses raw `pg` (NOT Drizzle) connecting as `app_user` role with `SET LOCAL app.user_id`/`app.user_role` to prove medical_events returns 0 rows for non-owner
-- [ ] `tests/integration/email-locale.test.ts` — mocks Mailgun fetch; asserts `subject` + body match locale
+- [ ] `tests/integration/email-locale.test.ts` — mocks the Resend SDK (`vi.mock('resend')`); asserts `subject` + rendered body match locale
 - [ ] `tests/e2e/register-with-consent.spec.ts` — full flow: register → verify email → consent (3 categories) → login redirect
 - [ ] `tests/integration/ratelimit.test.ts` — chaos: 110 requests in 60s → 11 should be 429
 - [ ] Framework install — already in CLAUDE.md stack; just `npm i -D vitest @playwright/test @testcontainers/postgresql && npx playwright install`
@@ -2531,7 +2526,7 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
 | A1 | Better Auth `freshAge` config option exists with that exact name | Section 4 (auth.ts) | LOW — if renamed, planner adapts; behavior is the same: track `session.freshUntil` |
-| A2 | Mailgun EU endpoint `https://api.eu.mailgun.net/v3/...` accepts the same v3 messages API | Section 8 | LOW — confirmed in Mailgun docs but version verify before send |
+| A2 | Resend account is provisioned in EU-region (`eu-west-1` / Frankfurt) so all PII stays in EU datacenters | Section 8 | LOW — explicitly verifiable in Resend dashboard before first prod send; Resend SDK is region-agnostic, region is bound to the account/API key |
 | A3 | Supabase Pooler (port 6543) supports `prepare: false` for postgres-js driver | Section 10 | MEDIUM — incorrect driver flags can break queries; verify with `SELECT 1` smoke test on first deploy |
 | A4 | `pgcrypto` `pgp_sym_encrypt` is available on Supabase Pro by default | Section 3 | LOW — verified in Supabase extensions list; just enable explicitly in 0000-init |
 | A5 | Postgres `current_setting('x', true)` returns empty string (not NULL) when unset | Section 4 | LOW — documented Postgres behavior; the `current_user_id()` STABLE wrapper handles this with NULLIF |
@@ -2547,8 +2542,8 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
 
 ## Open Questions
 
-1. **Belgian-DPA approved Sentry/Mailgun/Logflare DPAs**
-   - What we know: all three offer EU residency.
+1. **Belgian-DPA approved Sentry/Resend/Logflare DPAs**
+   - What we know: all three offer EU residency (Resend via `eu-west-1`).
    - What's unclear: whether VTTL legal has signed each DPA.
    - Recommendation: Phase 1 design uses these vendors; Phase 8 release-gate verifies signed DPAs are on file. Defer execution to Phase 8.
 
@@ -2562,10 +2557,10 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
    - What's unclear: whether read-only paths (e.g., own profile read) should be allowed pre-consent.
    - Recommendation: tRPC `requireCurrentConsent` blocks ALL protected procedures; banner is full-screen modal. Discuss-phase user already locked this stance.
 
-4. **Mailgun vs. SendGrid choice**
-   - What we know: both EU-resident; CLAUDE.md says "Mailgun EU or SendGrid EU".
-   - What's unclear: which one to pick now.
-   - Recommendation: Mailgun (simpler API, region selectable in dashboard, US/EU separation explicit in URL). Plannner can flip via `lib/email/send.ts` if cost justifies.
+4. **Email provider choice — RESOLVED**
+   - **Decision (post-research):** Resend (EU-region, `eu-west-1`/Frankfurt) — better DX (Better Auth + React Email + cleaner SDK), free tier covers v1 volume, abstracted behind `src/server/email/send.ts` so swap to Mailgun/SendGrid/SES is a 1-file change.
+   - Trade-offs accepted: Resend is newer (since 2023) — smaller scale track-record, but VTTL's v1 volume (≤20k/mnd) is far below any concern threshold.
+   - Pre-prod gate: confirm account region = `eu-west-1`; sign DPA via [resend.com/legal/dpa](https://resend.com/legal/dpa); review sub-processor list.
 
 5. **Timezone assumption for non-Belgian users**
    - What we know: tournaments will have IANA tz field (Phase 4); calendar in Phase 3.
@@ -2583,7 +2578,7 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
 | git | VCS | ✓ | 2.39.5 | — |
 | Postgres 16 (Supabase Pro EU) | Schema + RLS | ✗ (must provision) | — | None — blocking; provision Step 1 of Phase 1 |
 | Upstash Redis (EU) | Rate limit + revocation + BullMQ | ✗ (must provision) | — | None — blocking; provision Step 1 |
-| Mailgun EU | Transactional email | ✗ (must provision) | — | SendGrid EU |
+| Resend (EU-region) | Transactional email | ✗ (must provision) | — | Mailgun EU / SendGrid EU / SES eu-west-1 (1-file swap behind `src/server/email/send.ts`) |
 | Sentry (EU region) | Error tracking | ✗ (must provision) | — | Self-hosted GlitchTip on Hetzner |
 | Logflare or Axiom EU | Log aggregation | ✗ (must provision) | — | Self-hosted Loki + Grafana on Hetzner |
 | Coolify on Hetzner CX31 | App deploy | ✗ (must provision) | — | Railway EU (lower control, higher cost) |
@@ -2593,15 +2588,15 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
 **Missing dependencies with no fallback:**
 - Supabase Pro EU project (blocks all schema work)
 - Upstash Redis EU instance (blocks rate-limit + revocation + BullMQ)
-- Mailgun EU domain `vttl.be` with SPF/DKIM/DMARC (blocks email delivery)
+- Resend domain `vttl.be` (EU-region account) with verified SPF/DKIM/DMARC (blocks email delivery)
 - Coolify instance on Hetzner CX31 (blocks deployment; can defer to Phase 8 if local dev sufficient)
 
 **Missing dependencies with fallback:**
 - Sentry EU → self-hosted GlitchTip
 - Logflare/Axiom → self-hosted Loki
-- Mailgun → SendGrid
+- Resend → Mailgun EU / SendGrid EU / SES eu-west-1
 
-**Phase 1 task ordering implication:** Provisioning tasks (Supabase project, Upstash instance, Mailgun domain) MUST be the first track in the plan, with explicit OWNER + DEADLINE per item. They block almost everything else.
+**Phase 1 task ordering implication:** Provisioning tasks (Supabase project, Upstash instance, Resend domain in EU-region) MUST be the first track in the plan, with explicit OWNER + DEADLINE per item. They block almost everything else.
 
 ---
 
@@ -2623,7 +2618,8 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
 - `.planning/ROADMAP.md` Phase 1 — Doel, Succescriteria, Kerntaken, Risico's
 
 ### Secondary (MEDIUM confidence)
-- Mailgun EU API — `https://documentation.mailgun.com/docs/mailgun/api-reference/` (verified URL pattern)
+- Resend Node SDK — `https://resend.com/docs/send-with-nextjs` (verified — `resend` package + `emails.send`)
+- React Email components — `https://react.email/docs/components/html`, `https://react.email/docs/sdks/render` (verified)
 - Postgres 16 docs — RLS performance, current_setting, SECURITY DEFINER
 
 ### Tertiary (LOW confidence — flagged for validation)
@@ -2641,7 +2637,7 @@ The `app.medical_key` is set at connection-pool init time from `MEDICAL_ENCRYPTI
 - Pitfalls: HIGH — extracted directly from PITFALLS.md + PITFALLS-ADDITIONS.md with explicit Phase 1 mitigations
 - Better Auth specific config keys: MEDIUM — most documented; a few (e.g., `freshAge`) flagged as A1 in Assumptions Log
 - Belgian legal specifics: MEDIUM — minor age 16 documented in CLAUDE.md/REQUIREMENTS.md but flagged A6 for legal-team confirmation
-- Email + DNS infra (SPF/DKIM/DMARC): MEDIUM — pattern is industry-standard but exact records depend on chosen provider (Mailgun vs. SendGrid)
+- Email + DNS infra (SPF/DKIM/DMARC): MEDIUM — pattern is industry-standard; Resend dashboard generates the exact records to add to `vttl.be` DNS (Phase 8 OPS-11)
 
 **Research date:** 2026-05-01
 **Valid until:** 2026-06-01 (30 days; libraries here have stable APIs but Better Auth and next-intl release frequently)

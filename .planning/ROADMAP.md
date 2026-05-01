@@ -19,7 +19,9 @@
 
 **Stack-update:** Database, Storage en Realtime draaien op **Supabase (Pro tier, EU/Frankfurt)**. App-deployment blijft op **Coolify/Hetzner**. Alle migraties, RLS-policies en schema-definities staan in **Drizzle-code** (geen Supabase Dashboard-config) zodat de portabiliteit behouden blijft. Auth blijft **Better Auth** (tegen de Supabase Postgres database).
 
-**Talen-update:** Het platform is **drietalig (nl/en/fr)** met `nl` als default. UI-strings via **`next-intl`** message catalogs (`messages/nl.json`, `messages/en.json`, `messages/fr.json`). Lookup-tabellen slaan codes op (geen labels); display via i18n-keys. Eigennamen (academies, clubs, personen) niet vertaald. Backend-logs en source-code blijven Engels. Consent-tekst per locale versioned, juridische review per taal vóór livegang. Volledige i18n-infrastructuur (DB-kolom, e-mailtemplates × 3, consent × 3) wordt in Fase 1 gebouwd om latere migratie + re-consent te vermijden.
+**Talen-update:** Het platform is **drietalig (nl/en/fr)** met `nl` als default. UI-strings via **`next-intl`** message catalogs (`messages/nl.json`, `messages/en.json`, `messages/fr.json`). Lookup-tabellen slaan codes op (geen labels); display via i18n-keys. Eigennamen (academies, clubs, personen) niet vertaald. Backend-logs en source-code blijven Engels. Consent-tekst per locale versioned (team-drafted in Fase 1; juridische review per taal vóór productie-livegang als release-gate in Fase 8). Volledige i18n-infrastructuur (DB-kolom, e-mailtemplates × 3, consent × 3) wordt in Fase 1 gebouwd om latere migratie + re-consent te vermijden.
+
+**E-mail-update:** Transactionele e-mail via **Resend (EU-region, Frankfurt)** met React Email templates per locale. Achter `lib/email.ts` interface zodat een latere swap (Mailgun EU, SendGrid EU, AWS SES eu-west-1) een 1-bestand-wijziging is. DPA + EU-region-bevestiging vóór eerste productie-mail (release-gate Fase 8).
 
 ---
 
@@ -38,8 +40,8 @@ Plans:
 - [ ] 01-03-drizzle-schema-migration-002-medical-PLAN.md — Migration 002: medical_events, medical_documents, medical_access_audit + pgcrypto + write-time audit trigger
 - [ ] 01-04-rls-policies-and-functions-PLAN.md — Migration 002b: current_user_id/role STABLE wrappers, players_visible_to SECURITY DEFINER, RLS policies on every sensitive table
 - [ ] 01-05-better-auth-config-PLAN.md — Better Auth config (SEC-01..06) + permissions matrix + CSRF middleware + log-redact-paths constant
-- [ ] 01-06-better-auth-i18n-emails-PLAN.md — Localized transactional email (Mailgun EU primary, SendGrid EU fallback) — 4 templates × 3 locales
-- [ ] 01-07-next-intl-routing-and-catalogs-PLAN.md — next-intl routing + locale resolution chain + 3 message catalogs + 9 consent HTML files (gated on legal sign-off)
+- [ ] 01-06-better-auth-i18n-emails-PLAN.md — Localized transactional email via Resend (EU region) + React Email templates — 4 templates × 3 locales
+- [ ] 01-07-next-intl-routing-and-catalogs-PLAN.md — next-intl routing + locale resolution chain + 3 message catalogs + 9 consent HTML files (team-drafted; legal review tracked in Phase 8)
 - [ ] 01-08-locale-switcher-and-preferred-locale-flow-PLAN.md — Globe-icon LocaleSwitcher + setUserLocale Server Action + responsive header/hamburger placement
 - [ ] 01-09-upstash-cache-abstraction-ratelimit-PLAN.md — lib/cache.ts (D-14 abstraction) + JWT revocation list (D-09) + rate-limit middleware (SEC-07/08/09)
 - [ ] 01-10-bullmq-worker-template-PLAN.md — BullMQ Queue + Worker on ioredis; example consent-version-bump job; Coolify two-service hint
@@ -126,7 +128,7 @@ AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06,
 - Migratie 001 uitbreiden met `users.preferred_locale` enum (`nl`/`en`/`fr`, default `nl`, NOT NULL)
 - Locale-resolutie middleware: explicit user pref → session locale (anonymous switcher) → `Accept-Language` → `nl`
 - Better Auth e-mailtemplates per locale (verify-email, password-reset, magic-link) — 3 sets met gedeelde merge-vars
-- Consent-flow: `consent_records` schema bevat `policy_version`, `locale`, en de exacte getoonde tekst (snapshot voor GDPR-bewijs); 3 versies van elk consent-document opstellen (operationeel, medisch, foto/video) — juridische review per taal ingepland vóór productie
+- Consent-flow: `consent_records` schema bevat `policy_version`, `locale`, en de exacte getoonde tekst (snapshot voor GDPR-bewijs); 3 versies van elk consent-document opstellen (operationeel, medisch, foto/video) — team-drafted in Fase 1; juridische review per taal ingepland vóór productie-livegang (release-gate Fase 8, RISK-I18N-LEGAL)
 - `Intl` / `date-fns` locale-config in app: `nl-BE`, `en-GB`, `fr-BE`; weekstart maandag in alle drie
 - Locale-switcher in chrome (header of footer); bij login update direct `users.preferred_locale`
 - Convention: source-code, comments, pino-logs en error-codes blijven Engels; geen NL/FR strings in backend-code
@@ -425,7 +427,7 @@ MSG-01..05, MSG-CHANNEL-01..03
 - Ongelezen-teller: gecachete kolom `unread_count` op gebruiker, bijgewerkt via database-trigger of job — geïndexeerd (MSG-04)
 - tRPC-routers: `message.send`, `message.reply`, `message.forward`, `message.listInbox`, `message.listSent`, `message.markRead`
 - In-app-melding via **Supabase Realtime**: client abonneert op nieuwe rijen in `message_recipients` gefilterd op eigen user_id; RLS-aware (geen lekken)
-- E-mailmelding: fallback per gebruiker, via Mailgun EU of SendGrid EU — gebruikersvoorkeur opgeslagen; in-app blijft primaire kanaal (MSG-CHANNEL-01); systeemnotificatie-templates per locale (`users.preferred_locale` van ontvanger bepaalt template — niet die van zender)
+- E-mailmelding: fallback per gebruiker, via Resend (EU-region) — gebruikersvoorkeur opgeslagen; in-app blijft primaire kanaal (MSG-CHANNEL-01); systeemnotificatie-templates per locale via React Email components (`users.preferred_locale` van ontvanger bepaalt template — niet die van zender)
 - MSG-CHANNEL-02: leesbevestigingen werken alleen in-app; e-mail bevat link "open in app om te bevestigen"
 - MSG-CHANNEL-03: veiligheidskritieke berichten (blessure-updates, dringende roosterwijzigingen) sturen in-app + e-mail + vereisen affirmative RSVP, niet alleen leesbevestiging
 - Bijlage-upload: Supabase Storage `messages/`-prefix + getekende URL
@@ -527,11 +529,11 @@ CAL-06 (ICS-export), OPS-07..12, plus niet-functionele vereisten: prestaties, be
 
 **Email-infra (OPS-11..12):**
 - SPF, DKIM, DMARC DNS-records configureren op `vttl.be` vóór eerste transactionele e-mail
-- Mailgun EU of SendGrid EU configureren; nooit vanuit applicatieserver SMTP
+- Resend (EU-region) configureren met geverifieerde domain `vttl.be` + SPF/DKIM/DMARC; nooit vanuit applicatieserver SMTP
 - Deliverability-test: testberichten naar Gmail, Outlook, Apple Mail; spamclassificatie controleren
 
 **GDPR DPIA & beveiligingsaudit:**
-- DPIA: documenteer verwerkingsactiviteiten, gegevenscategorieën, bewaartermijnen, rechtsgrondslagen, betrokken verwerkers (**Supabase**, Hetzner, Mailgun, Sentry, ggf. Cloudflare), betrokkenenrechten
+- DPIA: documenteer verwerkingsactiviteiten, gegevenscategorieën, bewaartermijnen, rechtsgrondslagen, betrokken verwerkers (**Supabase**, Hetzner, **Resend**, Sentry, ggf. Cloudflare), betrokkenenrechten
 - DPA-verificatie: ondertekende DPA's met Supabase, Hetzner, e-maildienst, Sentry EU
 - Beveiligingsaudit: OWASP Top 10 — focus op injectie, broken access control, security misconfiguration, cryptographic failures, IDOR-tests per rol
 

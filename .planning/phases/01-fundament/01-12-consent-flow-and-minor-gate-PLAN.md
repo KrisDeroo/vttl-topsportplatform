@@ -711,13 +711,13 @@ Output: end-to-end consent capture working; Wave-0 GDPR tests GREEN.
     - `medical-delete.test.ts`: GDPR-07 — delete medical_events for a user; assert other tables untouched (cascade rules from Plan 03).
     - `parent-child.test.ts`: USER-01 + GDPR-02 — link a parent, give parent consent for minor, then call canActivate → ok.
     - `trainer-academy.test.ts`: USER-02 — link a trainer to academies; assert academy_memberships row.
-    - `auth-reset.test.ts`: AUTH-02 — invoke Better Auth password reset; assert sendEmailLocalized was called with the right template + locale (mock Mailgun fetch).
+    - `auth-reset.test.ts`: AUTH-02 — invoke Better Auth password reset; assert sendEmailLocalized was called with the right template + locale (mock the Resend SDK via `vi.mock('resend')`).
 
     Each test follows the pattern of `tests/integration/consent.test.ts` (Task 1): use `freshDb()`, insert fixtures with `h.db.insert(...)`, exercise the unit under test, assert.
 
   </action>
   <verify>
-    <automated>test -f tests/integration/medical-audit.test.ts && test -f tests/integration/medical-delete.test.ts && test -f tests/integration/parent-child.test.ts && test -f tests/integration/trainer-academy.test.ts && test -f tests/integration/auth-reset.test.ts && grep -q "medical_access_audit\|medicalAccessAudit" tests/integration/medical-audit.test.ts && grep -q "canActivate" tests/integration/parent-child.test.ts && grep -q "academyMemberships" tests/integration/trainer-academy.test.ts && grep -q "sendEmailLocalized\|Mailgun\|api.eu.mailgun" tests/integration/auth-reset.test.ts</automated>
+    <automated>test -f tests/integration/medical-audit.test.ts && test -f tests/integration/medical-delete.test.ts && test -f tests/integration/parent-child.test.ts && test -f tests/integration/trainer-academy.test.ts && test -f tests/integration/auth-reset.test.ts && grep -q "medical_access_audit\|medicalAccessAudit" tests/integration/medical-audit.test.ts && grep -q "canActivate" tests/integration/parent-child.test.ts && grep -q "academyMemberships" tests/integration/trainer-academy.test.ts && grep -qE "sendEmailLocalized|vi\\.mock\\(['\"]resend['\"]\\)" tests/integration/auth-reset.test.ts</automated>
   </verify>
   <acceptance_criteria>
     - All 5 test files have real test bodies (not placeholders) — admin-user.test.ts is OWNED BY PLAN 15 (MAJOR-12: no overlap)
@@ -738,7 +738,7 @@ Output: end-to-end consent capture working; Wave-0 GDPR tests GREEN.
   <how-to-verify>
     1. Run `npm run dev`. Visit `/nl/register`.
     2. Register a NEW user with DOB 1990-01-01 (adult). Submit credentials.
-    3. Receive a verification email in Dutch (check Mailgun sandbox or email server logs). Click verify link.
+    3. Receive a verification email in Dutch (check Resend dashboard "Logs" tab in dev mode, or use Resend's `delivered@resend.dev` test address; in CI use the mocked SDK). Click verify link.
     4. Land on `/nl/consent`. See 3 consent boxes; expand each — full Dutch text from `consent-*-1.0.0.nl.html` rendered.
     5. Accept all 3 → land on a "Account pending TD activation" page. Verify in DB:
        - `users.email_verified = true`, `users.active = false`

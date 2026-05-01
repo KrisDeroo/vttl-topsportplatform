@@ -23,7 +23,7 @@ files_modified:
   - public/locales/consent-photo_video-1.0.0.en.html
   - public/locales/consent-photo_video-1.0.0.fr.html
   - tests/unit/intl-format.test.ts
-autonomous: false
+autonomous: true
 requirements:
   - I18N-03
   - I18N-07
@@ -48,7 +48,7 @@ must_haves:
     - "Dev fallback fails LOUD (renders MISSING_KEY:nl.foo.bar); prod fallback graceful (locale → nl → key) — D-20"
     - "Intl/date-fns config: nl-BE, en-GB, fr-BE; weekStartsOn=1 (Monday) — I18N-07"
     - "9 consent HTML files committed to public/locales/ (3 categories × 3 locales) — D-04..06"
-    - "Consent NL brontekst MUST be legally signed BEFORE this plan's HTML files are finalised (D-04 hard gate — checkpoint)"
+    - "Consent texts (9 HTML files: operational/medical_processing/photo_video × nl/en/fr) ship as team-drafted v1.0.0 — legal review tracked at Phase 8 release-gate (RISK-I18N-LEGAL); not blocking for Phase 1"
   artifacts:
     - path: "src/i18n/routing.ts"
       provides: "defineRouting({ locales, defaultLocale: 'nl', localePrefix: 'as-needed', localeDetection: true })"
@@ -82,7 +82,7 @@ must_haves:
 <objective>
 Stand up next-intl App Router infrastructure: routing config, server-side message loader with the 4-step resolution chain (I18N-03), middleware, locale-specific date/number formatting (I18N-07), and the three message catalogs (`messages/nl.json` / `en.json` / `fr.json`) covering Phase 1's auth/registration/consent/error chrome surface (D-18).
 
-Critical hard gate: D-04 mandates that the NL brontekst for all three consent categories is **legally signed BEFORE migration 001 runs**. Migration 001 is Plan 02 (Wave 2). This plan (Wave 3) is the FIRST plan that physically writes the consent HTML files. We add a `checkpoint:human-action` task gating the consent HTML write on legal sign-off.
+Per the updated D-04 (no hard legal-signoff gate before migration 001), this plan ships **team-drafted consent HTML files** versioned as `1.0.0`. If legal review at Phase 8 requires wording changes, bump to `1.0.1` (patch) or `1.1.0` (substantive). RISK-I18N-LEGAL is documented but no longer blocking for Phase 1.
 
 Scope: `auth`, `register`, `consent`, `errors`, `lookups`, `common` keys. Domain strings (player, training, tournament) come per-phase as features land (I18N-05/06/08 in Phase 2+).
 
@@ -102,20 +102,6 @@ Output: complete next-intl wiring + 9 consent HTML files (3 categories × 3 loca
 </context>
 
 <tasks>
-
-<task type="checkpoint:human-action" gate="blocking">
-  <name>Task 0 [BLOCKING gate D-04]: Confirm NL consent brontekst is legally signed</name>
-  <what-built>Nothing yet — this is a precondition gate.</what-built>
-  <how-to-verify>
-    Per D-04: the NL brontekst for all three consent categories (operational, medical_processing, photo_video) must be reviewed and signed by VTTL legal counsel BEFORE the plan writes consent HTML files. EN/FR translations follow per D-05 and become productie-ready by Phase 8.
-
-    User must confirm one of:
-    - **(a)** "approved — proceed: paste signed NL text" — provide the signed NL HTML/text for all 3 categories. Plan continues to Task 4 with this content.
-    - **(b)** "approved with placeholders" — proceed using lawyer-reviewed draft NL text now; final-signed text will be patched into the same files BEFORE Plan 16 (drizzle-kit migrate to staging). Plan continues; `consent-*-1.0.0.nl.html` is committed but flagged in `.planning/phases/01-fundament/01-07-SUMMARY.md` as draft-pending-final.
-    - **(c)** "blocked — postpone" — Plan 07 must NOT write any `consent-*-*.{nl,en,fr}.html` files. The English/French translations in Task 4 are also withheld. The phase cannot proceed past Plan 12 without re-running this checkpoint.
-  </how-to-verify>
-  <resume-signal>One of: "approved — proceed", "approved with placeholders", "blocked — postpone"</resume-signal>
-</task>
 
 <task type="auto" tdd="true">
   <name>Task 1: routing.ts + navigation.ts + resolve.ts (locale resolution chain)</name>
@@ -541,36 +527,41 @@ Output: complete next-intl wiring + 9 consent HTML files (3 categories × 3 loca
 
     Template structure (each file):
     ```html
-    <article data-policy-version="1.0.0" data-locale="nl" data-category="operational">
+    <article data-policy-version="1.0.0" data-locale="nl" data-category="operational" data-legal-status="team-drafted">
       <h2>Toestemming voor verwerking van operationele gegevens — versie 1.0.0</h2>
-      <p>… inhoud (juridisch ondertekend) …</p>
+      <p>VTTL Topsport verwerkt persoonsgegevens van spelers, trainers, ouders, sparringpartners en academiebeheerders met het oog op de operationele werking van het topsportplatform.</p>
       <ul>
-        <li>Welke gegevens? …</li>
-        <li>Doel: …</li>
-        <li>Bewaartermijn: …</li>
-        <li>Rechtsgrondslag: GDPR Art. 6(1)(b) — uitvoering overeenkomst</li>
+        <li><strong>Welke gegevens?</strong> Naam, voornaam, geboortedatum, e-mailadres, telefoonnummer, adres, club, academie, statuut (A/B/C), leeftijdscategorie.</li>
+        <li><strong>Doel:</strong> beheer van de spelerslijst, trainingsregistratie, kalendercoördinatie, communicatie, evaluaties en rangschikking-opvolging.</li>
+        <li><strong>Bewaartermijn:</strong> zo lang het account actief is, plus 5 jaar na deactivering voor administratieve/juridische verplichtingen.</li>
+        <li><strong>Rechtsgrondslag:</strong> GDPR Art. 6(1)(b) — uitvoering overeenkomst voor topsportbegeleiding.</li>
+        <li><strong>Rechten:</strong> inzage, rectificatie, wissing, beperking, bezwaar — via /mijn-gegevens of dpo@vttl.be.</li>
       </ul>
       <p><strong>Versie:</strong> 1.0.0 · <strong>Datum:</strong> 2026-05-01 · <strong>Beheerder:</strong> VTTL — Vlaamse Tafeltennis Liga</p>
     </article>
     ```
 
-    Use the signed text supplied in Task 0 verbatim where available. For "approved with placeholders", insert clear `[PLACEHOLDER — final-signed text pending]` markers and add a `data-draft="true"` attribute so the consent UI can warn in dev.
+    All three categories (operational, medical_processing, photo_video) follow the same structural template per locale. Per category the body content differs:
+    - **operational** — basis-platform verwerking (Art. 6(1)(b))
+    - **medical_processing** — Art. 9(2)(h) verwerking gezondheidsgegevens voor sportgeneeskundige opvolging; expliciete consent vereist; isolatie via medical_events / medical_documents tabellen
+    - **photo_video** — beeldmateriaal van trainingen/wedstrijden voor analyse en communicatie; Art. 6(1)(a) consent; intrekbaar zonder consequenties voor sportieve deelname
 
-    EN and FR files structure-mirror the NL master file. Where final EN/FR sign-off is pending (D-05 — by Phase 8), include `data-draft="true"` markers per locale.
+    EN and FR mirror the NL master file structurally. Translations follow per D-05 — team-drafted in Phase 1; Phase 8 release-gate verifies legal sign-off per locale before that locale goes productie-live.
 
-    Verify file count == 9 and every file has the `data-policy-version`, `data-locale`, `data-category` attributes.
+    All files carry `data-legal-status="team-drafted"` until Phase 8 release-gate replaces it with `data-legal-status="signed"` after legal review (and bumps `policy_version` to `1.0.1` if wording changes).
+
+    Verify file count == 9 and every file has the `data-policy-version`, `data-locale`, `data-category`, `data-legal-status` attributes.
   </action>
   <verify>
-    <automated>test -f public/locales/consent-operational-1.0.0.nl.html && test -f public/locales/consent-operational-1.0.0.en.html && test -f public/locales/consent-operational-1.0.0.fr.html && test -f public/locales/consent-medical_processing-1.0.0.nl.html && test -f public/locales/consent-medical_processing-1.0.0.en.html && test -f public/locales/consent-medical_processing-1.0.0.fr.html && test -f public/locales/consent-photo_video-1.0.0.nl.html && test -f public/locales/consent-photo_video-1.0.0.en.html && test -f public/locales/consent-photo_video-1.0.0.fr.html && [ $(ls public/locales/consent-*.html 2>/dev/null | wc -l) -eq 9 ] && grep -l "data-policy-version=\"1.0.0\"" public/locales/consent-*.html | wc -l | grep -q "9"</automated>
+    <automated>test -f public/locales/consent-operational-1.0.0.nl.html && test -f public/locales/consent-operational-1.0.0.en.html && test -f public/locales/consent-operational-1.0.0.fr.html && test -f public/locales/consent-medical_processing-1.0.0.nl.html && test -f public/locales/consent-medical_processing-1.0.0.en.html && test -f public/locales/consent-medical_processing-1.0.0.fr.html && test -f public/locales/consent-photo_video-1.0.0.nl.html && test -f public/locales/consent-photo_video-1.0.0.en.html && test -f public/locales/consent-photo_video-1.0.0.fr.html && [ $(ls public/locales/consent-*.html 2>/dev/null | wc -l) -eq 9 ] && [ $(grep -l 'data-policy-version="1.0.0"' public/locales/consent-*.html | wc -l) -eq 9 ] && [ $(grep -l 'data-legal-status="team-drafted"' public/locales/consent-*.html | wc -l) -eq 9 ]</automated>
   </verify>
   <acceptance_criteria>
     - 9 files exist matching pattern `consent-{category}-1.0.0.{locale}.html`
-    - Every file declares `data-policy-version="1.0.0"`, `data-locale="…"`, `data-category="…"`
-    - Files contain actual legal text (not Lorem Ipsum) per Task 0 sign-off
-    - If Task 0 chose "approved with placeholders", `data-draft="true"` attribute is present on the affected files
-    - SKIPPED entirely if Task 0 returned "blocked — postpone" — in which case Plan 07 marks itself partially complete and Plan 12 cannot consume the consent registry
+    - Every file declares `data-policy-version="1.0.0"`, `data-locale="…"`, `data-category="…"`, `data-legal-status="team-drafted"`
+    - Files contain real GDPR-compliant draft text per category (welke gegevens / doel / bewaartermijn / rechtsgrondslag / rechten) — not Lorem Ipsum
+    - EN and FR mirror the NL structure with translated body content
   </acceptance_criteria>
-  <done>9 consent HTML files committed; legal sign-off recorded in plan SUMMARY.</done>
+  <done>9 team-drafted consent HTML files committed; legal review tracked in Phase 8 release-gate per RISK-I18N-LEGAL.</done>
 </task>
 
 </tasks>

@@ -91,7 +91,7 @@ created: 2026-05-01
   - Resources: `users`, `consent_records`, `medical_events`, `audit_log`, `parent_child_links`
   - Each cell: `allowed | denied | not_applicable` with explicit 200/403 expectation
 - [ ] `tests/rls/direct-query.test.ts` — uses raw `pg` (NOT Drizzle) connecting as `app_user` role with `SET LOCAL app.user_id` / `SET LOCAL app.user_role` to prove `SELECT * FROM medical_events` returns 0 rows for non-owner
-- [ ] `tests/integration/email-locale.test.ts` — mocks Mailgun fetch; asserts `subject` + body match user's `preferred_locale`
+- [ ] `tests/integration/email-locale.test.ts` — mocks the Resend SDK (`vi.mock('resend')`); asserts `subject` + rendered body match user's `preferred_locale`
 - [ ] `tests/e2e/register-with-consent.spec.ts` — full flow: register → verify email → consent (3 categories: operational/medical/photo-video) → login redirect
 - [ ] `tests/integration/ratelimit.test.ts` — chaos: 110 requests in 60s → exactly 11 should be 429 with `Retry-After`
 - [ ] `tests/integration/consent.test.ts` — version-bump scenario, snapshot stored, re-consent banner triggers
@@ -107,8 +107,8 @@ created: 2026-05-01
 | OPS-05 slow-query log threshold | OPS-05 | Requires Supabase Dashboard / psql role with `pg_settings` access — not part of app runtime | Connect to staging Postgres → `SHOW log_min_duration_statement;` → expect `500ms`. Document in OPS runbook. |
 | MIG-05 rollback procedure | MIG-05 | Procedural / documentation requirement | Manually verify a rollback runbook section exists for each migration in `migrations/*.md`; spot-check by simulating rollback on staging once. |
 | I18N-11 logs/source English | I18N-11 | Convention check; static grep gives signal but human review final | After implementation: `grep -rnE "(speler|trainer|gebruiker|wachtwoord)" src/` → expect zero matches in code. UI strings in `messages/` are exempt. |
-| Belgian DPA signed for processors | OPS-12 / I18N-09 | Legal procurement task | Confirm signed DPAs exist with: Supabase, Hetzner, Mailgun EU, Sentry EU, Cloudflare (if used). Track in DPIA doc (Phase 8). |
-| Consent text legal sign-off (NL) | GDPR-01 / I18N-09 | Legal review by external counsel | NL brontekst v1.0 ondertekend door juridisch adviseur **vóór** migratie 001 wordt uitgevoerd. EN/FR sign-off uiterlijk in Phase 8 release-gate. |
+| Belgian DPA signed for processors | OPS-12 / I18N-09 | Legal procurement task | Confirm signed DPAs exist with: Supabase, Hetzner, Resend (EU), Sentry (EU), Upstash, Cloudflare (if used). Track in DPIA doc (Phase 8). |
+| Consent text legal sign-off (deferred to Phase 8) | GDPR-01 / I18N-09 | Legal review by external counsel | Phase 1 ships **team-drafted** consent text (`policy_version='1.0.0'`, `data-legal-status="team-drafted"`); production-launch gate at Phase 8 release-gate verifies legal sign-off per locale and bumps the policy version on wording changes. NL minimum required before any productie-livegang; EN/FR before those locales gaan productie-live. RISK-I18N-LEGAL gedocumenteerd, niet blokkerend voor Fase 1. |
 
 ---
 

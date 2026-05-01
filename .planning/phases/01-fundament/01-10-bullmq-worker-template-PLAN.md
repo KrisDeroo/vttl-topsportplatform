@@ -237,7 +237,7 @@ Output: working Queue + Worker template with one example job (consent-version-bu
           "name": "worker",
           "command": "npm run worker",
           "healthcheck": null,
-          "env_required": ["DATABASE_URL", "REDIS_URL", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "MAILGUN_API_KEY", "MEDICAL_ENCRYPTION_KEY"]
+          "env_required": ["DATABASE_URL", "REDIS_URL", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "RESEND_API_KEY", "EMAIL_FROM", "MEDICAL_ENCRYPTION_KEY"]
         }
       ]
     }

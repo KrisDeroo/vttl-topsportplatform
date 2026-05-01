@@ -257,9 +257,8 @@ Output: A scaffolded Next.js 15 repository whose `npm run build` and `npx tsc --
     - `UPSTASH_REDIS_REST_URL: z.string().url()` (D-12)
     - `UPSTASH_REDIS_REST_TOKEN: z.string().min(20)` (D-12)
     - `REDIS_URL: z.string().url()` (BullMQ ioredis, separate per gotcha — D-15)
-    - `MAILGUN_API_KEY: z.string().optional()`
-    - `MAILGUN_DOMAIN: z.string().optional()`
-    - `SENDGRID_API_KEY: z.string().optional()`
+    - `RESEND_API_KEY: z.string().min(1)` (Resend EU-region; Plan 06)
+    - `EMAIL_FROM: z.string().email()` (verified sender, e.g. `noreply@vttl.be`)
     - `SENTRY_DSN: z.string().url().optional()`
     - `LOG_LEVEL: z.enum(['fatal','error','warn','info','debug','trace']).default('info')`
     - `NODE_ENV: z.enum(['development','test','production']).default('development')`
@@ -290,10 +289,9 @@ Output: A scaffolded Next.js 15 repository whose `npm run build` and `npx tsc --
     UPSTASH_REDIS_REST_URL=https://eu1-<name>.upstash.io
     UPSTASH_REDIS_REST_TOKEN=<token-from-upstash-console>
     REDIS_URL=rediss://default:<password>@eu1-<name>.upstash.io:6379
-    # Email (Plan 06; pick Mailgun OR SendGrid)
-    MAILGUN_API_KEY=
-    MAILGUN_DOMAIN=
-    SENDGRID_API_KEY=
+    # Email (Plan 06 — Resend EU-region; verify domain in Resend dashboard with SPF/DKIM/DMARC)
+    RESEND_API_KEY=re_<key-from-resend-console>
+    EMAIL_FROM=noreply@vttl.be
     # Observability (Plan 13)
     SENTRY_DSN=
     LOGFLARE_API_KEY=

@@ -34,17 +34,17 @@ tags:
 must_haves:
   truths:
     - "sendEmailLocalized({ to, locale, template, data }) selects the recipient's locale (NOT sender's) for subject + body — I18N-04"
-    - "Mailgun EU endpoint https://api.eu.mailgun.net/v3/{domain}/messages used by default; SendGrid fallback when SENDGRID_API_KEY set instead"
-    - "12 template files: 4 templates × 3 locales (verify-email, password-reset, magic-link, consent-version-bump)"
+    - "Resend (EU-region) is the email provider; abstracted behind src/server/email/send.ts so a swap to Mailgun/SendGrid/SES is a 1-file change"
+    - "12 template files: 4 templates × 3 locales (verify-email, password-reset, magic-link, consent-version-bump) as React Email components"
     - "Better Auth sendResetPassword + sendVerificationEmail hooks now CALL sendEmailLocalized with user.preferredLocale (replaces Plan 05 stubs)"
     - "tests/integration/email-locale.test.ts (Plan 17) is now GREEN — assertion strings match the 3 subjects per template"
   artifacts:
     - path: "src/server/email/send.ts"
-      provides: "sendEmailLocalized + provider abstraction (Mailgun / SendGrid)"
+      provides: "sendEmailLocalized backed by Resend SDK"
       exports: ["sendEmailLocalized"]
     - path: "src/server/email/templates/verify-email/nl.tsx"
-      provides: "render(data) function returning subject+html for Dutch verify-email"
-      exports: ["render"]
+      provides: "React Email component for Dutch verify-email; default-export the component, named-export `subject`"
+      exports: ["default", "subject"]
   key_links:
     - from: "src/server/auth/auth.ts"
       to: "src/server/email/send.ts"
@@ -53,7 +53,9 @@ must_haves:
 ---
 
 <objective>
-Localize Better Auth's transactional emails. Plan 05 stubbed the hooks; this plan replaces them with `sendEmailLocalized()` against Mailgun EU. 12 templates total (4 × 3 locales). Recipient's `preferredLocale` (NOT sender's) determines which template is rendered (I18N-04).
+Localize Better Auth's transactional emails. Plan 05 stubbed the hooks; this plan replaces them with `sendEmailLocalized()` backed by Resend (EU-region). 12 templates total (4 × 3 locales) implemented as React Email components. Recipient's `preferredLocale` (NOT sender's) determines which template is rendered (I18N-04).
+
+Provider is wrapped behind `src/server/email/send.ts` — switching to Mailgun, SendGrid or SES later is a single-file change (D-14 abstraction pattern, mirrored from `lib/cache.ts`).
 
 Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.ts` GREEN.
 </objective>
@@ -73,11 +75,12 @@ Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.t
 <tasks>
 
 <task type="auto" tdd="true">
-  <name>Task 1: send.ts (Mailgun EU + SendGrid fallback) + 12 template files</name>
+  <name>Task 1: send.ts (Resend EU) + 12 React Email template files</name>
   <read_first>
-    - .planning/phases/01-fundament/01-RESEARCH.md §Email Templates (lines 1670–1726) — exact send pattern + subject map
+    - .planning/phases/01-fundament/01-RESEARCH.md §Email Templates — subject map + send pattern (provider lines now read Resend; see overview)
     - .planning/phases/01-fundament/01-CONTEXT.md §B (D-04..07 — consent-version-bump template uses these)
     - tests/integration/email-locale.test.ts (Plan 17 — RED until this plan; expected subjects in all 3 locales)
+    - https://resend.com/docs/send-with-nextjs and https://react.email/docs/components/html — Resend SDK + React Email reference
   </read_first>
   <files>
     src/server/email/send.ts
@@ -95,17 +98,38 @@ Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.t
     src/server/email/templates/consent-version-bump/fr.tsx
   </files>
   <behavior>
-    - Test 1 (integration): sendEmailLocalized({ to, locale: 'nl', template: 'verify-email', data: { verifyUrl } }) calls Mailgun with subject "Bevestig je e-mailadres"
+    - Test 1 (integration): sendEmailLocalized({ to, locale: 'nl', template: 'verify-email', data: { verifyUrl } }) calls Resend with subject "Bevestig je e-mailadres"
     - Test 2 (integration): same with locale: 'en' → subject "Verify your email"
     - Test 3 (integration): same with locale: 'fr' → subject "Confirmez votre adresse e-mail"
-    - Test 4 (integration): missing template/locale combo throws
+    - Test 4 (integration): missing template/locale combo throws "email_unknown_template_or_locale:..."
+    - Test 5 (integration): when Resend SDK returns 4xx/5xx, sendEmailLocalized throws "resend_<status>" and `email.send_failed` is logged at warn level (provider: 'resend')
   </behavior>
   <action>
-    Create `src/server/email/send.ts` per RESEARCH §send.ts (lines 1678–1722) and add SendGrid fallback:
+    Install dependencies (Plan 01's package.json picks these up; Plan 06 just adds them):
+    ```
+    npm i resend @react-email/components @react-email/render
+    npm i -D @types/react
+    ```
+
+    Create `src/server/email/send.ts`:
     ```ts
+    import { Resend } from 'resend';
+    import { render } from '@react-email/render';
     import { env } from '@/lib/env';
     import type { Locale } from '@/i18n/routing';
     import { log } from '@/lib/log';
+    import VerifyNl from './templates/verify-email/nl';
+    import VerifyEn from './templates/verify-email/en';
+    import VerifyFr from './templates/verify-email/fr';
+    import ResetNl from './templates/password-reset/nl';
+    import ResetEn from './templates/password-reset/en';
+    import ResetFr from './templates/password-reset/fr';
+    import MagicNl from './templates/magic-link/nl';
+    import MagicEn from './templates/magic-link/en';
+    import MagicFr from './templates/magic-link/fr';
+    import ConsentNl from './templates/consent-version-bump/nl';
+    import ConsentEn from './templates/consent-version-bump/en';
+    import ConsentFr from './templates/consent-version-bump/fr';
 
     export type Template = 'verify-email' | 'password-reset' | 'magic-link' | 'consent-version-bump';
 
@@ -116,10 +140,20 @@ Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.t
       'consent-version-bump': { nl: 'Bijgewerkte voorwaarden',           en: 'Updated terms',              fr: 'Conditions mises à jour' },
     };
 
-    async function renderTemplate(template: Template, locale: Locale, data: Record<string, unknown>) {
-      const mod = await import(`./templates/${template}/${locale}`);
-      return mod.render(data);
+    const COMPONENTS = {
+      'verify-email':         { nl: VerifyNl,  en: VerifyEn,  fr: VerifyFr  },
+      'password-reset':       { nl: ResetNl,   en: ResetEn,   fr: ResetFr   },
+      'magic-link':           { nl: MagicNl,   en: MagicEn,   fr: MagicFr   },
+      'consent-version-bump': { nl: ConsentNl, en: ConsentEn, fr: ConsentFr },
+    } as const;
+
+    // Lazy-init so test mocks can intercept the constructor.
+    let _client: Resend | null = null;
+    export function getResendClient(): Resend {
+      if (!_client) _client = new Resend(env.RESEND_API_KEY);
+      return _client;
     }
+    export function __resetResendClientForTest() { _client = null; }
 
     export async function sendEmailLocalized(args: {
       to: string;
@@ -130,92 +164,77 @@ Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.t
       const subject = SUBJECTS[args.template]?.[args.locale];
       if (!subject) throw new Error(`email_unknown_template_or_locale:${args.template}:${args.locale}`);
 
-      const html = await renderTemplate(args.template, args.locale, args.data);
+      const Component = COMPONENTS[args.template][args.locale] as (props: any) => JSX.Element;
+      const html = await render(Component(args.data as any));
 
-      // Provider selection: Mailgun first, SendGrid fallback
-      if (env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN) {
-        return sendViaMailgun({ to: args.to, subject, html });
-      }
-      if (env.SENDGRID_API_KEY) {
-        return sendViaSendGrid({ to: args.to, subject, html });
-      }
-      throw new Error('email_no_provider_configured');
-    }
-
-    async function sendViaMailgun(args: { to: string; subject: string; html: string }) {
-      const res = await fetch(`https://api.eu.mailgun.net/v3/${env.MAILGUN_DOMAIN}/messages`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${Buffer.from(`api:${env.MAILGUN_API_KEY}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          from: 'VTTL Topsport <noreply@vttl.be>',
-          to: args.to,
-          subject: args.subject,
-          html: args.html,
-          'h:Reply-To': 'support@vttl.be',
-        }),
+      const resend = getResendClient();
+      const { data, error } = await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: args.to,
+        replyTo: 'support@vttl.be',
+        subject,
+        html,
+        headers: { 'X-Entity-Ref-ID': `${args.template}:${args.locale}` },
       });
-      if (!res.ok) {
-        log.warn({ status: res.status, provider: 'mailgun' }, 'email.send_failed');
-        throw new Error(`mailgun_${res.status}`);
-      }
-      return { provider: 'mailgun' as const, status: res.status };
-    }
 
-    async function sendViaSendGrid(args: { to: string; subject: string; html: string }) {
-      const res = await fetch('https://api.eu.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.SENDGRID_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          personalizations: [{ to: [{ email: args.to }] }],
-          from: { email: 'noreply@vttl.be', name: 'VTTL Topsport' },
-          subject: args.subject,
-          content: [{ type: 'text/html', value: args.html }],
-          reply_to: { email: 'support@vttl.be' },
-        }),
-      });
-      if (!res.ok) {
-        log.warn({ status: res.status, provider: 'sendgrid' }, 'email.send_failed');
-        throw new Error(`sendgrid_${res.status}`);
+      if (error) {
+        log.warn({ status: (error as any).statusCode ?? 0, provider: 'resend' }, 'email.send_failed');
+        throw new Error(`resend_${(error as any).statusCode ?? 'unknown'}`);
       }
-      return { provider: 'sendgrid' as const, status: res.status };
+      return { provider: 'resend' as const, id: data?.id ?? null };
     }
     ```
 
-    Create 12 template files. Each exports `render(data)` returning HTML string. Templates are SIMPLE strings (Phase 1) — Phase 8 may move to react-email. Example for `src/server/email/templates/verify-email/nl.tsx`:
-    ```ts
-    interface Data { verifyUrl: string; }
-    export function render(data: Data | Record<string, unknown>): string {
-      const d = data as Data;
-      return `
-        <!doctype html>
-        <html lang="nl">
-        <body style="font-family:system-ui,sans-serif;line-height:1.5;color:#1a1a1a">
-          <h1 style="color:#0066cc">Bevestig je e-mailadres</h1>
-          <p>Welkom bij VTTL Topsport. Klik op de knop om je e-mailadres te bevestigen.</p>
-          <p style="margin:24px 0">
-            <a href="${d.verifyUrl}" style="background:#0066cc;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;display:inline-block">Bevestig e-mail</a>
-          </p>
-          <p style="color:#666;font-size:14px">Of kopieer deze link: ${d.verifyUrl}</p>
-          <p style="color:#666;font-size:14px">Deze link is 24 uur geldig.</p>
-          <hr style="margin:32px 0;border:0;border-top:1px solid #eee">
-          <p style="color:#999;font-size:12px">VTTL — Vlaamse Tafeltennis Liga · vttl.be</p>
-        </body>
-        </html>
-      `;
+    Notes:
+    - **EU-region**: account must be provisioned with `eu-west-1` / Frankfurt (verify in Resend dashboard before first prod send). Resend SDK call signature is region-agnostic; the API key is bound to the region of the account.
+    - **No fallback provider** in Phase 1 — abstraction is at the file boundary (`src/server/email/send.ts`); switching to Mailgun/SendGrid/SES is a one-file rewrite. Avoid Phase 1 over-engineering with a multi-provider switch.
+
+    Create 12 React Email template files. Each exports a default React component AND a named `subject` constant (mirrors what's in SUBJECTS for static analysis). Example for `src/server/email/templates/verify-email/nl.tsx`:
+    ```tsx
+    import { Body, Container, Head, Heading, Hr, Html, Link, Preview, Section, Text } from '@react-email/components';
+
+    export const subject = 'Bevestig je e-mailadres';
+
+    interface Props { verifyUrl: string; }
+
+    export default function VerifyEmailNl({ verifyUrl }: Props) {
+      return (
+        <Html lang="nl">
+          <Head />
+          <Preview>Bevestig je e-mailadres voor VTTL Topsport</Preview>
+          <Body style={{ fontFamily: 'system-ui, sans-serif', lineHeight: 1.5, color: '#1a1a1a' }}>
+            <Container>
+              <Heading style={{ color: '#0066cc' }}>Bevestig je e-mailadres</Heading>
+              <Text>Welkom bij VTTL Topsport. Klik op de knop om je e-mailadres te bevestigen.</Text>
+              <Section style={{ margin: '24px 0' }}>
+                <Link
+                  href={verifyUrl}
+                  style={{
+                    background: '#0066cc',
+                    color: '#fff',
+                    padding: '12px 24px',
+                    textDecoration: 'none',
+                    borderRadius: 4,
+                    display: 'inline-block',
+                  }}
+                >
+                  Bevestig e-mail
+                </Link>
+              </Section>
+              <Text style={{ color: '#666', fontSize: 14 }}>Of kopieer deze link: {verifyUrl}</Text>
+              <Text style={{ color: '#666', fontSize: 14 }}>Deze link is 24 uur geldig.</Text>
+              <Hr style={{ margin: '32px 0', border: 0, borderTop: '1px solid #eee' }} />
+              <Text style={{ color: '#999', fontSize: 12 }}>VTTL — Vlaamse Tafeltennis Liga · vttl.be</Text>
+            </Container>
+          </Body>
+        </Html>
+      );
     }
     ```
 
-    Mirror for en (heading "Verify your email", body in English) and fr (heading "Confirmez votre adresse e-mail", body in French).
+    Mirror the same component shape for `en.tsx` (heading "Verify your email", body English) and `fr.tsx` (heading "Confirmez votre adresse e-mail", body French).
 
-    Repeat for `password-reset/{nl,en,fr}.tsx`, `magic-link/{nl,en,fr}.tsx`, `consent-version-bump/{nl,en,fr}.tsx`.
-
-    Data shapes per template:
+    Repeat the structure for the other three templates × 3 locales = 9 more files. Data shapes per template:
     - verify-email: `{ verifyUrl: string }`
     - password-reset: `{ resetUrl: string; expiresInMinutes: number }`
     - magic-link: `{ loginUrl: string; expiresInMinutes: number }`
@@ -250,17 +269,18 @@ Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.t
     Verify `tests/integration/email-locale.test.ts` (created in Plan 17) is now able to import `@/server/email/send` and asserts the 3 expected subjects.
   </action>
   <verify>
-    <automated>test -f src/server/email/send.ts && [ $(ls src/server/email/templates/*/*.tsx 2>/dev/null | wc -l) -eq 12 ] && grep -q "Bevestig je e-mailadres" src/server/email/send.ts && grep -q "Verify your email" src/server/email/send.ts && grep -q "Confirmez votre adresse e-mail" src/server/email/send.ts && grep -q "api.eu.mailgun.net" src/server/email/send.ts && grep -q "api.eu.sendgrid.com" src/server/email/send.ts && grep -q "Bevestig je e-mailadres" src/server/email/templates/verify-email/nl.tsx && grep -q "Verify your email" src/server/email/templates/verify-email/en.tsx && grep -q "Confirmez votre adresse e-mail" src/server/email/templates/verify-email/fr.tsx && grep -q "sendEmailLocalized" src/server/auth/auth.ts && ! grep -q "sendResetPasswordStub" src/server/auth/auth.ts && npx vitest run tests/integration/email-locale.test.ts</automated>
+    <automated>test -f src/server/email/send.ts && [ $(ls src/server/email/templates/*/*.tsx 2>/dev/null | wc -l) -eq 12 ] && grep -q "Bevestig je e-mailadres" src/server/email/send.ts && grep -q "Verify your email" src/server/email/send.ts && grep -q "Confirmez votre adresse e-mail" src/server/email/send.ts && grep -q "from 'resend'" src/server/email/send.ts && grep -q "@react-email/render" src/server/email/send.ts && ! grep -q "mailgun\|sendgrid\|MAILGUN\|SENDGRID" src/server/email/send.ts && grep -q "Bevestig je e-mailadres" src/server/email/templates/verify-email/nl.tsx && grep -q "Verify your email" src/server/email/templates/verify-email/en.tsx && grep -q "Confirmez votre adresse e-mail" src/server/email/templates/verify-email/fr.tsx && grep -q "sendEmailLocalized" src/server/auth/auth.ts && ! grep -q "sendResetPasswordStub" src/server/auth/auth.ts && npx vitest run tests/integration/email-locale.test.ts</automated>
   </verify>
   <acceptance_criteria>
     - `src/server/email/send.ts` exports `sendEmailLocalized` with subject map for all 4 templates × 3 locales
-    - 12 template files exist (verify-email, password-reset, magic-link, consent-version-bump × nl/en/fr)
-    - Each template exports `render(data)` returning HTML string
-    - Mailgun EU endpoint + SendGrid EU fallback both implemented
+    - `send.ts` imports `Resend` from `'resend'` and `render` from `'@react-email/render'`
+    - `send.ts` does NOT reference Mailgun, SendGrid, or any other provider (single-provider cleanly abstracted)
+    - 12 template files exist (verify-email, password-reset, magic-link, consent-version-bump × nl/en/fr) as React Email components with default export + named `subject` const
     - `auth.ts` no longer references stubs; calls `sendEmailLocalized` with `user.preferredLocale`
-    - `tests/integration/email-locale.test.ts` passes for all 3 locales
+    - `tests/integration/email-locale.test.ts` passes for all 3 locales (mocks `Resend` constructor via `__resetResendClientForTest` + module mock)
+    - Failure path: when mocked Resend returns `{ error: { statusCode: 422 } }`, `sendEmailLocalized` throws `resend_422`
   </acceptance_criteria>
-  <done>Email pipeline localized; recipient locale drives template selection.</done>
+  <done>Email pipeline localized via Resend; recipient locale drives template selection.</done>
 </task>
 
 </tasks>
@@ -270,33 +290,35 @@ Output: working email pipeline; Plan 17's `tests/integration/email-locale.test.t
 
 | Boundary | Description |
 |----------|-------------|
-| App ↔ Mailgun EU / SendGrid EU | API key in env (Coolify secret); HTTPS to api.eu.* |
-| User input ↔ Email body | URLs interpolated into HTML — Better Auth-controlled, not user-controlled (no XSS surface) |
+| App ↔ Resend EU | API key in env (Coolify secret); HTTPS via Resend SDK; account region locked to eu-west-1 / Frankfurt |
+| User input ↔ Email body | Variables interpolated via React component props — XSS handled by React's escaping; URLs come from Better Auth (not user-controlled) |
 
 ## STRIDE Threat Register
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-01-06 | Information Disclosure | Email content in logs | mitigate | pino REDACT_PATHS strips `*.email`; `email.send_failed` log entries omit body content |
+| T-01-06 | Information Disclosure | Email content in logs | mitigate | pino REDACT_PATHS strips `*.email`; `email.send_failed` log entries omit body content; only status code + provider name logged |
+| T-01-06b | Information Disclosure | Resend account region drift | accept | Account is provisioned in eu-west-1 / Frankfurt before first prod send; documented in DPIA (Phase 8); recipient PII never leaves EU |
 </threat_model>
 
 <verification>
-- 12 template files exist
+- 12 React Email template files exist
+- `src/server/email/send.ts` imports `Resend` and `@react-email/render`; contains no Mailgun/SendGrid references
 - `npx tsc --noEmit` exits 0
-- `tests/integration/email-locale.test.ts` GREEN
-- Plan 17's `tests/integration/email-locale.test.ts` mocks fetch — no real Mailgun calls in tests
+- `tests/integration/email-locale.test.ts` GREEN with the Resend SDK mocked (no real Resend calls in tests)
 </verification>
 
 <success_criteria>
-- 4 templates × 3 locales = 12 files
+- 4 templates × 3 locales = 12 files (React Email components)
 - Recipient locale (preferredLocale) drives selection (I18N-04)
-- Mailgun EU primary, SendGrid EU fallback
+- Resend (EU-region) is the sole provider; abstraction at `src/server/email/send.ts`
 - Better Auth hooks now use `sendEmailLocalized`
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/01-fundament/01-06-SUMMARY.md` documenting:
-- Provider chosen (Mailgun vs SendGrid) — A2 + Open Question 4 resolution
-- DNS records (SPF/DKIM/DMARC) NOT yet configured — Phase 8 OPS-11 task
+- Provider: Resend (EU-region, eu-west-1 / Frankfurt) — verified pre-deploy in Resend dashboard
+- DPA signed via [resend.com/legal/dpa](https://resend.com/legal/dpa) — track in Phase 8 DPIA
+- DNS records (SPF/DKIM/DMARC for `vttl.be`) NOT yet configured — Phase 8 OPS-11 task
 - Note: production-readiness blocked until DNS records on `vttl.be` are live
 </output>

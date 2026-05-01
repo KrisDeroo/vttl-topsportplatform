@@ -232,7 +232,7 @@
 - [ ] **OPS-09**: Monthly restore drill: backup restored to staging Supabase project, row counts and integrity validated, timing documented
 - [ ] **OPS-10**: Medical records archived monthly to encrypted offsite storage with 30-year retention (Belgian patient rights law)
 - [ ] **OPS-11**: SPF, DKIM, DMARC configured on `vttl.be` mail domain before first transactional email is sent
-- [ ] **OPS-12**: Transactional email via Mailgun EU or SendGrid EU — never the application server SMTP
+- [ ] **OPS-12**: Transactional email via Resend (EU region) — never the application server SMTP; signed DPA + EU-region (Frankfurt) confirmed before first production email
 
 ---
 
@@ -246,8 +246,8 @@
 - [ ] **I18N-06**: Proper nouns are not translated: academy names ("Topsportschool", "Academy Antwerpen"), club names, person names, tournament event names are stored once in their canonical form and rendered identically across locales
 - [ ] **I18N-07**: Date, time, and number formatting uses `Intl` / `date-fns` with the user's locale (`nl-BE`, `en-GB`, `fr-BE`); week starts on Monday in all three locales
 - [ ] **I18N-08**: All Zod validation messages are emitted as i18n keys, not hardcoded strings; client renders the localized text
-- [ ] **I18N-09**: Consent text (operational data, medical processing, photo/video use) is versioned per locale: each `consent_records` row stores `policy_version`, `locale`, and the exact text shown at consent time; legal review required per language before any locale goes live
-- [ ] **I18N-10**: Translation completeness gate before any new locale is released to production: 100% string coverage check in CI (no missing keys, no fallback-to-English in user-facing surfaces); `nl` and `en` ship at v1; `fr` ships when its catalog is complete and consent text is legally reviewed
+- [ ] **I18N-09**: Consent text (operational data, medical processing, photo/video use) is versioned per locale: each `consent_records` row stores `policy_version`, `locale`, and the exact text shown at consent time. NL/EN/FR consent texts are team-drafted during build; formal legal review per language is **recommended** before production launch and tracked in Phase 8 release-gate (RISK-I18N-LEGAL). Phase 1 ships staging-quality consent text — production launch blocked until legal review signs off NL at minimum.
+- [ ] **I18N-10**: Translation completeness gate before any new locale is released to production: 100% string coverage check in CI (no missing keys, no fallback-to-English in user-facing surfaces). Production-launch checklist requires legal sign-off on consent text per locale before that locale goes live; `nl` is the v1 minimum; `en` and `fr` ship when their catalog is complete and their consent text passes legal review.
 - [ ] **I18N-11**: Backend logs (pino), source code, comments, error codes, and database column names remain English regardless of UI locale — system observability is single-language
 
 ---
@@ -420,7 +420,7 @@
 | I18N-06 | Phase 2 — Identiteit & Bestanden | proper-noun handling for academy/club/person names |
 | I18N-07 | Phase 1 — Fundament | `Intl` / `date-fns` locale config; reused across phases |
 | I18N-08 | Phase 2 — Identiteit & Bestanden | Zod-error i18n keys; first real forms appear here |
-| I18N-09 | Phase 1 — Fundament | versioned consent text per locale (legal review × 3) |
+| I18N-09 | Phase 1 — Fundament | versioned consent text per locale (team-drafted; legal review tracked at Phase 8) |
 | I18N-10 | Phase 8 — Kwaliteit & Release | release gate — 100% catalog coverage check in CI |
 | I18N-11 | Phase 1 — Fundament | logging/source-code English convention (pino redact already English) |
 
