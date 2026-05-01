@@ -1,0 +1,39 @@
+{
+  "_comment": "Coolify two-service hint per D-15. Coolify ignores this file when services are configured via the dashboard, but this is the canonical declaration of intent for ops handover.",
+  "services": [
+    {
+      "name": "web",
+      "command": "npm run start",
+      "port": 3000,
+      "healthcheck": "/api/health/ready",
+      "env_required": [
+        "DATABASE_URL",
+        "DIRECT_DATABASE_URL",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "REDIS_URL",
+        "RESEND_API_KEY",
+        "EMAIL_FROM",
+        "MEDICAL_ENCRYPTION_KEY",
+        "NEXT_PUBLIC_APP_URL",
+        "NEXT_PUBLIC_DEFAULT_LOCALE"
+      ]
+    },
+    {
+      "name": "worker",
+      "command": "npm run worker",
+      "healthcheck": null,
+      "env_required": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "RESEND_API_KEY",
+        "EMAIL_FROM",
+        "MEDICAL_ENCRYPTION_KEY"
+      ]
+    }
+  ]
+}
