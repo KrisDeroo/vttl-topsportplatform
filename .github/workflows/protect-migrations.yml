@@ -1,0 +1,68 @@
+# Enforces MIG-01 (immutability of committed migrations) and MIG-05 (rollback
+# companion required) at the PR level. The job is skipped on PRs that don't
+# touch drizzle/, so it adds zero overhead to non-schema PRs.
+#
+# Reference:
+#   - docs/migration-runbook.md §Hard Rules
+#   - .planning/phases/01-fundament/01-RESEARCH.md §Migration Governance
+#
+# This workflow is a sibling of .github/workflows/ci.yml (Plan 17). Keeping it
+# separate means the standard CI pipeline doesn't depend on `git fetch
+# --depth=0` and the migration-protection logic stays auditable in one place.
+
+name: Protect Migrations
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'drizzle/**'
+
+jobs:
+  ensure-no-edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # We diff against origin/main, so we need the full history of main.
+          fetch-depth: 0
+
+      - name: MIG-01 — committed migrations may not be edited
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=0 || git fetch origin main
+          # All drizzle/[0-9]*.sql or drizzle/[0-9]*.rollback.md files changed in this PR.
+          CHANGED=$(git diff --name-only origin/main...HEAD -- 'drizzle/[0-9]*.sql' 'drizzle/[0-9]*.rollback.md' || true)
+          VIOLATIONS=""
+          for f in $CHANGED; do
+            # If the file already exists on main, this PR is editing a committed migration.
+            if git cat-file -e "origin/main:$f" 2>/dev/null; then
+              VIOLATIONS="$VIOLATIONS $f"
+            fi
+          done
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::MIG-01 violation — committed migrations may not be edited:$VIOLATIONS"
+            echo "Add a NEW migration that reverses or supersedes the change. See docs/migration-runbook.md."
+            exit 1
+          fi
+          echo "OK — only new migrations or non-migration drizzle/ files changed."
+
+      - name: MIG-05 — every new migration must ship a rollback companion
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=0 || git fetch origin main
+          # New SQL files added in this PR (status A only — pure additions).
+          NEW_SQL=$(git diff --name-only --diff-filter=A origin/main...HEAD -- 'drizzle/[0-9]*.sql' || true)
+          MISSING=""
+          for sql in $NEW_SQL; do
+            md="${sql%.sql}.rollback.md"
+            if [ ! -f "$md" ]; then
+              MISSING="$MISSING $sql (expected $md)"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::MIG-05 violation — new migration(s) without companion rollback.md:$MISSING"
+            echo "See docs/migration-runbook.md for the rollback companion template."
+            exit 1
+          fi
+          echo "OK — rollback companions present for every new migration."
