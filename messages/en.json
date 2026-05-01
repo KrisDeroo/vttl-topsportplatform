@@ -1,0 +1,155 @@
+{
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "email": "Email address",
+      "password": "Password",
+      "submit": "Sign in",
+      "forgot": "Forgot your password?"
+    },
+    "register": {
+      "title": "Create account",
+      "name": "Name",
+      "dateOfBirth": "Date of birth",
+      "submit": "Register",
+      "minorWarning": "Players under 16 require parent/guardian consent."
+    },
+    "resetPassword": {
+      "title": "Reset your password",
+      "submit": "Send email",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "instructions": "We sent a verification email to {email}.",
+      "resend": "Resend"
+    },
+    "errors": {
+      "invalidCredentials": "Incorrect email or password",
+      "lockoutTriggered": "Too many failed attempts. Try again in 15 minutes.",
+      "sessionExpired": "Your session expired. Please sign in again.",
+      "rateLimited": "Too many requests. Please wait a minute.",
+      "emailNotVerified": "Please verify your email first.",
+      "accountInactive": "Your account is not yet activated. Contact the Technical Director.",
+      "minorPendingParent": "Account is awaiting parent/guardian consent."
+    }
+  },
+  "consent": {
+    "title": "Consents",
+    "operational": {
+      "label": "Operational data (required)",
+      "version": "1.0.0"
+    },
+    "medicalProcessing": {
+      "label": "Medical data processing (optional)",
+      "version": "1.0.0"
+    },
+    "photoVideo": {
+      "label": "Photo and video use (optional)",
+      "version": "1.0.0"
+    },
+    "submit": "Agree and continue",
+    "withdraw": "Withdraw consent",
+    "reConsentRequired": "The terms have been updated. Please reconfirm to continue.",
+    "showFullText": "Show full text"
+  },
+  "lookups": {
+    "status": {
+      "status_a": "A-status",
+      "status_b": "B-status",
+      "status_c": "C-status"
+    },
+    "academy": {
+      "topsportschool": "Topsportschool",
+      "academy_antwerpen": "Academy Antwerpen"
+    },
+    "trainingType": {
+      "training_type_group": "Group",
+      "training_type_individual": "Individual",
+      "training_type_physical": "Physical",
+      "training_type_mental": "Mental"
+    },
+    "tournamentType": {
+      "tournament_wtt": "WTT",
+      "tournament_wtt_star": "WTT Star",
+      "tournament_ettu": "ETTU",
+      "tournament_ejk": "EJK",
+      "tournament_wk": "WK",
+      "tournament_internationaal": "International",
+      "tournament_belgium": "Belgium"
+    },
+    "rankingType": {
+      "ranking_senior_world": "World Ranking Senior",
+      "ranking_youth_world": "World Ranking Youth",
+      "ranking_senior_european": "European Senior",
+      "ranking_youth_european": "European Youth",
+      "ranking_belgium": "Belgium"
+    },
+    "organisation": {
+      "org_private": "Private",
+      "org_kbttb": "KBTTB",
+      "org_topsportschool": "Topsportschool",
+      "org_academy": "Academy",
+      "org_provincial": "Provincial",
+      "org_club": "Club"
+    },
+    "outcomeLevel": {
+      "outcome_winner": "Winner",
+      "outcome_finalist": "Finalist",
+      "outcome_last_4": "Last 4",
+      "outcome_last_8": "Last 8",
+      "outcome_last_16": "Last 16",
+      "outcome_last_32": "Last 32",
+      "outcome_last_64": "Last 64",
+      "outcome_last_128": "Last 128",
+      "outcome_group_phase": "Group phase"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "submit": "Submit",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "back": "Back"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "players": "Players",
+    "trainers": "Trainers",
+    "settings": "Settings",
+    "logout": "Sign out",
+    "language": "Language"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "forbidden": "You do not have access to this page.",
+    "notFound": "Page not found.",
+    "validationFailed": "The data is not filled in correctly.",
+    "csrfRejected": "Request rejected for security reasons."
+  },
+  "admin": {
+    "users": {
+      "title": "User management",
+      "create": "New user",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "assignRole": "Assign role",
+      "linkParent": "Link parent",
+      "linkAcademy": "Link academy",
+      "fields": {
+        "email": "Email",
+        "name": "Name",
+        "role": "Role",
+        "status": "Status",
+        "locale": "Language"
+      }
+    }
+  }
+}

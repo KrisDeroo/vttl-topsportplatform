@@ -1,0 +1,155 @@
+{
+  "auth": {
+    "login": {
+      "title": "Inloggen",
+      "email": "E-mailadres",
+      "password": "Wachtwoord",
+      "submit": "Aanmelden",
+      "forgot": "Wachtwoord vergeten?"
+    },
+    "register": {
+      "title": "Account aanmaken",
+      "name": "Naam",
+      "dateOfBirth": "Geboortedatum",
+      "submit": "Registreren",
+      "minorWarning": "Voor spelers jonger dan 16 jaar moet een ouder/voogd toestemming geven."
+    },
+    "resetPassword": {
+      "title": "Wachtwoord opnieuw instellen",
+      "submit": "Verzend e-mail",
+      "newPassword": "Nieuw wachtwoord",
+      "confirmPassword": "Bevestig wachtwoord"
+    },
+    "verifyEmail": {
+      "title": "Bevestig je e-mailadres",
+      "instructions": "We hebben een bevestigingsmail gestuurd naar {email}.",
+      "resend": "Stuur opnieuw"
+    },
+    "errors": {
+      "invalidCredentials": "Onjuiste e-mail of wachtwoord",
+      "lockoutTriggered": "Te veel mislukte pogingen. Probeer over 15 minuten opnieuw.",
+      "sessionExpired": "Je sessie is verlopen. Log opnieuw in.",
+      "rateLimited": "Te veel verzoeken. Wacht een minuut.",
+      "emailNotVerified": "Bevestig eerst je e-mailadres.",
+      "accountInactive": "Je account is nog niet geactiveerd. Neem contact op met de Technisch Directeur.",
+      "minorPendingParent": "Account wacht op toestemming van ouder/voogd."
+    }
+  },
+  "consent": {
+    "title": "Toestemmingen",
+    "operational": {
+      "label": "Operationele gegevens (verplicht)",
+      "version": "1.0.0"
+    },
+    "medicalProcessing": {
+      "label": "Medische gegevensverwerking (optioneel)",
+      "version": "1.0.0"
+    },
+    "photoVideo": {
+      "label": "Foto- en videogebruik (optioneel)",
+      "version": "1.0.0"
+    },
+    "submit": "Akkoord en doorgaan",
+    "withdraw": "Toestemming intrekken",
+    "reConsentRequired": "De voorwaarden zijn bijgewerkt. Bevestig opnieuw om door te gaan.",
+    "showFullText": "Volledige tekst tonen"
+  },
+  "lookups": {
+    "status": {
+      "status_a": "A-status",
+      "status_b": "B-status",
+      "status_c": "C-status"
+    },
+    "academy": {
+      "topsportschool": "Topsportschool",
+      "academy_antwerpen": "Academy Antwerpen"
+    },
+    "trainingType": {
+      "training_type_group": "Groep",
+      "training_type_individual": "Individueel",
+      "training_type_physical": "Fysiek",
+      "training_type_mental": "Mentaal"
+    },
+    "tournamentType": {
+      "tournament_wtt": "WTT",
+      "tournament_wtt_star": "WTT Star",
+      "tournament_ettu": "ETTU",
+      "tournament_ejk": "EJK",
+      "tournament_wk": "WK",
+      "tournament_internationaal": "Internationaal",
+      "tournament_belgium": "België"
+    },
+    "rankingType": {
+      "ranking_senior_world": "Wereldranking Senior",
+      "ranking_youth_world": "Wereldranking Jeugd",
+      "ranking_senior_european": "Europees Senior",
+      "ranking_youth_european": "Europees Jeugd",
+      "ranking_belgium": "België"
+    },
+    "organisation": {
+      "org_private": "Privé",
+      "org_kbttb": "KBTTB",
+      "org_topsportschool": "Topsportschool",
+      "org_academy": "Academie",
+      "org_provincial": "Provinciaal",
+      "org_club": "Club"
+    },
+    "outcomeLevel": {
+      "outcome_winner": "Winnaar",
+      "outcome_finalist": "Finalist",
+      "outcome_last_4": "Laatste 4",
+      "outcome_last_8": "Laatste 8",
+      "outcome_last_16": "Laatste 16",
+      "outcome_last_32": "Laatste 32",
+      "outcome_last_64": "Laatste 64",
+      "outcome_last_128": "Laatste 128",
+      "outcome_group_phase": "Groepsfase"
+    }
+  },
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "loading": "Bezig met laden...",
+    "submit": "Verzenden",
+    "yes": "Ja",
+    "no": "Nee",
+    "confirm": "Bevestigen",
+    "back": "Terug"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "calendar": "Kalender",
+    "players": "Spelers",
+    "trainers": "Trainers",
+    "settings": "Instellingen",
+    "logout": "Uitloggen",
+    "language": "Taal"
+  },
+  "errors": {
+    "generic": "Er ging iets mis. Probeer het opnieuw.",
+    "forbidden": "Je hebt geen toegang tot deze pagina.",
+    "notFound": "Pagina niet gevonden.",
+    "validationFailed": "De gegevens zijn niet correct ingevuld.",
+    "csrfRejected": "Verzoek geweigerd om veiligheidsredenen."
+  },
+  "admin": {
+    "users": {
+      "title": "Gebruikersbeheer",
+      "create": "Nieuwe gebruiker",
+      "activate": "Activeren",
+      "deactivate": "Deactiveren",
+      "assignRole": "Rol toewijzen",
+      "linkParent": "Ouder koppelen",
+      "linkAcademy": "Academie koppelen",
+      "fields": {
+        "email": "E-mail",
+        "name": "Naam",
+        "role": "Rol",
+        "status": "Status",
+        "locale": "Taal"
+      }
+    }
+  }
+}
