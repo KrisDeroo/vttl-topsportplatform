@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "VTTL Topsportplatform — operational elite sports management platform for the Flemish Table Tennis League",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -59,7 +60,7 @@
     "@playwright/test": "^1.59",
     "@testcontainers/postgresql": "^11",
     "testcontainers": "^11",
-    "vitest-mock-extended": "^4",
+    "vitest-mock-extended": "^3.1",
     "eslint": "^10",
     "eslint-config-next": "^16",
     "prettier": "^3",
