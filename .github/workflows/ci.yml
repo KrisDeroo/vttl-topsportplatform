@@ -1,0 +1,51 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+jobs:
+  lint-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+  unit-integration:
+    runs-on: ubuntu-latest
+    services:
+      docker: { image: docker:dind }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - name: Vitest (unit + integration)
+        run: npx vitest run --reporter=verbose
+        env:
+          MEDICAL_ENCRYPTION_KEY: ci-medical-key-must-be-32-bytes!!
+  rbac-matrix-gate:
+    runs-on: ubuntu-latest
+    needs: [unit-integration]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - name: D-11 35-test rol×resource matrix MUST be 100% green
+        run: npx vitest run tests/integration/rbac-matrix.test.ts --reporter=verbose
+      - name: RLS direct-query medical-isolation MUST be green
+        run: npx vitest run tests/rls/medical-isolation.test.ts --reporter=verbose
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'npm' }
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npx playwright test --grep="@phase1"
+        env:
+          BASE_URL: http://localhost:3000
