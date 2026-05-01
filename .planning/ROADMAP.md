@@ -28,6 +28,31 @@
 ### Doel
 Het fundament is klaar wanneer een technisch directeur kan inloggen met een gescopede sessie, RLS alle data afschermt op databaseniveau, en het GDPR-schema klaar staat voor alle vervolgfasen.
 
+### Plans
+
+**Plans:** 18 plans in 8 waves (parallel-able where files don't overlap; see each plan's `depends_on` and `files_modified` for the precise ordering).
+
+Plans:
+- [ ] 01-01-setup-tooling-PLAN.md — Next.js 15 init + TypeScript + ESLint + env validation + Drizzle Kit config
+- [ ] 01-02-drizzle-schema-migration-001-core-PLAN.md — Migration 001: users (locale + role enums), sessions, lookups, memberships, consent_records, audit_log, idempotency_keys + Postgres role separation
+- [ ] 01-03-drizzle-schema-migration-002-medical-PLAN.md — Migration 002: medical_events, medical_documents, medical_access_audit + pgcrypto + write-time audit trigger
+- [ ] 01-04-rls-policies-and-functions-PLAN.md — Migration 002b: current_user_id/role STABLE wrappers, players_visible_to SECURITY DEFINER, RLS policies on every sensitive table
+- [ ] 01-05-better-auth-config-PLAN.md — Better Auth config (SEC-01..06) + permissions matrix + CSRF middleware + log-redact-paths constant
+- [ ] 01-06-better-auth-i18n-emails-PLAN.md — Localized transactional email (Mailgun EU primary, SendGrid EU fallback) — 4 templates × 3 locales
+- [ ] 01-07-next-intl-routing-and-catalogs-PLAN.md — next-intl routing + locale resolution chain + 3 message catalogs + 9 consent HTML files (gated on legal sign-off)
+- [ ] 01-08-locale-switcher-and-preferred-locale-flow-PLAN.md — Globe-icon LocaleSwitcher + setUserLocale Server Action + responsive header/hamburger placement
+- [ ] 01-09-upstash-cache-abstraction-ratelimit-PLAN.md — lib/cache.ts (D-14 abstraction) + JWT revocation list (D-09) + rate-limit middleware (SEC-07/08/09)
+- [ ] 01-10-bullmq-worker-template-PLAN.md — BullMQ Queue + Worker on ioredis; example consent-version-bump job; Coolify two-service hint
+- [ ] 01-11-callercontext-trpc-middleware-PLAN.md — tRPC bootstrap + CallerContext + requireAuth (revocation + staleness) + withRlsContext + freshSession + audit + requireConsent + procedure presets
+- [ ] 01-12-consent-flow-and-minor-gate-PLAN.md — lib/consent (CURRENT_POLICY + sha256 snapshot) + canActivate (Belgian < 16 minor gate) + consent tRPC router + ReConsentBanner
+- [ ] 01-13-observability-pino-sentry-PLAN.md — pino with REDACT_PATHS + Sentry EU beforeSend PII strip + Drizzle slow-query helper + retention doc
+- [ ] 01-14-health-endpoints-PLAN.md — /api/health/live (process-only) + /api/health/ready (DB + Redis with 2s timeout)
+- [ ] 01-15-td-admin-ui-user-management-PLAN.md — admin.user.* router (CRUD + activate/deactivate/role/parent/academy) + UserTable Server Component + tRPC client
+- [ ] 01-16-drizzle-push-blocking-PLAN.md — **[BLOCKING]** Apply migrations 0000–0003 to dev/staging Supabase + 8 post-migration smoke checks
+- [ ] 01-17-wave-0-test-infrastructure-PLAN.md — Vitest + Playwright + testcontainers + RBAC matrix (D-11) + RLS direct-query + chaos rate-limit + e2e specs (RED on day one)
+- [ ] 01-18-migration-governance-docs-PLAN.md — Migration runbook + erasure strategy + backfill utility + protect-migrations CI guard + TIMESTAMPTZ ESLint rule
+
+
 ### Vereisten
 AUTH-01..05, USER-01..05, GDPR-01..04, GDPR-07, GDPR-08, SEC-01..09, OPS-01..06, MIG-01..05, I18N-01..05, I18N-07, I18N-09, I18N-11
 
