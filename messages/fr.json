@@ -1,0 +1,155 @@
+{
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "forgot": "Mot de passe oublié ?"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "name": "Nom",
+      "dateOfBirth": "Date de naissance",
+      "submit": "S'inscrire",
+      "minorWarning": "Pour les joueurs de moins de 16 ans, l'autorisation d'un parent/tuteur est requise."
+    },
+    "resetPassword": {
+      "title": "Réinitialiser le mot de passe",
+      "submit": "Envoyer l'e-mail",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le mot de passe"
+    },
+    "verifyEmail": {
+      "title": "Confirmez votre adresse e-mail",
+      "instructions": "Nous avons envoyé un e-mail de confirmation à {email}.",
+      "resend": "Renvoyer"
+    },
+    "errors": {
+      "invalidCredentials": "E-mail ou mot de passe incorrect",
+      "lockoutTriggered": "Trop de tentatives échouées. Réessayez dans 15 minutes.",
+      "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+      "rateLimited": "Trop de requêtes. Veuillez patienter une minute.",
+      "emailNotVerified": "Veuillez d'abord confirmer votre adresse e-mail.",
+      "accountInactive": "Votre compte n'est pas encore activé. Contactez le Directeur Technique.",
+      "minorPendingParent": "Le compte attend l'autorisation d'un parent/tuteur."
+    }
+  },
+  "consent": {
+    "title": "Consentements",
+    "operational": {
+      "label": "Données opérationnelles (obligatoire)",
+      "version": "1.0.0"
+    },
+    "medicalProcessing": {
+      "label": "Traitement des données médicales (facultatif)",
+      "version": "1.0.0"
+    },
+    "photoVideo": {
+      "label": "Utilisation photo et vidéo (facultatif)",
+      "version": "1.0.0"
+    },
+    "submit": "J'accepte et je continue",
+    "withdraw": "Retirer le consentement",
+    "reConsentRequired": "Les conditions ont été mises à jour. Veuillez confirmer à nouveau pour continuer.",
+    "showFullText": "Afficher le texte complet"
+  },
+  "lookups": {
+    "status": {
+      "status_a": "Statut A",
+      "status_b": "Statut B",
+      "status_c": "Statut C"
+    },
+    "academy": {
+      "topsportschool": "Topsportschool",
+      "academy_antwerpen": "Academy Antwerpen"
+    },
+    "trainingType": {
+      "training_type_group": "Groupe",
+      "training_type_individual": "Individuel",
+      "training_type_physical": "Physique",
+      "training_type_mental": "Mental"
+    },
+    "tournamentType": {
+      "tournament_wtt": "WTT",
+      "tournament_wtt_star": "WTT Star",
+      "tournament_ettu": "ETTU",
+      "tournament_ejk": "EJK",
+      "tournament_wk": "WK",
+      "tournament_internationaal": "International",
+      "tournament_belgium": "Belgique"
+    },
+    "rankingType": {
+      "ranking_senior_world": "Classement mondial senior",
+      "ranking_youth_world": "Classement mondial jeunes",
+      "ranking_senior_european": "Européen senior",
+      "ranking_youth_european": "Européen jeunes",
+      "ranking_belgium": "Belgique"
+    },
+    "organisation": {
+      "org_private": "Privé",
+      "org_kbttb": "KBTTB",
+      "org_topsportschool": "Topsportschool",
+      "org_academy": "Académie",
+      "org_provincial": "Provincial",
+      "org_club": "Club"
+    },
+    "outcomeLevel": {
+      "outcome_winner": "Vainqueur",
+      "outcome_finalist": "Finaliste",
+      "outcome_last_4": "Dernier carré",
+      "outcome_last_8": "Quart de finale",
+      "outcome_last_16": "Huitièmes",
+      "outcome_last_32": "32e de finale",
+      "outcome_last_64": "64e de finale",
+      "outcome_last_128": "128e de finale",
+      "outcome_group_phase": "Phase de groupe"
+    }
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "loading": "Chargement...",
+    "submit": "Envoyer",
+    "yes": "Oui",
+    "no": "Non",
+    "confirm": "Confirmer",
+    "back": "Retour"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "calendar": "Calendrier",
+    "players": "Joueurs",
+    "trainers": "Entraîneurs",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "language": "Langue"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "forbidden": "Vous n'avez pas accès à cette page.",
+    "notFound": "Page introuvable.",
+    "validationFailed": "Les données ne sont pas correctement remplies.",
+    "csrfRejected": "Requête refusée pour des raisons de sécurité."
+  },
+  "admin": {
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "create": "Nouvel utilisateur",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "assignRole": "Attribuer un rôle",
+      "linkParent": "Lier un parent",
+      "linkAcademy": "Lier une académie",
+      "fields": {
+        "email": "E-mail",
+        "name": "Nom",
+        "role": "Rôle",
+        "status": "Statut",
+        "locale": "Langue"
+      }
+    }
+  }
+}
