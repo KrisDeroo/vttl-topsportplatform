@@ -6,3 +6,19 @@ node_modules/
 .env.local
 .env.*.local
 *.log
+
+# Test + build artifacts
+coverage/
+playwright-report/
+test-results/
+.vitest-cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+
+# Note: drizzle/meta/_journal.json is NOT gitignored — must be committed
+# (Drizzle Kit consults it to generate the next migration in sequence)
