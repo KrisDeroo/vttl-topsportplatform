@@ -8,15 +8,16 @@
 | UI component library | shadcn/ui + Tailwind CSS | shadcn latest / Tailwind 4.x | High |
 | Backend API | Next.js Route Handlers + tRPC | tRPC 11.x | High |
 | Alternative backend (if split) | NestJS | 11.x | Medium |
-| Database | PostgreSQL | 16.x | High |
-| ORM | Drizzle ORM | 0.40.x | High |
-| Auth / RBAC | Lucia v3 (self-hosted) or Better Auth | 3.x / 1.x | High |
+| Database (managed) | Supabase Postgres (Pro tier, EU/Frankfurt region) | PG 15+ | High |
+| ORM | Drizzle ORM | latest stable | High |
+| Auth / RBAC | Better Auth (self-hosted, runs against Supabase Postgres) | 1.x | High |
 | Calendar | FullCalendar | 6.x | High |
-| File storage | Cloudflare R2 (S3-compatible) | — | High |
-| Real-time / Messaging | Soketi (self-hosted Pusher) + Pusher JS | 1.x / 8.x | Medium |
-| Video handling | Cloudflare Stream | — | High |
-| Deployment | Coolify (self-hosted VPS) or Railway | latest | Medium |
-| GDPR tooling | Custom audit log + pg_audit + data-at-rest encryption | — | High |
+| File storage | Supabase Storage (RLS-integrated buckets, EU/Frankfurt) | — | High |
+| Real-time / Messaging | Supabase Realtime (managed, integrated with RLS) | — | High |
+| Video handling (v1) | External URL + react-player (YouTube/Vimeo) | — | High |
+| Video handling (v2) | Cloudflare Stream | — | Medium |
+| App deployment | Coolify on Hetzner (EU/DE) — Next.js app only; DB lives on Supabase | latest | High |
+| GDPR tooling | Drizzle-defined RLS policies + audit_log + pgcrypto for special-category data | — | High |
 
 ---
 
@@ -96,18 +97,32 @@ For a team of 1–3 developers building this platform, colocating frontend and b
 
 ### Database
 
-**Choice: PostgreSQL 16 + Drizzle ORM 0.40**
+**Choice: Supabase Postgres (Pro tier, EU/Frankfurt) + Drizzle ORM**
 
-**PostgreSQL 16 rationale:**
-- Best-in-class ACID compliance — non-negotiable for medical data (GDPR special category)
-- Row-level security (RLS) — enforce data access rules at database level as a second layer behind application RBAC
-- JSONB columns — useful for storing flexible training plan structures, evaluation schemas that evolve over time
-- Time-series ranking data: use `timescaledb` extension (free tier) or PostgreSQL partitioning with an indexed `recorded_at` column
-- Full-text search in Dutch (with `pg_trgm` and `unaccent` extensions) for player search
-- `pgcrypto` extension — column-level encryption for special-category medical fields at rest
-- Strong managed hosting: Neon (serverless, branching for dev/test), Supabase (adds realtime + storage), or self-hosted with pgBackRest
+**Why Supabase (DECISION UPDATED — supersedes the earlier "self-hosted on Hetzner" recommendation):**
+- Managed Postgres with all needed extensions enabled: `pgcrypto`, `pg_cron`, `pg_trgm`, `unaccent`, `uuid-ossp`
+- Row Level Security: Postgres-native; policies defined as code in Drizzle migrations (avoids the "RLS in dashboard = drift risk" anti-pattern that originally motivated self-hosting)
+- EU data residency: Frankfurt region (eu-central-1) — GDPR compliant for medical and minor data
+- Automatic backups: daily snapshots + Point-In-Time Recovery (PITR) on Pro tier — closes the missing DR gap from the original research
+- Built-in connection pooler (Supavisor) — eliminates the need to deploy PgBouncer manually
+- Supabase Storage on the same platform — bucket policies reference the same auth context as RLS, so file access control is consistent with database access control (simplifies signed-URL pattern significantly)
+- Supabase Realtime on the same platform — replaces Soketi for in-app messaging notifications, removes WebSocket operational burden for a 1–3 person team
+- DPA available; GDPR Art. 28 contractual coverage standard
+- Pricing: Pro tier ~$25/mo + bandwidth — close to Hetzner-managed-Postgres equivalent but with PITR, observability, and Realtime included
 
-**Drizzle ORM 0.40 rationale:**
+**Why we deliberately go MANAGED here (and self-host the app layer on Coolify):**
+The original concern about Supabase ("adds a managed layer between you and your DB") is mitigated when you treat Supabase as **a Postgres host, not as your application backend**: define all schemas, migrations, and RLS in Drizzle code (versioned in your repo), connect via standard Postgres URL, never use the Supabase JS SDK from the application layer. The platform stays portable — you can move to Neon, RDS, or self-hosted Postgres in a day. The wins (managed backups, integrated Storage with RLS-aware buckets, integrated Realtime) outweigh the lock-in risk for a small team.
+
+**PostgreSQL feature usage:**
+- ACID compliance for medical data (Art. 9 special category)
+- RLS as enforcement backstop behind tRPC middleware
+- JSONB for flexible evaluation schemas
+- Time-series ranking storage with `(player_id, ranking_type, entry_date DESC)` index
+- `pg_trgm` + `unaccent` for Dutch full-text search
+- `pgcrypto` for column-level encryption of medical diagnosis fields
+- `pg_cron` for scheduled retention jobs (data expiry, archive triggers)
+
+**Drizzle ORM (latest stable) rationale:**
 - Fully type-safe, lightweight (no heavy runtime like Prisma's query engine binary)
 - SQL-first philosophy: you write SQL-like TypeScript, not magic abstractions; easier to audit for security
 - Drizzle Kit migrations: schema-as-code with versioned migration files (important for auditability under GDPR)
@@ -204,15 +219,20 @@ rrule                        ^2.x
 
 ### File Storage
 
-**Choice: Cloudflare R2**
+**Choice: Supabase Storage (DECISION UPDATED — supersedes Cloudflare R2)**
 
-**Rationale:**
-- S3-compatible API: works with AWS SDK v3 (`@aws-sdk/client-s3`), no vendor lock-in
-- **Zero egress fees** — critical distinction from AWS S3 (which charges per GB downloaded); player video clips and medical PDFs will be downloaded frequently
-- EU data residency: R2 stores data in European datacenters — GDPR compliant for personal data (profile photos, medical documents, evaluation PDFs)
-- Signed URLs: generate time-limited URLs for secure document access (medical records never publicly accessible)
-- Cloudflare Access integration: add IP/identity rules in front of storage access
-- Pricing: ~$0.015/GB/month storage, $0 egress — significantly cheaper than S3 or GCS at this scale
+**Rationale (revised given the Supabase database decision):**
+- **RLS-integrated bucket policies** — bucket access policies reference the same `auth.uid()` and `auth.role()` as the database; file access control is consistent with data access control. This eliminates an entire class of bugs where database RBAC says "no" but a leaked storage URL still works.
+- **Same platform as the Postgres DB** — one DPA, one EU region, one set of credentials, one place to monitor
+- EU data residency: Frankfurt region — GDPR compliant for profile photos, medical documents, evaluation PDFs
+- Signed URLs: built-in support with TTL configurable per request; refresh and revocation patterns documented
+- S3-compatible API: works with `@aws-sdk/client-s3` if needed, no full vendor lock-in (files can be migrated out via standard S3 sync)
+- Pricing: $0.021/GB/month storage + $0.09/GB egress — slightly higher than R2's zero-egress model, but at the v1 scale (50–200 users, ~10GB total) this is < €5/month difference
+- Bucket structure: `profiles/` (semi-public, authenticated download), `evaluations/` (TD + trainer + player scope), `medical/` (TD + medical staff + player scope, 5-min signed URL TTL), `messages/` (sender + recipients scope)
+
+**Why not Cloudflare R2 (the original choice):**
+- Zero egress is genuinely attractive but the operational benefit of having Storage RLS reference the same auth context as the database (no separate signing layer to maintain) is more valuable for a small team
+- R2 still wins for content delivery at large scale (TB/month bandwidth) — keep R2 in mind as a v2 migration if egress costs grow
 
 **Use cases:**
 - Player profile photos
@@ -231,24 +251,28 @@ rrule                        ^2.x
 
 ### Real-time / Messaging
 
-**Choice: Soketi (self-hosted) + Pusher JS client**
+**Choice: Supabase Realtime (DECISION UPDATED — supersedes Soketi)**
 
-**Rationale:**
-The internal messaging module needs real-time delivery. Options are WebSockets (raw or via a library) or Server-Sent Events (SSE).
-
-**Soketi:**
-- Open-source, self-hosted Pusher-compatible WebSocket server (Node.js)
-- Drop-in replacement for Pusher Channels — use the official `pusher-js` client without modification
-- Deploy alongside the app on the same VPS/container cluster
-- All message data stays on your own infrastructure — GDPR compliant (no messages routed through third-party servers)
-- Horizontal scaling via Redis adapter (if needed later)
+**Rationale (revised given the Supabase database decision):**
+Since the database lives on Supabase, Supabase Realtime is the natural choice for in-app messaging notifications and live updates:
+- **Postgres replication-based**: subscribe to inserts/updates on the `message_recipients` table filtered by the current user's ID — automatic delivery when a new row appears
+- **RLS-aware**: subscriptions respect the same RLS policies as direct queries; you can't subscribe to data you can't read
+- **No separate infrastructure**: zero ops burden vs. self-hosted Soketi (which would require WebSocket service + Redis + monitoring)
+- **EU data residency**: same Frankfurt region as the database
+- **Client SDK**: `@supabase/supabase-js` provides a simple subscription API; no need for Pusher JS
 
 **Message persistence:**
-- Store all messages in PostgreSQL (`messages` table with `sender_id`, `recipient_id`, `thread_id`, `body`, `sent_at`, `read_at`)
-- Soketi handles real-time delivery; PostgreSQL is the source of truth
-- Messages are end-to-end auditable (GDPR accountability)
+- All messages stored in Postgres (`messages`, `message_recipients`, `message_attachments`)
+- Supabase Realtime replicates changes; Postgres is the source of truth
+- End-to-end auditable for GDPR accountability
 
-**SSE as alternative:** For lighter use (notification badges, live ranking updates), Next.js native SSE via Route Handlers is sufficient and requires zero extra infrastructure. Use SSE for read notifications and Soketi for full duplex messaging.
+**SSE as fallback:** For very low-volume notifications (calendar reminder badges), Next.js native SSE via Route Handlers remains viable and requires no Supabase Realtime configuration. Use Realtime for messaging; SSE for unread-count updates.
+
+**Why not Soketi (the original choice):**
+- Soketi is excellent but adds a self-hosted WebSocket service that a 1–3 person team must monitor, scale, and patch
+- Supabase Realtime is the same operational primitive (Postgres-replication WebSocket) but managed
+- For v1 scale (50–200 users, low broadcast volume), Realtime's connection limits are not a concern
+- If Realtime ever becomes a bottleneck, Soketi remains a clean migration target — both speak similar Postgres-replication patterns
 
 **Key packages:**
 ```
@@ -396,17 +420,96 @@ helmet             ^8.x    (Next.js middleware — security headers)
 | Technology | Why NOT |
 |-----------|---------|
 | **Firebase (any module)** | Google infrastructure; GDPR data residency and processing complexity; vendor lock-in; no SQL = no RLS; realtime DB has no audit capability |
-| **Supabase (as primary)** | Good product but adds a managed layer between you and your DB; RLS defined in Supabase dashboard not in code = drift risk; auth tied to Supabase; limits portability |
+| **Supabase Auth (as primary auth)** | Better Auth gives more control over the consent flow, sensitive-action re-authentication, and Belgian minor-consent path. Use Supabase only for Postgres + Storage + Realtime; keep auth in Better Auth so the auth layer is portable and the GDPR consent model is fully owned in code. |
 | **Auth0 / Clerk** | Personal data (emails, names, session data) leaves your infrastructure; US-based primary infrastructure; GDPR Article 46 SCCs required; ongoing SaaS cost |
 | **Prisma ORM** | Binary query engine causes cold-start latency in serverless; harder to write raw optimized SQL; migration system less flexible than Drizzle; Drizzle is the 2025 default for new TypeScript projects |
 | **MongoDB** | No ACID transactions spanning collections (needed for medical data integrity); no RLS; JOINs for rankings/stats are painful; no column encryption primitive |
-| **Vercel (primary hosting)** | No persistent WebSocket support (kills Soketi); US data processing risk on non-EU edges; expensive at scale; less control |
-| **Pusher (managed)** | Real-time messages leave your infrastructure; GDPR data processing agreement required; ongoing cost; Soketi gives identical API for free |
+| **Vercel (primary hosting)** | US data processing risk on non-EU edges; expensive at scale; less control over runtime; not needed since Coolify on Hetzner is cheaper and EU-resident |
+| **Pusher (managed) / Ably** | Real-time messages would leave your infrastructure; GDPR data processing agreement required; ongoing cost; Supabase Realtime gives the same managed primitive in the same region as your database |
+| **Soketi (self-hosted)** | Originally recommended but adds WebSocket service ops burden; Supabase Realtime replaces it as a managed primitive on the same platform as the DB |
+| **Cloudflare R2 (as primary v1 storage)** | Excellent product but Storage on Supabase shares the same auth context as RLS, which simplifies the signed-URL pattern significantly; revisit R2 in v2 if egress costs grow at scale |
 | **Mux / Wistia** | US-based video infrastructure; player video (faces, performance data) is personal data under GDPR; SCCs required; cost |
 | **React Big Calendar** | Effectively unmaintained; no drag-resize; no rrule; poor locale support; FullCalendar is strictly better |
 | **react-i18next** | Heavier than `next-intl` for Next.js App Router; `next-intl` has built-in RSC support and server-side translation |
 | **Moment.js** | Deprecated; large bundle; use `date-fns` v3 instead |
 | **jQuery** | Not relevant in 2025; not compatible with React component model |
+
+---
+
+## Testing & Quality Assurance
+
+**Choice:** Vitest (unit) + Playwright (E2E) + k6 (load) + dedicated RBAC integration test suite
+
+- **Vitest** (`^2.x`) for unit tests on business logic, service layer, RBAC helpers, RRULE expansion, audit log writers
+- **Playwright** (`^1.x`) for E2E user journeys: login → calendar create → player notification, role × resource matrix verification, GDPR data-export flow
+- **Test database**: separate Supabase project named `vttl-test` (free tier sufficient) reset between test runs via Drizzle migration replay; never test against production
+- **k6** for load tests against calendar week view (50 concurrent users, 200 events/week scenario), broadcast send, dashboard query
+- **RBAC test matrix**: every role × every sensitive endpoint × every entity type, asserts both the happy path AND the unauthorized path returns 403/404
+- **GDPR compliance tests**: verify medical reads append to audit log, verify audit log is INSERT-only, verify erasure preserves required aggregates and deletes required identifiers
+- CI: GitHub Actions runs Vitest + Playwright on every PR, k6 weekly against staging
+
+---
+
+## Observability & Operations
+
+**Choice:** Pino (structured logs) + Sentry EU (errors, with PII redaction) + Grafana Cloud free tier OR self-hosted Grafana on Hetzner (metrics + dashboards) + UptimeRobot or Better Stack (uptime)
+
+- **Pino** (`^9.x`) with redact filter on `req.headers.authorization`, `req.headers.cookie`, `*.password`, `*.email`, `*.phone`, `*.medical_*`
+- **Log aggregation**: Logflare (EU region), Axiom (EU available), or self-hosted Grafana Loki on Hetzner — DO NOT store logs in the application database
+- **Application metrics**: request latency p50/p95/p99 per tRPC procedure, database query duration via Drizzle query interceptor, error rate per endpoint
+- **Database metrics**: Supabase Pro provides built-in dashboards for connections, slow queries, storage usage; alerts available
+- **Slow query log**: Supabase enables `log_min_duration_statement = 500ms` (queries over 500ms logged); review weekly during build phase
+- **Sentry EU**: error tracking with PII scrubbing config (`beforeSend` callback strips known sensitive fields)
+- **Uptime**: Better Stack or UptimeRobot polls `/api/health` every 60s; alerts to Slack/email on failure
+- **Alerting**: error rate > 1%, p95 latency > 1s on calendar/dashboard, database connection saturation > 80%, audit log write rate > 100/sec (suspicious)
+
+---
+
+## Cost Estimate (realistic, monthly)
+
+| Item | Cost | Notes |
+|------|------|-------|
+| Supabase Pro (DB + Storage + Realtime + PITR backups) | $25 | EU/Frankfurt region, 8GB DB, 100GB transfer included |
+| Supabase Storage (estimated 10GB) | ~$0.20 | $0.021/GB/month |
+| Supabase egress (estimated 30GB/month) | ~$2.70 | $0.09/GB |
+| Hetzner CX31 VPS (Next.js app + Coolify) | €13 | 4 vCPU, 8GB RAM — sufficient for 50–200 users |
+| Mailgun EU (transactional email, ~5k/month) | $15 | Or SendGrid EU equivalent |
+| Sentry EU (developer tier) | $0 | Free up to 5k events/month |
+| Better Stack (uptime + log aggregation) | $0–10 | Free tier covers v1 |
+| Domain + DNS | €1 | Annual, amortized |
+| FullCalendar premium plugins (v2 only) | €0 | MIT plugins sufficient for v1; budget €150/year for v2 resource view |
+| **Total v1 (running)** | **~€55/month** | Excludes development time and one-time DPIA legal review |
+| **Total v2 (with Cloudflare Stream)** | **~€80/month** | Adds video infrastructure |
+
+**Original estimate of ~€15/month was incomplete.** Factor in email service, monitoring, and storage egress; realistic v1 ops cost is ~€50–60/month.
+
+---
+
+## Migration Strategy (legacy VTTL data)
+
+**Assumption:** VTTL has existing player records, rankings, tournament results in another system (Excel/Access/legacy CMS).
+
+**Approach:**
+1. **Inventory**: catalogue what data exists, in what format, with what fidelity (especially: are historical rankings preserved as time-series, or only current values?)
+2. **Schema mapping**: define ETL mapping from legacy fields → Drizzle schema; flag fields without a clear source (will need TD review)
+3. **Staging migration**: run ETL against a Supabase staging project; verify row counts, foreign key integrity, RLS visibility per role
+4. **Gap analysis**: rankings without historical data points = single time-series row at migration date; tournament results without per-match detail = level-1 result only; missing emergency contacts for minors = explicit TD review queue
+5. **Production cutover**: ETL run during low-activity window (e.g., Sunday 02:00 CET); verification report sent to TD before opening platform
+6. **Rollback plan**: legacy system remains read-accessible for 30 days after cutover
+
+---
+
+## Browser & Device Support Matrix
+
+| Tier | Browsers | Devices | Tested? |
+|------|----------|---------|---------|
+| Tier 1 (full support) | Chrome, Firefox, Edge, Safari (latest 2 versions) | Desktop, iPad | Yes — every release |
+| Tier 2 (best effort) | Mobile Safari, Chrome Android | iPhone, Android phone | Yes — calendar single-day view, profile view, messages |
+| Tier 3 (not supported) | IE 11, Edge < 15, Safari < 15 | — | No |
+
+- Calendar week view: Tier 1 desktop only; mobile (Tier 2) gets single-day view via FullCalendar `windowResizeDetect`
+- Touch interaction for drag-resize: Tier 2 supported but not encouraged (desktop is the editing surface)
+- PWA manifest in v1.1: enables "add to home screen" on mobile for parents/players (not v1 must-have)
 
 ---
 
@@ -421,12 +524,12 @@ helmet             ^8.x    (Next.js middleware — security headers)
 **Mitigation:** Consent flow in registration, `parent_guardian` role, minor flag on player profiles, parental access portal, legal review of consent forms.
 
 ### 3. Vendor Lock-in for Video (v2)
-**Risk:** AI video analysis is a v2 feature but the video storage/delivery infrastructure chosen in v1 determines the AI pipeline in v2.
-**Mitigation:** Choose Cloudflare Stream now (webhook-ready, signed tokens, EU) even if v1 only stores links. This avoids a migration later.
+**Risk:** AI video analysis is a v2 feature; the v1 decision to use external URLs (YouTube/Vimeo) means video re-upload effort if v2 wants AI analysis on archived footage.
+**Mitigation:** Accept this — v1 ships faster without storage infra. When v2 AI analysis lands, Cloudflare Stream becomes the upload destination, and videos uploaded from v2 onward will be analysis-ready. Older external links remain as-is.
 
-### 4. Real-time Messaging at Scale
-**Risk:** Soketi is a smaller project; if the team lacks DevOps experience, maintaining a self-hosted WebSocket server adds operational burden.
-**Mitigation:** Start with SSE (built into Next.js, zero infra) for notifications. Add Soketi only when full duplex messaging is required. If team is small, consider Ably EU region with a signed DPA as a managed fallback.
+### 4. Supabase Lock-in
+**Risk:** Choosing Supabase as managed Postgres + Storage + Realtime ties operational dependencies to a single vendor.
+**Mitigation:** Treat Supabase as Postgres-host-only at the application level — define all schemas, migrations, and RLS in Drizzle code; never use the Supabase JS SDK from the application backend; access Postgres via standard URL. Storage migrates to R2/S3 via standard sync if needed. Realtime can be replaced by self-hosted Soketi if a future scale ceiling appears. Migration cost is bounded.
 
 ### 5. Next.js Upgrade Velocity
 **Risk:** Next.js releases breaking changes frequently (App Router, Turbopack, RSC patterns). A platform built on Next.js 15 will need active maintenance.

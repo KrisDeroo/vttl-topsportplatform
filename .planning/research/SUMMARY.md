@@ -4,28 +4,34 @@
 
 ---
 
-## Recommended Stack
+## Recommended Stack (post-review, with Supabase decision)
 
 | Layer | Choice | Version |
 |-------|--------|---------|
 | Frontend | Next.js (App Router) | 15.x |
 | UI | shadcn/ui + Tailwind CSS | 4.x |
 | API | tRPC | 11.x |
-| Database | PostgreSQL | 16.x |
-| ORM | Drizzle ORM | 0.40.x |
-| Auth | Better Auth (self-hosted) | 1.x |
+| Database (managed) | Supabase Postgres (Pro tier, EU/Frankfurt) | PG 15+ |
+| ORM | Drizzle ORM | latest stable |
+| Auth | Better Auth (against Supabase Postgres) | 1.x |
 | Calendar | FullCalendar | 6.x |
-| File storage | Cloudflare R2 | — |
-| Real-time | Soketi (self-hosted) | 1.x |
+| File storage | Supabase Storage (RLS-integrated) | — |
+| Real-time | Supabase Realtime (managed) | — |
 | Video (v1) | External URL + react-player | — |
 | Video (v2) | Cloudflare Stream | — |
-| Deployment | Coolify on Hetzner (EU) | — |
+| App deployment | Coolify on Hetzner (EU/DE) | — |
+| Email | Mailgun EU or SendGrid EU | — |
+| Logging | Pino + Logflare/Axiom (EU) | — |
+| Errors | Sentry EU | — |
+| Testing | Vitest + Playwright + k6 | — |
 
-**Key stack rationale:**
+**Key stack rationale (updated post-review):**
 - Next.js Server Components render sensitive medical data server-side (never leaks to client bundle — GDPR advantage)
 - tRPC gives end-to-end TypeScript type safety — eliminates a large class of frontend bugs for a complex 6-role domain
-- Better Auth self-hosted: all user data stays in our own PostgreSQL — required for GDPR, no DPA with auth vendor
-- Coolify + Hetzner: EU data residency guaranteed, full data control, ~€15/month vs Vercel's US edge risk + cost
+- Better Auth runs against Supabase Postgres — auth layer stays portable, all user data is in our own database (just hosted by Supabase), DPA covers it
+- Supabase as managed DB + Storage + Realtime: closes original gaps (backups, DR, observability) and reduces ops surface for a 1–3 person team; treat as Postgres-host-only to keep portability (Drizzle migrations + RLS in code, no Supabase JS SDK in app code)
+- Coolify + Hetzner for the Next.js app: EU data residency guaranteed, full code control; realistic ops cost ~€55/month including Supabase Pro, email, monitoring
+- New: testing strategy (Vitest + Playwright + k6), observability (Pino + Sentry EU + Grafana), SPF/DKIM/DMARC, browser support matrix — all explicitly addressed
 
 ---
 
