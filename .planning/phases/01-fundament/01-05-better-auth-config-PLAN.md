@@ -1,4 +1,5 @@
----phase: 01-fundament
+---
+phase: 01-fundament
 plan: 05
 type: execute
 wave: 3
