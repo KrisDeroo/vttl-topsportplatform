@@ -6,6 +6,10 @@
       {
         "selector": "NewExpression[callee.name='Date'][arguments.length=0]",
         "message": "Use Date.now() or db.timestamptz default. Naive new Date() forbidden — see GDPR-08."
+      },
+      {
+        "selector": "CallExpression[callee.name='timestamp'] ObjectExpression Property[key.name='withTimezone'][value.value=false]",
+        "message": "TIMESTAMPTZ required (GDPR-08). Use tstz() from @/server/db/helpers/timestamps. Never set withTimezone:false."
       }
     ],
     "no-restricted-imports": [
@@ -44,6 +48,10 @@
     {
       "files": ["src/components/consent/consent-step.tsx"],
       "rules": { "react/no-danger": "off" }
+    },
+    {
+      "files": ["src/server/db/helpers/timestamps.ts"],
+      "rules": { "no-restricted-syntax": "off" }
     }
   ]
 }
