@@ -41,11 +41,11 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Key Constraints
 
-- Dutch/Flemish UI throughout
-- GDPR: medical data = Art. 9 special category; Belgian minor consent threshold = 16
-- All data residency in EU (Cloudflare EU + Hetzner)
+- Three-language UI: nl (default) / en / fr — full infrastructure built in Phase 1
+- GDPR: medical data = Art. 9 special category; Belgian minor consent threshold = 16; consent text versioned per locale
+- All data residency in EU (Supabase Pro Frankfurt + Hetzner; Mailgun/SendGrid EU; Sentry EU)
 - Calendar week view (Outlook-style) mandatory for v1
-- No technical stack until Phase 1 execution
+- Lookups: codes in DB, labels via i18n catalogs; proper nouns not translated
 
 ---
 *Last updated: 2026-05-01 after initialization*
