@@ -45,7 +45,7 @@ Plans:
 - [x] 01-08-locale-switcher-and-preferred-locale-flow-PLAN.md — Globe-icon LocaleSwitcher + setUserLocale Server Action + responsive header/hamburger placement
 - [x] 01-09-upstash-cache-abstraction-ratelimit-PLAN.md — lib/cache.ts (D-14 abstraction) + JWT revocation list (D-09) + rate-limit middleware (SEC-07/08/09)
 - [x] 01-10-bullmq-worker-template-PLAN.md — BullMQ Queue + Worker on ioredis; example consent-version-bump job; Coolify two-service hint
-- [ ] 01-11-callercontext-trpc-middleware-PLAN.md — tRPC bootstrap + CallerContext + requireAuth (revocation + staleness) + withRlsContext + freshSession + audit + requireConsent + procedure presets
+- [x] 01-11-callercontext-trpc-middleware-PLAN.md — tRPC bootstrap + CallerContext + requireAuth (revocation + staleness) + withRlsContext + freshSession + audit + requireConsent + procedure presets
 - [ ] 01-12-consent-flow-and-minor-gate-PLAN.md — lib/consent (CURRENT_POLICY + sha256 snapshot) + canActivate (Belgian < 16 minor gate) + consent tRPC router + ReConsentBanner
 - [x] 01-13-observability-pino-sentry-PLAN.md — pino with REDACT_PATHS + Sentry EU beforeSend PII strip + Drizzle slow-query helper + retention doc
 - [x] 01-14-health-endpoints-PLAN.md — /api/health/live (process-only) + /api/health/ready (DB + Redis with 2s timeout)
