@@ -42,10 +42,6 @@
  * it externally, the per-component breakdown should be hidden behind a header
  * check.
  *
- * Note: deliberately NOT importing from `@/lib/log` (Plan 13, sibling wave 3)
- * to keep this plan self-contained. When Plan 13 lands, swap `console.warn`
- * for `log.warn({ components }, 'health.ready.degraded')`.
- *
  * Reference: .planning/phases/01-fundament/01-RESEARCH.md §Health Endpoints
  *            (lines 2014–2050), .planning/phases/01-fundament/01-CONTEXT.md §F (D-17).
  */
@@ -54,6 +50,7 @@ import { sql } from 'drizzle-orm';
 
 import { db } from '@/server/db/client';
 import { cache } from '@/lib/cache';
+import { log } from '@/lib/log';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -106,10 +103,7 @@ export async function GET() {
     : 'degraded';
 
   if (overall !== 'ok') {
-    // Plan 13 (sibling wave 3) introduces structured pino logging; until that
-    // ships, console.warn keeps the readiness signal visible in container logs.
-    // eslint-disable-next-line no-console
-    console.warn('[health.ready.degraded]', JSON.stringify({ components }));
+    log.warn({ components }, 'health.ready.degraded');
   }
 
   const timestamp = new Date(Date.now()).toISOString();
