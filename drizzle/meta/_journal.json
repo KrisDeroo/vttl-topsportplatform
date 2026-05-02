@@ -15,6 +15,13 @@
       "when": 1746178000000,
       "tag": "0001_medical_isolated",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777715030142,
+      "tag": "0002_rls_functions_and_policies",
+      "breakpoints": true
     }
   ]
 }
