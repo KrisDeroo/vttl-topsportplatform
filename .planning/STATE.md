@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Executing Phase 1
-last_updated: "2026-05-02T09:50:00.000Z"
+last_updated: "2026-05-02T10:30:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 18
-  completed_plans: 11
-  percent: 61
+  completed_plans: 14
+  percent: 78
 ---
 
 # Project State — VTTL Topsportplatform
@@ -18,7 +18,7 @@ progress:
 
 Phase: 1 — Fundament
 Active Phase: 01-fundament
-Last Action: Wave 3 complete (01-03 schema-medical, 01-05 better-auth, 01-13 observability, 01-14 health). 11/18 plans done. Wave 4 dispatching (3 plans: 01-04 RLS, 01-06 emails, 01-08 locale-switcher).
+Last Action: Wave 4 complete (01-04 RLS, 01-06 i18n emails, 01-08 locale switcher). 14/18 plans done. Wave 5 dispatching (1 plan: 01-11 callercontext-trpc-middleware).
 
 Resume: `/gsd-execute-phase 1` (run `/clear` first for a fresh context window)
 Artifacts: `.planning/phases/01-fundament/` (CONTEXT.md, RESEARCH.md, VALIDATION.md, 18 PLAN.md files, 2 SUMMARY.md files)
@@ -34,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Fundament | 🔄 In progress (11/18 plans, Waves 1-3 complete) |
+| 1 | Fundament | 🔄 In progress (14/18 plans, Waves 1-4 complete) |
 | 2 | Identiteit & Bestanden | ⬜ Not started |
 | 3 | Kalender | ⬜ Not started |
 | 4 | Kerndomein | ⬜ Not started |
