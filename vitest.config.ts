@@ -18,6 +18,12 @@ export default defineConfig({
       exclude: ['src/**/*.test.ts', 'src/**/*.d.ts'],
     },
   },
+  // Plan 06 added React Email templates (.tsx). esbuild's default `transform`
+  // JSX mode is the classic runtime, which requires `React` in scope. Use the
+  // automatic runtime (React 17+) so templates do not need a `React` import.
+  esbuild: {
+    jsx: 'automatic',
+  },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

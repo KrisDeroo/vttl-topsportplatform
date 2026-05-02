@@ -17,10 +17,11 @@
  * VTTL extension columns (role, preferred_locale, active, deactivatedAt,
  * dateOfBirth) live alongside and are populated by VTTL flows.
  *
- * Email hooks are STUBBED — Plan 06 replaces sendResetPasswordStub +
- * sendVerificationEmailStub with `sendEmailLocalized` (React Email + Resend,
- * EU region, locale-aware). Until then, both stubs log to the console with a
- * loud `[auth] STUB` prefix so any production deploy flagged by ops is obvious.
+ * Email hooks are localized via `sendEmailLocalized` (Plan 06): React Email
+ * templates rendered through Resend (EU region, eu-west-1 / Frankfurt). The
+ * recipient's `preferredLocale` (NOT the sender's) drives template selection —
+ * see `src/server/email/send.ts` and the `tests/integration/email-locale.test.ts`
+ * contract for the locale → subject literal mapping.
  *
  * Reference: .planning/phases/01-fundament/01-RESEARCH.md §Better Auth Integration (lines 1530-1666)
  */
@@ -36,6 +37,20 @@ import {
 import { db } from '@/server/db/client';
 import * as schema from '@/server/db/schema';
 import { env } from '@/lib/env';
+import { sendEmailLocalized } from '@/server/email/send';
+import type { Locale } from '@/i18n/routing';
+
+/**
+ * Better Auth's user payload exposes Better Auth-managed fields (id, email,
+ * emailVerified, name, image) but VTTL extension columns like
+ * `preferredLocale` come through with `unknown` typing. This narrowing keeps
+ * us out of `any` while accepting that Better Auth does not surface the
+ * Drizzle row type through its hook payload.
+ */
+function pickLocale(user: { preferredLocale?: unknown }): Locale {
+  const v = user.preferredLocale;
+  return v === 'nl' || v === 'en' || v === 'fr' ? v : 'nl';
+}
 
 /**
  * Custom access-control statements + role grants for the Better Auth admin plugin.
@@ -88,38 +103,6 @@ function normalizeLogLevel(
   }
 }
 
-/**
- * Plan 06 replaces this stub with `sendEmailLocalized({ template: 'password-reset' })`.
- * Until then, log the URL so dev flows can manually click it. In production this is
- * a no-op (the warning is visible in deployment logs and triggers ops review).
- */
-async function sendResetPasswordStub(args: {
-  user: { email: string; preferredLocale?: string };
-  url: string;
-}): Promise<void> {
-  // eslint-disable-next-line no-console
-  console.warn(
-    '[auth] STUB sendResetPassword — Plan 06 overrides:',
-    args.user.email,
-    args.url,
-  );
-}
-
-/**
- * Plan 06 replaces this stub with `sendEmailLocalized({ template: 'verify-email' })`.
- */
-async function sendVerificationEmailStub(args: {
-  user: { email: string; preferredLocale?: string };
-  url: string;
-}): Promise<void> {
-  // eslint-disable-next-line no-console
-  console.warn(
-    '[auth] STUB sendVerificationEmail — Plan 06 overrides:',
-    args.user.email,
-    args.url,
-  );
-}
-
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
@@ -141,7 +124,12 @@ export const auth = betterAuth({
     minPasswordLength: 12,
     maxPasswordLength: 128,
     sendResetPassword: async ({ user, url }) => {
-      await sendResetPasswordStub({ user, url });
+      await sendEmailLocalized({
+        to: user.email,
+        locale: pickLocale(user as { preferredLocale?: unknown }),
+        template: 'password-reset',
+        data: { resetUrl: url, expiresInMinutes: 60 },
+      });
     },
     resetPasswordTokenExpiresIn: 60 * 60, // SEC-05: 1h
   },
@@ -151,7 +139,12 @@ export const auth = betterAuth({
     autoSignInAfterVerification: false,
     expiresIn: 60 * 60 * 24, // 24h
     sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmailStub({ user, url });
+      await sendEmailLocalized({
+        to: user.email,
+        locale: pickLocale(user as { preferredLocale?: unknown }),
+        template: 'verify-email',
+        data: { verifyUrl: url },
+      });
     },
   },
 
