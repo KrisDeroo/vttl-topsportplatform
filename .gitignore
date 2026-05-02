@@ -22,3 +22,4 @@ Thumbs.db
 
 # Note: drizzle/meta/_journal.json is NOT gitignored — must be committed
 # (Drizzle Kit consults it to generate the next migration in sequence)
+tsconfig.tsbuildinfo
