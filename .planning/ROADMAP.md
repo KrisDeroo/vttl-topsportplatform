@@ -38,11 +38,11 @@ Plans:
 - [x] 01-01-setup-tooling-PLAN.md — Next.js 15 init + TypeScript + ESLint + env validation + Drizzle Kit config
 - [x] 01-02-drizzle-schema-migration-001-core-PLAN.md — Migration 001: users (locale + role enums), sessions, lookups, memberships, consent_records, audit_log, idempotency_keys + Postgres role separation
 - [x] 01-03-drizzle-schema-migration-002-medical-PLAN.md — Migration 002: medical_events, medical_documents, medical_access_audit + pgcrypto + write-time audit trigger
-- [ ] 01-04-rls-policies-and-functions-PLAN.md — Migration 002b: current_user_id/role STABLE wrappers, players_visible_to SECURITY DEFINER, RLS policies on every sensitive table
+- [x] 01-04-rls-policies-and-functions-PLAN.md — Migration 002b: current_user_id/role STABLE wrappers, players_visible_to SECURITY DEFINER, RLS policies on every sensitive table
 - [x] 01-05-better-auth-config-PLAN.md — Better Auth config (SEC-01..06) + permissions matrix + CSRF middleware + log-redact-paths constant
-- [ ] 01-06-better-auth-i18n-emails-PLAN.md — Localized transactional email via Resend (EU region) + React Email templates — 4 templates × 3 locales
+- [x] 01-06-better-auth-i18n-emails-PLAN.md — Localized transactional email via Resend (EU region) + React Email templates — 4 templates × 3 locales
 - [x] 01-07-next-intl-routing-and-catalogs-PLAN.md — next-intl routing + locale resolution chain + 3 message catalogs + 9 consent HTML files (team-drafted; legal review tracked in Phase 8)
-- [ ] 01-08-locale-switcher-and-preferred-locale-flow-PLAN.md — Globe-icon LocaleSwitcher + setUserLocale Server Action + responsive header/hamburger placement
+- [x] 01-08-locale-switcher-and-preferred-locale-flow-PLAN.md — Globe-icon LocaleSwitcher + setUserLocale Server Action + responsive header/hamburger placement
 - [x] 01-09-upstash-cache-abstraction-ratelimit-PLAN.md — lib/cache.ts (D-14 abstraction) + JWT revocation list (D-09) + rate-limit middleware (SEC-07/08/09)
 - [x] 01-10-bullmq-worker-template-PLAN.md — BullMQ Queue + Worker on ioredis; example consent-version-bump job; Coolify two-service hint
 - [ ] 01-11-callercontext-trpc-middleware-PLAN.md — tRPC bootstrap + CallerContext + requireAuth (revocation + staleness) + withRlsContext + freshSession + audit + requireConsent + procedure presets
