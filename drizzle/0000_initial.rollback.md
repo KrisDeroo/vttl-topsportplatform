@@ -5,6 +5,8 @@ the trigger function, and the locale/user_role enums. Only run on
 dev/staging after a full restore from PITR. **Never run in production**
 without an explicit incident-commander sign-off.
 
+**Procedure:** drop dependent objects (triggers, indexes) before their parents; drop tables in reverse FK-creation order (child tables first); drop enums last so column defaults referencing them have already been removed by the table drops. Run the SQL block below inside a single transaction. Pre-conditions follow.
+
 **Pre-conditions:**
 - All later migrations (0001+, e.g. Plan 03 medical, Plan 04 RLS) have
   ALREADY been rolled back via their own `*.rollback.md` runbooks.
@@ -110,3 +112,9 @@ drizzle-kit actually executes against staging; it will:
 
 A zero-diff check is enforced at that point (RESEARCH §Migration Governance,
 MIG-01: never edit a committed migration once applied to staging).
+
+**Verification:** After the rollback transaction commits, confirm:
+1. `\dt` in `psql` shows none of the dropped tables (users, sessions, accounts, verifications, lookups, academy_memberships, parent_child_links, consent_records, audit_log, idempotency_keys).
+2. `\dT+ user_role` and `\dT+ locale_code` return no rows (enums dropped).
+3. `\df set_updated_at` returns no rows (trigger function dropped).
+4. The application web tier remains scaled to 0 until 0000_initial.sql is re-applied — without the schema, every request 500s on the first DB call.

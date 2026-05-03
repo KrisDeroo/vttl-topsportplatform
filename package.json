@@ -56,6 +56,7 @@
     "zod": "^4"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@playwright/test": "^1.59",
     "@tailwindcss/postcss": "^4",
     "@testcontainers/postgresql": "^11",
