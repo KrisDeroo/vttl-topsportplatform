@@ -14,8 +14,18 @@
  *   - `*.<field>` paths use pino's wildcard form so any nested object whose
  *     key matches `<field>` is redacted regardless of depth (e.g. `user.email`,
  *     `body.user.email`, `result.parent.user.email`).
- *   - `*.medical_*` (with the trailing wildcard) catches the encrypted
- *     medical-event envelope columns introduced in Plan 03.
+ *
+ * WR-06 fix (2026-05-01): the previous list contained `*.medical_*`,
+ * intending to redact every key starting with `medical_`. pino's
+ * underlying `fast-redact` library does NOT support partial-segment
+ * wildcards in the trailing path component — it would have matched a
+ * literal property called `medical_*` (asterisk character) and let
+ * keys like `medical_diagnosis` / `medical_history` flow through
+ * unredacted. Replaced with the enumerated set of medical-prefixed
+ * fields the v1 schema actually emits, mirroring the runtime
+ * `k.startsWith('medical_')` check that `src/lib/sentry.ts` already
+ * uses. New medical-prefixed fields MUST be added here when
+ * introduced.
  *
  * Why a constant module rather than inline in log.ts: Plan 05 ships this list
  * with auth-config tests BEFORE Plan 13 lands the runtime pino instance.
@@ -46,10 +56,22 @@ export const REDACT_PATHS = [
   '*.dateOfBirth',
   '*.ipAddress',
 
-  // Encrypted medical envelopes (Plan 03 medical_events table)
-  '*.medical_*',
+  // Encrypted medical envelopes (Plan 03 medical_events table) — see
+  // WR-06 block-comment for why each medical-prefixed field is listed
+  // explicitly instead of relying on a `medical_*` glob.
+  '*.medical_diagnosis',
+  '*.medical_diagnosis_cipher',
+  '*.medical_doctor',
+  '*.medical_doctor_cipher',
+  '*.medical_event_description',
+  '*.medical_event_description_cipher',
+  '*.medical_history',
+  '*.medical_notes',
+  '*.medical_original_filename',
+  '*.medical_original_filename_cipher',
   '*.eventDescriptionCipher',
   '*.doctorCipher',
+  '*.originalFilenameCipher',
 
   // Consent text snapshot (legally significant, may contain PII references)
   '*.consentTextSnapshot',
