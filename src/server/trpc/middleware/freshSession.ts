@@ -39,9 +39,22 @@ import { requireAuth } from './auth';
 import { requireCurrentConsent } from './requireConsent';
 import { withRlsContext } from './rls';
 
-/** SEC-03 — re-auth window. Plan 05 sets `session.freshAge = 1h`. */
+/**
+ * SEC-03 — re-auth window. Plan 05 sets `session.freshAge = 1h`.
+ *
+ * WR-02 fix (2026-05-01): split null-scope (anonymous) from
+ * non-fresh-scope (authenticated but stale). The previous version
+ * collapsed both into FORBIDDEN `re_auth_required`, telling an
+ * unauthenticated caller to "re-authenticate" — that is information
+ * disclosure (it confirms the procedure exists) and a UX bug (the UI
+ * routes the user to a re-auth page instead of a login page).
+ * Anonymous → UNAUTHORIZED; stale → FORBIDDEN.
+ */
 export const requireFreshSession = middleware(({ ctx, next }) => {
-  if (!ctx.scope?.fresh) {
+  if (!ctx.scope) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  if (!ctx.scope.fresh) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 're_auth_required',
@@ -51,13 +64,21 @@ export const requireFreshSession = middleware(({ ctx, next }) => {
 });
 
 /**
- * Role allowlist gate. Throws FORBIDDEN `role_not_allowed` when the caller's
- * role is not in the allowed set OR when scope is null (defence in depth —
- * `requireAuth` should have rejected nullscope earlier).
+ * Role allowlist gate.
+ *
+ * WR-03 fix (2026-05-01): same shape as `requireFreshSession` —
+ * anonymous (`scope === null`) is UNAUTHORIZED so the UI can route to
+ * login; an authenticated caller in the wrong role is FORBIDDEN
+ * `role_not_allowed`. The previous version collapsed both into
+ * `role_not_allowed`, which the UI surfaces as "your role does not
+ * permit this" instead of "please log in".
  */
 export const requireRole = (...roles: Role[]) =>
   middleware(({ ctx, next }) => {
-    if (!ctx.scope || !roles.includes(ctx.scope.role)) {
+    if (!ctx.scope) {
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
+    if (!roles.includes(ctx.scope.role)) {
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'role_not_allowed',
