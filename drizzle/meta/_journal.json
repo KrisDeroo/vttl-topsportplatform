@@ -29,6 +29,13 @@
       "when": 1777756447000,
       "tag": "0003_users_is_minor",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777843200000,
+      "tag": "0004_verifications_policy_tighten",
+      "breakpoints": true
     }
   ]
 }
