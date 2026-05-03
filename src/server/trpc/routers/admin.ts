@@ -148,8 +148,9 @@ export const adminRouter = router({
      * action to the TD with the new user's id as `resource_id`.
      *
      * `dateOfBirth` is optional — TD/staff accounts often have no DOB
-     * on file; the generated `is_minor` column on `users` returns NULL
-     * for those rows so they pass the activation guard as adults.
+     * on file; the application-side `isMinorAt(dateOfBirth, now)`
+     * helper (CR-01 fix, src/lib/consent.ts) returns NULL for those
+     * rows so they pass the activation guard as adults.
      *
      * `.strict()` on the input shape rejects unknown fields so a
      * misspelled key (e.g. `localePreference`) fails loudly instead of

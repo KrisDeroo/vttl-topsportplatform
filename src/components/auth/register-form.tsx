@@ -56,9 +56,10 @@ export function RegisterForm() {
       const password = String(data.get('password') ?? '');
       const name = String(data.get('name') ?? '');
       // Better Auth `signUp.email` accepts arbitrary additional fields
-      // for VTTL's user-extension columns. `dateOfBirth` is read by the
-      // generated `is_minor` column on insert (Migration 0003); the TD
-      // admin UI (Plan 15) uses that flag in the activate flow.
+      // for VTTL's user-extension columns. `dateOfBirth` is consumed by
+      // the application-side `isMinorAt` helper (CR-01 fix,
+      // src/lib/consent.ts) inside `canActivate`; the TD admin UI
+      // (Plan 15) calls that guard in the activate flow.
       const result = await signUp.email({
         email,
         password,

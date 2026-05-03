@@ -63,8 +63,9 @@ export function UserTable({ initialData }: UserTableProps) {
 
   // initialData typed loosely because the Server Component reads through
   // Drizzle's select-row type which carries extra fields (image,
-  // dateOfBirth, isMinor, deactivatedAt, etc.); UserRow is the subset
-  // the table renders.
+  // dateOfBirth, deactivatedAt, etc.); UserRow is the subset the table
+  // renders. (Note: `isMinor` is no longer a column post CR-01 fix; it
+  // is computed in app code via `isMinorAt` from src/lib/consent.ts.)
   const list = trpc.admin.user.list.useQuery(
     { limit: 100 },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

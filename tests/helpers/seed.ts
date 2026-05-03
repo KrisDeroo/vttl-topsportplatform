@@ -115,9 +115,10 @@ export async function seedRolesMatrix(
     throw new Error('seedRolesMatrix: academy insert returned no rows');
   }
 
-  // 2. Seven role users. DOB 30 years ago so the generated `is_minor`
-  //    column resolves to FALSE (no minor-gate fallout in tests that do
-  //    not specifically target the GDPR-02 path).
+  // 2. Seven role users. DOB 30 years ago so the application-side
+  //    `isMinorAt` helper (CR-01 fix, src/lib/consent.ts) resolves to
+  //    FALSE — no minor-gate fallout in tests that do not specifically
+  //    target the GDPR-02 path.
   const adultDob = new Date(Date.now() - 30 * 365 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);

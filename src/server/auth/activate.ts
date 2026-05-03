@@ -42,7 +42,7 @@
  */
 import { and, eq, isNull } from 'drizzle-orm';
 
-import { CURRENT_POLICY } from '@/lib/consent';
+import { CURRENT_POLICY, isMinorAt } from '@/lib/consent';
 import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema/auth';
 import { consentRecords } from '@/server/db/schema/consent';
@@ -76,13 +76,16 @@ export async function canActivate(userId: string): Promise<ActivationResult> {
   const u = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!u) return { ok: false, reason: 'not_found' };
 
-  // The generated column lives on `users.is_minor` (Migration 0003).
-  // Drizzle's strict TS inference exposes it through the schema type,
-  // but we cast to a narrowed shape here because the generated-column
-  // helper does not yet typeify `boolean | null` cleanly across the
-  // Drizzle 0.45 minor versions. The runtime value is always one of
-  // `true` / `false` / `null` — see migration 0003 CASE expression.
-  const isMinor = (u as { isMinor: boolean | null }).isMinor;
+  // CR-01 fix: the prior implementation read `u.is_minor` from a STORED
+  // generated column on `users` whose expression referenced
+  // `CURRENT_DATE`. Postgres rejects non-IMMUTABLE expressions in STORED
+  // generated columns, so the migration could never apply. We now compute
+  // the flag in application code via `isMinorAt(dateOfBirth, now)` —
+  // UTC-anchored at day granularity, deterministic across the 16th
+  // birthday boundary, and produces the same `boolean | null` tri-state
+  // the rest of the code below expects (NULL when DOB is missing →
+  // adult-treatment for activation purposes).
+  const isMinor = isMinorAt(u.dateOfBirth, new Date());
 
   if (isMinor === true) {
     const link = await db.query.parentChildLinks.findFirst({

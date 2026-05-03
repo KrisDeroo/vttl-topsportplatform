@@ -216,3 +216,65 @@ export async function recordConsent(
 export function isCategoryRequired(category: ConsentCategory): boolean {
   return REQUIRED_CATEGORIES.includes(category);
 }
+
+/**
+ * The Belgian VTTL minor-consent threshold in years (GDPR-02). Centralised
+ * here so the migration header rationale, the activation guard, and any
+ * future direct-Postgres predicate cite the SAME constant. Changing the
+ * platform threshold requires a schema-or-policy review (PROJECT.md +
+ * RESEARCH.md §Belgian minor-consent enforcement) and a new migration —
+ * NEVER an in-place edit of the prior migration's header.
+ */
+export const MINOR_AGE_YEARS = 16;
+
+/**
+ * `isMinorAt(birthDate, now)` — pure predicate replacing the
+ * non-IMMUTABLE STORED generated column the original draft of Migration
+ * 0003 attempted (CR-01 fix). Returns:
+ *
+ *   - `null` when `birthDate` is `null` / `undefined` — TD/staff users
+ *     without a DOB on file are neither minor nor non-minor; the
+ *     activation guard treats this as "not a minor" (no parent consent
+ *     required).
+ *   - `true` when the user has not yet reached `MINOR_AGE_YEARS` on the
+ *     wall-clock date represented by `now`.
+ *   - `false` otherwise.
+ *
+ * Day-granularity, UTC-anchored: the comparison normalises both sides to
+ * UTC midnight so the function flips deterministically on the user's 16th
+ * birthday regardless of the caller's local timezone. Postgres' original
+ * intended expression — `(CURRENT_DATE - date_of_birth) < INTERVAL '16
+ * years'` — used the server's session time zone (Europe/Brussels per the
+ * Coolify deploy), which would have flipped at the same UTC moment in
+ * practice; this helper matches that semantics.
+ *
+ * Accepted input shapes mirror what the Drizzle `date` column produces
+ * when parsed: a `Date`, an ISO `YYYY-MM-DD` string, or a full ISO 8601
+ * timestamp. `null` and `undefined` short-circuit to `null` so callers
+ * can pipe in `users.dateOfBirth` (`Date | null`) without a guard.
+ */
+export function isMinorAt(
+  birthDate: Date | string | null | undefined,
+  now: Date,
+): boolean | null {
+  if (birthDate === null || birthDate === undefined) return null;
+  const birth =
+    birthDate instanceof Date ? birthDate : new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return null;
+
+  // Compare year/month/day in UTC so the predicate is timezone-stable
+  // across the 16th-birthday day boundary. We are NOT comparing
+  // wall-clock minutes — Plan 02 stores `date_of_birth` as a `date`
+  // (no time component), and the policy threshold is also at day
+  // granularity, so any sub-day arithmetic would be spurious precision.
+  const nowY = now.getUTCFullYear();
+  const nowM = now.getUTCMonth();
+  const nowD = now.getUTCDate();
+  const bY = birth.getUTCFullYear();
+  const bM = birth.getUTCMonth();
+  const bD = birth.getUTCDate();
+
+  let age = nowY - bY;
+  if (nowM < bM || (nowM === bM && nowD < bD)) age -= 1;
+  return age < MINOR_AGE_YEARS;
+}

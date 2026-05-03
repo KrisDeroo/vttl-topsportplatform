@@ -1,35 +1,37 @@
 # Rollback — 0003_users_is_minor
 
-Removes the `is_minor` STORED generated column from `users`.
+This migration is intentionally a no-op (see CR-01 fix in
+`drizzle/0003_users_is_minor.sql`). There is nothing to roll back at the
+schema layer.
+
+## Background (CR-01 fix, 2026-05-01)
+
+The original draft of this migration attempted to add `users.is_minor`
+as a STORED generated column whose expression referenced
+`CURRENT_DATE`. Postgres rejects non-IMMUTABLE expressions in STORED
+generated columns, so the migration could not apply.
+
+The minor-flag computation moved to application code:
+`isMinorAt(dateOfBirth, now)` in `src/lib/consent.ts`, called from
+`src/server/auth/activate.ts`. The migration file is preserved as a
+no-op so `drizzle/meta/_journal.json` (idx 3) still references a valid
+file and subsequent migrations keep contiguous numbering.
 
 ## When to roll back
 
-Roll back this migration only if a downstream defect blocks production
-deploys. The `canActivate` minor-gate (`src/server/auth/activate.ts`)
-depends on this column; rolling back the column will break the GDPR-02
-minor-consent enforcement and Phase 1 succescriterium #5 ("under-16
-cannot activate without parental consent").
+Never — the migration makes no schema change. If a downstream defect
+forces a rollback, the only artifact to revert is the application-side
+helper in `src/lib/consent.ts` (and its consumer in
+`src/server/auth/activate.ts`).
 
 ## Rollback SQL
 
-```sql
-ALTER TABLE "users" DROP COLUMN "is_minor";
-```
-
-## Post-rollback checklist
-
-1. Update `src/server/db/schema/auth.ts` to remove the `isMinor` column
-   declaration.
-2. Update `src/server/auth/activate.ts` to compute the minor flag in
-   application code (NOT a long-term solution — re-introduces the
-   timezone-drift risk that the generated column eliminates).
-3. Re-run `tests/integration/minor-flow.test.ts` to confirm the
-   `parent_link_missing` / `consent_missing` reasons still resolve in
-   the application-layer fallback.
+None required.
 
 ## Why this is a separate file (MIG-01)
 
 Drizzle's migration runner does not provide rollback SQL automatically.
 Each migration in this directory has a `.rollback.md` companion that
 documents the inverse so an SRE can apply it manually with `psql` if a
-production rollback is required.
+production rollback is required. This file remains for parity even when
+the migration itself is a no-op.

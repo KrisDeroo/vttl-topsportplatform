@@ -1,38 +1,30 @@
 -- Migration 0003_users_is_minor.sql — Phase 1 Wave 6, Plan 12.
--- GDPR-02 minor-consent enforcement: add `is_minor` STORED generated column
--- to `users` so the `canActivate(userId)` guard in
--- `src/server/auth/activate.ts` can rely on a Postgres-computed truth value
--- (rather than recomputing age in TypeScript on every check, which drifts
--- across timezone boundaries on the day of a user's 16th birthday).
+-- GDPR-02 minor-consent enforcement.
 --
--- Hand-authored. The agent worktree cannot run `npx drizzle-kit generate`
--- against a live Postgres instance; Plan 16 reconciles via
--- `drizzle-kit introspect` once node_modules is available against staging,
--- same pattern as 0000_initial.sql / 0001_medical_isolated.sql.
+-- ─────────────────────────────────────────────────────────────────────────
+-- DEVIATION (CR-01 fix, 2026-05-01): the original draft of this migration
+-- attempted to add `users.is_minor` as a STORED generated column whose
+-- expression referenced `CURRENT_DATE`. Postgres rejects that at apply time
+-- with `ERROR: generation expression is not immutable` because
+-- `CURRENT_DATE` is `STABLE`, not `IMMUTABLE`, and STORED generated columns
+-- demand IMMUTABLE expressions. The whole minor-consent gate (Plan 12 /
+-- `canActivate`) would have been broken at the schema layer.
 --
--- Rules:
---   * NULL when `date_of_birth IS NULL` — staff/TD users without DOB are
---     neither minor nor non-minor; the activation guard treats NULL as
---     "not a minor" because no parent consent is required for a user with
---     no DOB on file.
---   * TRUE when `(CURRENT_DATE - date_of_birth) < INTERVAL '16 years'`.
---   * FALSE otherwise.
+-- Resolution: drop the generated-column approach and compute the minor
+-- flag in application code. `src/server/auth/activate.ts` derives
+-- `isMinor` from `users.date_of_birth` via the `isMinorAt(birthDate, now)`
+-- helper in `src/lib/consent.ts` (UTC-anchored, deterministic across the
+-- 16th-birthday day boundary). RLS / direct-Postgres consumers that need
+-- the flag (none in Phase 1) can compute it inline as
+-- `CURRENT_DATE - date_of_birth < INTERVAL '16 years'` in their own
+-- SELECT predicate — that is allowed because predicates do not require
+-- IMMUTABLE expressions.
 --
--- The Belgian Art. 8 threshold is 13 (digital service provider consent
--- per Belgian implementation of GDPR Art. 8(1) — Wet 30 juli 2018), but
--- VTTL-specific policy (PROJECT.md + RESEARCH.md §Belgian minor-consent
--- enforcement) sets 16 as the platform threshold to align with Belgian
--- youth-sport oversight and the Patient Rights Act expectations on minors
--- in elite-sport medical follow-up. The threshold is centralised here as
--- the SQL `INTERVAL '16 years'` literal — changing the policy means a new
--- migration (0004), never an in-place edit (MIG-01).
+-- This file therefore intentionally contains no DDL: it remains in the
+-- migration sequence so `drizzle/meta/_journal.json` (idx 3) still points
+-- at a valid file, but it makes no schema change. Subsequent migrations
+-- (0004+) keep numbering consistent.
+-- ─────────────────────────────────────────────────────────────────────────
 
-ALTER TABLE "users"
-  ADD COLUMN "is_minor" boolean
-  GENERATED ALWAYS AS (
-    CASE
-      WHEN date_of_birth IS NULL THEN NULL
-      WHEN (CURRENT_DATE - date_of_birth) < INTERVAL '16 years' THEN TRUE
-      ELSE FALSE
-    END
-  ) STORED;
+-- No-op (see header rationale).
+SELECT 1 WHERE FALSE;
