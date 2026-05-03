@@ -36,6 +36,13 @@
       "when": 1777843200000,
       "tag": "0004_verifications_policy_tighten",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777843300000,
+      "tag": "0005_consenting_party_not_null",
+      "breakpoints": true
     }
   ]
 }

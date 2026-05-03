@@ -18,9 +18,11 @@
  *
  * `consenting_party_user_id`: who actually clicked 'I agree'. For a
  * Belgian minor (< 16), this is the parent (parent_user_id from
- * parent_child_links); for an adult, this equals user_id. RLS policy
- * (Plan 04) requires INSERT only when `consenting_party_user_id`
- * matches caller or matches a parent of the user_id.
+ * parent_child_links); for an adult, this equals user_id. NOT NULL
+ * (WR-11 fix, Migration 0005) — every consent row must identify its
+ * consenting agent. RLS policy (Plan 04) requires INSERT only when
+ * `consenting_party_user_id` matches caller or matches a parent of
+ * the user_id.
  *
  * `withdrawn_at` is the only column an UPDATE may touch; Plan 04 RLS
  * forbids any other column change. DELETE is forbidden at the role
@@ -49,7 +51,14 @@ export const consentRecords = pgTable('consent_records', {
   consentTextSha256: varchar('consent_text_sha256', { length: 64 }).notNull(),
   givenAt: tstz('given_at', { defaultNow: true }).notNull(),
   withdrawnAt: tstz('withdrawn_at'), // null = active consent
-  consentingPartyUserId: uuid('consenting_party_user_id').references(() => users.id),
+  // WR-11 fix (2026-05-01): NOT NULL — Belgian Art. 8 audit trail
+  // requires this column to identify "who clicked agree". The CR-02
+  // fix in `src/server/trpc/routers/consent.ts` always sets it to the
+  // caller's user_id, and Migration 0005 backfills any pre-existing
+  // NULL rows with `user_id` (assumes self-consent for legacy rows).
+  consentingPartyUserId: uuid('consenting_party_user_id')
+    .notNull()
+    .references(() => users.id),
   ipAddress: inet('ip_address').notNull(),
   userAgent: text('user_agent').notNull(),
 });
