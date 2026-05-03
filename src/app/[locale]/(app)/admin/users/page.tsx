@@ -5,9 +5,14 @@
  *   - Re-validates the session via Better Auth (the parent layout already
  *     redirected anonymous users; we re-check role here so a non-TD
  *     authenticated user can't reach this URL).
- *   - Reads the initial user list with the schema-owner Drizzle client
- *     (bypasses RLS on read; mutations from the Client Component go
- *     through tRPC where RLS is honoured per-request).
+ *   - Reads the initial user list THROUGH the tRPC `admin.user.list`
+ *     procedure (CR-07 fix, 2026-05-01) so the same middleware chain that
+ *     guards the client (requireAuth + withRlsContext +
+ *     requireCurrentConsent + requireRole(technical_director)) also gates
+ *     the server-rendered initial data. Direct `db.query.users.findMany`
+ *     would have bypassed RLS on read, leaving sensitive columns (DOB,
+ *     deactivatedAt) exposed if a non-TD ever reached this Server
+ *     Component via a routing bug or a Better Auth role-claim quirk.
  *   - Hands the list off to <UserTable> as `initialData` so the React
  *     Query cache hydrates without a client-side round-trip.
  *
@@ -22,14 +27,13 @@
  *            .planning/phases/01-fundament/01-RESEARCH.md
  *              §`/admin/users/page.tsx` (lines 2132–2156)
  */
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { getTranslations } from 'next-intl/server';
 
 import { UserTable } from '@/components/admin/user-table';
-import { auth } from '@/server/auth/auth';
-import { db } from '@/server/db/client';
+import { createContext } from '@/server/trpc/server-context';
+import { appRouter } from '@/server/trpc/routers/_app';
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -38,25 +42,26 @@ interface PageProps {
 export default async function AdminUsersPage({ params }: PageProps) {
   const { locale } = await params;
   const t = await getTranslations('admin.users');
-  const session = await auth.api.getSession({ headers: await headers() });
 
-  // Better Auth's session.user shape includes Better Auth-managed fields
-  // (id, email, emailVerified, name, image) but VTTL extension columns
-  // (role, preferredLocale) come through with `unknown` typing — narrowing
-  // here mirrors the `pickLocale` pattern in src/server/auth/auth.ts.
-  const role =
-    session && (session.user as { role?: unknown }).role !== undefined
-      ? (session.user as { role: unknown }).role
-      : null;
+  // Build the same per-request context the HTTP tRPC adapter uses; this
+  // populates session, scope, RLS GUCs, request-id, ip, etc. so the
+  // server-side caller honours every middleware (requireAuth,
+  // withRlsContext, requireCurrentConsent, requireRole).
+  const ctx = await createContext();
 
-  if (!session || role !== 'technical_director') {
+  // Anonymous or non-TD callers go to login. Doing the role check first
+  // avoids the cost of building the caller for a request that will
+  // immediately be denied by `requireRole('technical_director')`.
+  if (!ctx.scope || ctx.scope.role !== 'technical_director') {
     redirect(`/${locale}/login`);
   }
 
-  const list = await db.query.users.findMany({
-    orderBy: (u, { desc }) => desc(u.createdAt),
-    limit: 100,
-  });
+  // tRPC server-side caller — invokes the procedure WITH the full
+  // middleware chain. RLS is enforced inside `tdProcedure`'s
+  // `withRlsContext`, so this is the canonical guarded read path; any
+  // future tightening of the policy automatically applies here too.
+  const caller = appRouter.createCaller(ctx);
+  const list = await caller.admin.user.list({ limit: 100 });
 
   return (
     <main className="p-6">
