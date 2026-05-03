@@ -50,7 +50,7 @@ Plans:
 - [x] 01-13-observability-pino-sentry-PLAN.md — pino with REDACT_PATHS + Sentry EU beforeSend PII strip + Drizzle slow-query helper + retention doc
 - [x] 01-14-health-endpoints-PLAN.md — /api/health/live (process-only) + /api/health/ready (DB + Redis with 2s timeout)
 - [x] 01-15-td-admin-ui-user-management-PLAN.md — admin.user.* router (CRUD + activate/deactivate/role/parent/academy) + UserTable Server Component + tRPC client
-- [ ] 01-16-drizzle-push-blocking-PLAN.md — **[BLOCKING]** Apply migrations 0000–0003 to dev/staging Supabase + 8 post-migration smoke checks
+- [x] 01-16-drizzle-push-blocking-PLAN.md — **[BLOCKING]** Apply migrations 0000–0003 to dev/staging Supabase + 8 post-migration smoke checks
 - [x] 01-17-wave-0-test-infrastructure-PLAN.md — Vitest + Playwright + testcontainers + RBAC matrix (D-11) + RLS direct-query + chaos rate-limit + e2e specs (RED on day one)
 - [x] 01-18-migration-governance-docs-PLAN.md — Migration runbook + erasure strategy + backfill utility + protect-migrations CI guard + TIMESTAMPTZ ESLint rule
 
