@@ -55,10 +55,23 @@ export const requireCurrentConsent = middleware(async ({ ctx, next }) => {
     `,
   );
 
-  // postgres-js returns the result rows as an array-like; coerce defensively
-  // because Drizzle's `execute` return shape is loose for raw SQL.
-  const rows = Array.isArray(stale) ? stale : [];
-  if (rows.length > 0) {
+  // WR-01 fix (2026-05-01): fail closed, not open. The previous
+  // implementation coerced any non-array shape to `[]` and then took
+  // the "no missing categories" branch — silently SKIPPING the consent
+  // gate for any caller whose `db.execute` happened to return a
+  // non-array (a postgres-js wrapper change, a transaction-handle
+  // quirk, or an unexpected error envelope). The gate is the
+  // platform-wide D-07 re-consent enforcement; surfacing an
+  // INTERNAL_SERVER_ERROR here is the only correct response — the
+  // caller's tRPC handler must not run with an indeterminate consent
+  // status.
+  if (!Array.isArray(stale)) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'consent_check_unexpected_shape',
+    });
+  }
+  if (stale.length > 0) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 're_consent_required',
