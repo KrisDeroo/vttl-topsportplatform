@@ -84,6 +84,27 @@ export const protectedProcedure = publicProcedure
   .use(withRlsContext)
   .use(requireCurrentConsent);
 
+/**
+ * `consentGiveProcedure` — auth + RLS, NO `requireCurrentConsent` gate.
+ *
+ * CR-03 fix (2026-05-01): `consent.give` was previously composed on
+ * `protectedProcedure`, which transitively chains `requireCurrentConsent`
+ * via the standard preset. A first-time user (or any user after a major
+ * version bump) has no row at `CURRENT_POLICY[category].version`, so the
+ * gate threw `re_consent_required` BEFORE the give-mutation ran — making
+ * the only endpoint that creates a consent row itself gated on having
+ * one. Net effect: the consent banner could never proceed (deadlock).
+ *
+ * This preset reuses requireAuth + withRlsContext (so RLS still gates
+ * the INSERT and audit attribution remains correct) but intentionally
+ * omits `requireCurrentConsent`. Only `consent.give` should compose on
+ * this preset; every other authenticated mutation belongs on
+ * `protectedProcedure`.
+ */
+export const consentGiveProcedure = publicProcedure
+  .use(requireAuth)
+  .use(withRlsContext);
+
 /** Technical-director-only procedures (admin user-management — AUTH-04/05, Plan 15). */
 export const tdProcedure = protectedProcedure.use(
   requireRole('technical_director'),

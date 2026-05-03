@@ -39,14 +39,16 @@
  *                          the surface but does not expose a UI; the
  *                          BullMQ queue is wired in Plan 10.
  *
- * `protectedProcedure` (Plan 11 freshSession.ts) wraps every procedure
- * with: requireAuth + withRlsContext + requireCurrentConsent. The
- * `give` mutation is the natural exception (a user without a current
- * consent must be ABLE to give one to lift the gate) — see the
- * `requireConsent.ts` block-comment for why the existing middleware
- * tolerates this: it short-circuits when the row exists, and the
- * absence of a row throws `re_consent_required` which the UI catches
- * to render the banner that calls `consent.give`.
+ * `protectedProcedure` (Plan 11 freshSession.ts) wraps procedures with:
+ * requireAuth + withRlsContext + requireCurrentConsent.
+ *
+ * The `give` mutation is the natural exception (a user without a
+ * current consent must be ABLE to give one to lift the gate). Per CR-03
+ * fix (2026-05-01) it is therefore composed on `consentGiveProcedure`
+ * — auth + RLS only, NO `requireCurrentConsent` — so a first-time user
+ * (or any user after a major policy version bump) can submit consent
+ * without first holding consent. Every other endpoint in this router
+ * stays on `protectedProcedure`.
  *
  * Reference: .planning/phases/01-fundament/01-12-consent-flow-and-minor-gate-PLAN.md Task 2
  *            src/lib/consent.ts (recordConsent, CURRENT_POLICY)
@@ -67,7 +69,10 @@ import { parentChildLinks } from '@/server/db/schema/memberships';
 import { consentNotifyQueue } from '@/server/workers/queues';
 
 import { writeAudit } from '../middleware/audit';
-import { protectedProcedure } from '../middleware/freshSession';
+import {
+  consentGiveProcedure,
+  protectedProcedure,
+} from '../middleware/freshSession';
 import { router } from '../trpc';
 
 /** Discriminator union for the three consent categories — kept in lock-step
@@ -89,12 +94,18 @@ export const consentRouter = router({
    * Minor flow (parent acts on behalf):
    *   `forUserId = minor.id`, `consentingPartyUserId = ctx.scope.userId`.
    *
+   * Composed on `consentGiveProcedure` (auth + RLS, NO
+   * `requireCurrentConsent`) — CR-03 fix: a first-time user has no
+   * current consent yet, so this endpoint MUST be reachable without
+   * the consent gate firing. Every other authenticated endpoint stays
+   * on `protectedProcedure`.
+   *
    * `textShown.min(50)` is a sanity floor — the shortest committed
    * consent text (any locale, any category) is well over 50 chars; a
    * shorter input would mean the client sent an empty or wrong text and
    * the SHA-256 we'd compute would be meaningless.
    */
-  give: protectedProcedure
+  give: consentGiveProcedure
     .input(
       z.object({
         category: CategorySchema,
