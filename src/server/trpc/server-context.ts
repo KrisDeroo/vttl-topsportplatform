@@ -98,14 +98,37 @@ export async function createContext(): Promise<CallerContext> {
     // Better Auth stores `freshUntil` on the session row (Plan 02 schema +
     // Plan 05 freshAge=1h). Treat any non-future freshUntil — including null —
     // as "stale, requires re-auth for sensitive ops".
-    const sessionRow = (session.session ?? {}) as { freshUntil?: Date | string | null };
+    //
+    // WR-05 fix (2026-05-01): handle the `number` (epoch-ms) shape too.
+    // Better Auth's session-cookie cache serialises `Date` objects
+    // differently per backend across v1.6 minors — JSON cache returns
+    // an ISO string (handled by the `string` arm), but a binary /
+    // typed-array cache may return a numeric timestamp. The previous
+    // implementation fell into the `else 0` branch for numbers, so
+    // `fresh` was permanently `false` for the entire session window
+    // — sensitive endpoints required re-auth on every call. Added a
+    // `typeof === 'number'` arm with a sanity check on the unhandled
+    // shape so a future regression is observable in logs.
+    const sessionRow = (session.session ?? {}) as {
+      freshUntil?: Date | string | number | null;
+    };
     const freshUntilRaw = sessionRow.freshUntil;
-    const freshUntilMs =
-      freshUntilRaw instanceof Date
-        ? freshUntilRaw.getTime()
-        : typeof freshUntilRaw === 'string'
-          ? Date.parse(freshUntilRaw)
-          : 0;
+    let freshUntilMs = 0;
+    if (freshUntilRaw instanceof Date) {
+      freshUntilMs = freshUntilRaw.getTime();
+    } else if (typeof freshUntilRaw === 'string') {
+      freshUntilMs = Date.parse(freshUntilRaw);
+    } else if (typeof freshUntilRaw === 'number') {
+      freshUntilMs = freshUntilRaw;
+    } else if (freshUntilRaw !== undefined && freshUntilRaw !== null) {
+      // Anything else is a contract violation between Better Auth and
+      // this consumer — log so a regression is observable, then fall
+      // through to "stale" (the safest default).
+      log.warn(
+        { type: typeof freshUntilRaw },
+        'auth.freshUntil_unhandled_shape',
+      );
+    }
     const fresh = freshUntilMs > Date.now();
 
     // WR-04 fix (2026-05-01): reject unknown role values instead of
