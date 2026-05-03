@@ -8,11 +8,15 @@
  *   `pgp_sym_decrypt(bytea, current_setting('app.medical_key'))`.
  *
  * The symmetric key is set per-connection from the `MEDICAL_ENCRYPTION_KEY`
- * env var via the session GUC `app.medical_key` — Plan 06 (db client) wires
- * the GUC at pool init time. The key is NEVER stored in any database column
- * or migration file; rotation = rotate the env var, re-encrypt rows in a
- * background job (deferred; see RESEARCH §pgcrypto encrypted column read
- * pattern, lines 2483-2502).
+ * env var via the session GUC `app.medical_key` — `src/server/db/client.ts`
+ * wires the GUC via the postgres-js `connection.options` startup parameter
+ * (CR-06 fix, 2026-05-01) so every pooled backend has the key set BEFORE
+ * the first query runs. Plan 04's `withRlsContext` additionally sets the
+ * same GUC with `is_local=true` per tRPC transaction for layered defence.
+ * The key is NEVER stored in any database column or migration file;
+ * rotation = rotate the env var, re-encrypt rows in a background job
+ * (deferred; see RESEARCH §pgcrypto encrypted column read pattern,
+ * lines 2483-2502).
  *
  * Cipher columns are stored as `text` (base64-encoded bytea) for portability
  * across pg drivers. The `pgp_sym_encrypt` function returns bytea; the
@@ -20,10 +24,10 @@
  * cast back via `::bytea` before `pgp_sym_decrypt`.
  *
  * IMPORTANT: every connection that touches `medical_*` tables MUST have
- * `app.medical_key` set — Plan 06's pool initializer enforces this. A
- * missing key raises `unrecognized configuration parameter` on the first
- * encrypted read/write, which is the correct fail-loud behaviour (do not
- * silently fall back to a default key).
+ * `app.medical_key` set — the pool initializer (`src/server/db/client.ts`)
+ * enforces this. A missing key raises `unrecognized configuration
+ * parameter` on the first encrypted read/write, which is the correct
+ * fail-loud behaviour (do not silently fall back to a default key).
  *
  * Reference: .planning/phases/01-fundament/01-RESEARCH.md
  *   §Medical isolation (lines 759-803), §pgcrypto encrypted column read
