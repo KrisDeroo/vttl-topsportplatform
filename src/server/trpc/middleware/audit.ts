@@ -122,6 +122,16 @@ export async function writeAudit(
  *     TRPCError is preserved. If the audit insert itself fails, the original
  *     error is masked — acceptable trade-off; alerting on audit insert
  *     failures is an OPS-04 dashboard concern.
+ *
+ * WR-07 fix (2026-05-01): on rejection the surrounding tRPC transaction
+ * (the one `withRlsContext` opened) has already been aborted, so
+ * `ctx.db` is a stale handle. Force `writeAudit` onto the raw pool by
+ * stripping `ctx.db` from the context shim — `writeAudit` already
+ * pulls actor attribution from `ctx.scope.userId` directly (NOT from
+ * the app.user_id GUC), so the audit row remains fully attributed.
+ * The audit_log table's RLS INSERT policy is `WITH CHECK (true)`
+ * (Plan 04), so the rawDb-pool insert succeeds even without the
+ * per-request GUCs set on that connection.
  */
 export const auditMiddleware = (action: string, resourceType: string) =>
   middleware(async ({ ctx, next }) => {
@@ -130,7 +140,19 @@ export const auditMiddleware = (action: string, resourceType: string) =>
       await writeAudit(ctx, { action, resourceType, outcome: 'success' });
       return result;
     } catch (e) {
-      await writeAudit(ctx, { action, resourceType, outcome: 'error' });
+      // Strip the aborted-tx handle so writeAudit falls back to rawDb;
+      // ctx.scope is preserved so actor_user_id is still recorded.
+      const auditCtx: AuditContext = {
+        scope: ctx.scope ? { userId: ctx.scope.userId } : null,
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+        requestId: ctx.requestId,
+      };
+      await writeAudit(auditCtx, {
+        action,
+        resourceType,
+        outcome: 'error',
+      });
       throw e;
     }
   });
