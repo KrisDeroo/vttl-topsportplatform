@@ -26,9 +26,18 @@ import { routing, type Locale } from './routing';
 import { resolveLocale } from './resolve';
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  // Step 0: middleware-detected locale (URL segment) — first signal in the chain.
-  let locale = await requestLocale;
-  if (!hasLocale(routing.locales, locale)) locale = routing.defaultLocale;
+  // Step 0: middleware-detected locale (URL segment). Note that
+  // `next-intl` middleware reports the URL-segment locale ONLY when a
+  // locale-prefix is explicitly present in the path (e.g. `/en/x`,
+  // `/fr/x`); for default-locale URLs without a prefix (e.g. `/x` →
+  // implicit `nl`) `requestLocale` is `undefined`. Plan 07 routing
+  // pattern is `as-needed`, so this distinction is load-bearing for
+  // the WR-08 fix below.
+  const requestedRaw = await requestLocale;
+  const urlHasExplicitLocale = hasLocale(routing.locales, requestedRaw);
+  const urlLocale: Locale | null = urlHasExplicitLocale
+    ? (requestedRaw as Locale)
+    : null;
 
   const hdrs = await headers();
   const cookieStore = await cookies();
@@ -55,11 +64,17 @@ export default getRequestConfig(async ({ requestLocale }) => {
     userPref,
   })) as Locale;
 
-  // Prefer the URL-segment locale if it diverges (e.g. user shares a link to /fr/x
-  // with a cookie='nl' — the URL is the explicit user intent for that request).
-  const final: Locale = hasLocale(routing.locales, locale) && locale !== routing.defaultLocale
-    ? (locale as Locale)
-    : resolved;
+  // WR-08 fix (2026-05-01): URL-priority is honoured for ANY explicit
+  // locale segment in the path, including the default locale. The
+  // previous predicate (`locale !== routing.defaultLocale`) excluded
+  // explicit `/nl/...` URLs from URL-priority, so a user clicking a
+  // `/foo` link with `cookie=en` saw English on what was actually a
+  // Dutch URL — the docstring claimed "URL is explicit user intent"
+  // but the implementation contradicted it. We now distinguish:
+  //   * URL has an explicit locale segment → URL wins (urlLocale)
+  //   * URL is locale-less (the as-needed default) → defer to the
+  //     resolution chain (cookie / Accept-Language / userPref)
+  const final: Locale = urlLocale ?? resolved;
 
   const messages = (await import(`../../messages/${final}.json`)).default;
 
