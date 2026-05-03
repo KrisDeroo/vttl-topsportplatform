@@ -54,12 +54,15 @@ interface ReConsentBannerProps {
  *   Body: { "0": { "json": { ...input } } }
  *
  * The response shape on success is `[{ result: { data: { json: row } } }]`.
+ *
+ * CR-04 fix: the input no longer carries `textShown` — the server
+ * fetches the canonical bytes and stores them itself, so the client
+ * is no longer trusted to supply the legal snapshot.
  */
 async function callConsentGive(input: {
   category: 'operational';
   version: string;
   locale: 'nl' | 'en' | 'fr';
-  textShown: string;
 }): Promise<void> {
   const res = await fetch(`/api/trpc/consent.give?batch=1`, {
     method: 'POST',
@@ -93,14 +96,18 @@ export function ReConsentBanner({ onComplete }: ReConsentBannerProps) {
         category="operational"
         version={CURRENT_POLICY.operational.version}
         required
-        onAccept={async (textShown) => {
+        // CR-04 fix: the textShown argument from <ConsentStep> is the
+        // bytes the user saw in the browser, used here ONLY to gate the
+        // accept button (the server re-reads the canonical bytes via
+        // `getConsentText` before hashing). It is intentionally not
+        // forwarded to the consent.give input.
+        onAccept={async (_textShown) => {
           setError(null);
           try {
             await callConsentGive({
               category: 'operational',
               version: CURRENT_POLICY.operational.version,
               locale,
-              textShown,
             });
             onComplete();
           } catch (e) {

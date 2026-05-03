@@ -60,10 +60,13 @@ import { z } from 'zod';
 
 import {
   CURRENT_POLICY,
+  getConsentText,
   recordConsent,
   type ConsentCategory,
 } from '@/lib/consent';
+import { hasPermission } from '@/server/auth/permissions';
 import { db as rawDb, type DbClient } from '@/server/db/client';
+import { users } from '@/server/db/schema/auth';
 import { consentRecords } from '@/server/db/schema/consent';
 import { parentChildLinks } from '@/server/db/schema/memberships';
 import { consentNotifyQueue } from '@/server/workers/queues';
@@ -100,38 +103,118 @@ export const consentRouter = router({
    * the consent gate firing. Every other authenticated endpoint stays
    * on `protectedProcedure`.
    *
-   * `textShown.min(50)` is a sanity floor — the shortest committed
-   * consent text (any locale, any category) is well over 50 chars; a
-   * shorter input would mean the client sent an empty or wrong text and
-   * the SHA-256 we'd compute would be meaningless.
+   * **Authorization (CR-02 fix, 2026-05-01):** when `forUserId !==
+   * callerId`, the handler verifies one of:
+   *   (a) the caller is the technical_director (admin override; the
+   *       audit trail records the override),
+   *   (b) the caller has the `consent.give_for_minor` permission AND a
+   *       `parent_child_links` row exists with `parentUserId = callerId
+   *       AND childUserId = forUserId`.
+   * Without one of these, the request is rejected `FORBIDDEN`. This
+   * closes the prior bypass that let any authenticated user record a
+   * consent on behalf of any victim.
+   *
+   * **Canonical text (CR-04 fix, 2026-05-01):** the legal snapshot is
+   * read server-side via `getConsentText(category, version, locale)`;
+   * the client never controls the bytes that land in
+   * `consent_text_snapshot`. SHA-256 is computed by `recordConsent`
+   * over the server-supplied text, so the tamper-evidence drill
+   * (`tests/integration/consent.test.ts`) covers genuine content only.
    */
   give: consentGiveProcedure
     .input(
-      z.object({
-        category: CategorySchema,
-        version: z.string().min(1),
-        locale: LocaleSchema,
-        textShown: z.string().min(50),
-        forUserId: z.string().uuid().optional(),
-      }),
+      z
+        .object({
+          category: CategorySchema,
+          version: z.string().min(1),
+          locale: LocaleSchema,
+          forUserId: z.string().uuid().optional(),
+        })
+        .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      // ctx.scope is non-null inside protectedProcedure — requireAuth has
+      // ctx.scope is non-null inside consentGiveProcedure — requireAuth has
       // already short-circuited the anonymous case. The `!` is documenting
       // intent rather than asserting blindly.
       const callerId = ctx.scope!.userId;
+      const callerRole = ctx.scope!.role;
       const targetUserId = input.forUserId ?? callerId;
       // `exactOptionalPropertyTypes: true` (tsconfig.json) forbids
       // passing `db: undefined` explicitly — spread only when the
       // RLS-bound handle is actually present so the optional property
       // is omitted in the anonymous-fallback case.
       const ctxDb = ctx.db as DbClient | undefined;
+      const dbHandle = ctxDb ?? rawDb;
+
+      // ─── CR-02 authorization gate ──────────────────────────────────
+      // Verify that the caller is allowed to act on behalf of
+      // `targetUserId`. Self-consent is the common path; anything else
+      // requires an audited override (TD) or a verified parent-child
+      // link with the right permission grant.
+      if (targetUserId !== callerId) {
+        const isTd = callerRole === 'technical_director';
+        const mayParent = hasPermission(callerRole, 'consent.give_for_minor');
+        if (!isTd && !mayParent) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'consent_forUserId_not_permitted',
+          });
+        }
+        if (!isTd) {
+          // Parent flow — confirm the link exists. RLS on
+          // `parent_child_links` would already filter out unauthorized
+          // reads, but a defence-in-depth lookup also rejects the case
+          // where the link is for a non-minor (the schema's UNIQUE
+          // constraint on child_user_id is the Belgian Art. 8 invariant
+          // and is enforced at INSERT time by Plan 02).
+          const link = await dbHandle.query.parentChildLinks.findFirst({
+            where: and(
+              eq(parentChildLinks.parentUserId, callerId),
+              eq(parentChildLinks.childUserId, targetUserId),
+            ),
+          });
+          if (!link) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'consent_forUserId_not_linked',
+            });
+          }
+          // Defence in depth — confirm target user actually exists. RLS
+          // visibility for `users` already permits a parent to read
+          // their linked child via `players_visible_to`, so this read
+          // will return the row inside the RLS-bound transaction.
+          const target = await dbHandle.query.users.findFirst({
+            where: eq(users.id, targetUserId),
+          });
+          if (!target) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'consent_forUserId_not_found',
+            });
+          }
+        }
+      }
+
+      // ─── CR-04 canonical-text gate ─────────────────────────────────
+      // Read the consent text from disk SERVER-SIDE. The client never
+      // controls the bytes hashed into `consent_text_sha256`. A
+      // missing/unknown (category, version, locale) tuple raises
+      // ENOENT here, which surfaces as a tRPC INTERNAL_SERVER_ERROR
+      // — the correct fail-loud behaviour: a consent attempt at a
+      // version we no longer ship must NOT silently store a hash over
+      // empty/stale bytes.
+      const canonicalText = await getConsentText(
+        input.category as ConsentCategory,
+        input.version,
+        input.locale,
+      );
+
       const row = await recordConsent({
         userId: targetUserId,
         category: input.category as ConsentCategory,
         version: input.version,
         locale: input.locale,
-        textShown: input.textShown,
+        textShown: canonicalText,
         consentingPartyUserId: callerId,
         ipAddress: ctx.ipAddress,
         userAgent: ctx.userAgent,
@@ -146,6 +229,14 @@ export const consentRouter = router({
           version: input.version,
           locale: input.locale,
           forUserId: input.forUserId ?? null,
+          // CR-02 audit attribution — record whether this was a
+          // TD-override path so security review can spot overrides at
+          // a glance. Self-consent and parent-of-linked-minor flows
+          // record `tdOverride: false`.
+          tdOverride:
+            input.forUserId !== undefined &&
+            input.forUserId !== callerId &&
+            callerRole === 'technical_director',
         },
       });
       return row;
