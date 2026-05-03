@@ -38,6 +38,29 @@ import type { CallerContext, CallerScope } from './trpc';
 import type { Role } from '@/server/auth/permissions';
 
 /**
+ * The seven canonical VTTL roles, mirroring `userRoleEnum`
+ * (src/server/db/schema/auth.ts) and `Role` (permissions.ts). Used by
+ * the WR-04 sanity check that rejects any unknown / drifted role
+ * string from the session row.
+ */
+const KNOWN_ROLES = [
+  'technical_director',
+  'academy_manager',
+  'trainer',
+  'player',
+  'parent',
+  'sparring_partner',
+  'medical_staff',
+] as const;
+
+function isKnownRole(role: unknown): role is Role {
+  return (
+    typeof role === 'string' &&
+    (KNOWN_ROLES as readonly string[]).includes(role)
+  );
+}
+
+/**
  * Build the per-request caller context. The Next.js route handler hands this
  * function the inbound `Request`; we read headers via `next/headers` (the App
  * Router pattern that Better Auth's `getSession` already uses internally).
@@ -85,7 +108,33 @@ export async function createContext(): Promise<CallerContext> {
           : 0;
     const fresh = freshUntilMs > Date.now();
 
-    const role = (u.role ?? 'player') as Role;
+    // WR-04 fix (2026-05-01): reject unknown role values instead of
+    // defaulting to 'player'. The previous fallback (`u.role ?? 'player'`
+    // cast as Role) silently downgraded any unrecognised role string —
+    // if Better Auth's additional-fields plugin ever returned a
+    // schema-drifted or partially-migrated row, the user got
+    // 'player'-level grants without an audit trail of why. With the
+    // sanity check, an unknown role becomes "no scope" → the request
+    // falls through to anonymous handling (requireAuth then rejects
+    // with UNAUTHORIZED). The DEBUG log lets ops track when this
+    // happens without surfacing details to the caller.
+    if (!isKnownRole(u.role)) {
+      log.warn(
+        { userId: u.id, roleRaw: u.role },
+        'auth.unknown_role',
+      );
+      // Leave `scope` as null — the caller is treated as anonymous.
+      return {
+        session: session?.session ?? null,
+        user: session?.user ?? null,
+        scope: null,
+        requestId,
+        ipAddress,
+        userAgent,
+        log: log.child({ requestId, userId: u.id }),
+      };
+    }
+    const role: Role = u.role;
     const locale = (u.preferredLocale ?? 'nl') as 'nl' | 'en' | 'fr';
 
     scope = {
