@@ -75,6 +75,7 @@ import { writeAudit } from '../middleware/audit';
 import {
   consentGiveProcedure,
   protectedProcedure,
+  tdProcedure,
 } from '../middleware/freshSession';
 import { router } from '../trpc';
 
@@ -342,13 +343,21 @@ export const consentRouter = router({
   /**
    * Internal — enqueue a notify-job after a major version bump (D-07).
    *
+   * **TD-only (WR-09 fix, 2026-05-01).** The endpoint enqueues an email
+   * fan-out for an arbitrary `userId`; on `protectedProcedure` it would
+   * have let any authenticated user spam any other user with
+   * "consent updated" emails via the BullMQ queue. The leading
+   * underscore in the name is a convention, NOT a tRPC visibility
+   * mechanism — moving the procedure onto `tdProcedure` is what
+   * actually restricts access. Plan 15 admin UI is the intended caller.
+   *
    * Phase 1 ships the surface; the call site (Plan 15 admin "bump
    * consent version" UI) is out of scope. The handler simply pushes onto
    * the BullMQ queue declared in `src/server/workers/queues.ts`; the
    * worker handler (`workers/jobs/consent-version-bump.ts`) does the
    * idempotency check + email send.
    */
-  _enqueueVersionBump: protectedProcedure
+  _enqueueVersionBump: tdProcedure
     .input(
       z.object({
         userId: z.string().uuid(),
@@ -357,8 +366,20 @@ export const consentRouter = router({
         newVersion: z.string().min(1),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await consentNotifyQueue.add('consent-version-bump', input);
+      // Audit-log the TD action so a security review can correlate
+      // bumps with the resulting fan-out volume.
+      await writeAudit(ctx, {
+        action: 'consent.version_bump_enqueue',
+        resourceType: 'user',
+        resourceId: input.userId,
+        newValues: {
+          category: input.category,
+          oldVersion: input.oldVersion,
+          newVersion: input.newVersion,
+        },
+      });
       return { queued: true };
     }),
 });
