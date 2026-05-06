@@ -23,6 +23,17 @@
 
 **E-mail-update:** Transactionele e-mail via **Resend (EU-region, Frankfurt)** met React Email templates per locale. Achter `lib/email.ts` interface zodat een latere swap (Mailgun EU, SendGrid EU, AWS SES eu-west-1) een 1-bestand-wijziging is. DPA + EU-region-bevestiging vóór eerste productie-mail (release-gate Fase 8).
 
+## Fase Status
+
+- [x] Phase 1: Fundament — done (18/18 plans + code-review fix cycle + verifier human_needed deferred to UAT)
+- [ ] Phase 2: Identiteit & Bestanden
+- [ ] Phase 3: Kalender
+- [ ] Phase 4: Kerndomein
+- [ ] Phase 5: Uitgebreid domein
+- [ ] Phase 6: Communicatie
+- [ ] Phase 7: Synthese
+- [ ] Phase 8: Kwaliteit & Release
+
 ---
 
 ## Phase 1: Fundament
