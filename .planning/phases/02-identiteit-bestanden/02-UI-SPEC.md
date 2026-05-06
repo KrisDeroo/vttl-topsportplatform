@@ -1,10 +1,12 @@
 ---
 phase: 2
 slug: identiteit-bestanden
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "style=new-york, baseColor=neutral, cssVariables=true, iconLibrary=lucide, rsc=true (detected from components.json — Phase 1)"
 created: 2026-05-06
+reviewed_at: 2026-05-06
+review_score: 6/6
 ---
 
 # Phase 2 — UI Design Contract — Identiteit & Bestanden
