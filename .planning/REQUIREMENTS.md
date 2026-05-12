@@ -345,7 +345,7 @@
 | TRAINER-02 | Phase 2 — Identiteit & Bestanden | diploma + pedagogical qualification |
 | TRAINER-03 | Phase 2 — Identiteit & Bestanden | trainer_academy_links junction |
 | FILE-01 | Phase 2 — Identiteit & Bestanden | signed URLs only, no public bucket |
-| FILE-02 | Phase 2 — Identiteit & Bestanden | separate medical bucket/prefix |
+| FILE-02 | Phase 5 — Uitgebreid domein | separate medical bucket/prefix — moved 2026-05-12 to match medical-tables creation in Phase 5 |
 | FILE-03 | Phase 2 — Identiteit & Bestanden | profiles/ prefix, role-gated |
 | FILE-04 | Phase 2 — Identiteit & Bestanden | UUID filenames |
 | FILE-05 | Phase 5 — Uitgebreid domein | evaluation attachments (trainer+TD+player) |

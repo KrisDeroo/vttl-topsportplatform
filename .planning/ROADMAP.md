@@ -9,10 +9,10 @@
 | Fase | Naam | UI? | Parallel? | Vereisten |
 |------|------|-----|-----------|-----------|
 | 1 | Fundament | Beperkt | Nee | AUTH-01..05, USER-01..05, GDPR-01..08, SEC-01..09, OPS-01..06, MIG-01..05, I18N-01..05, I18N-07, I18N-09, I18N-11 |
-| 2 | Identiteit & Bestanden | Ja | Nee | PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02, I18N-06, I18N-08 |
+| 2 | Identiteit & Bestanden | Ja | Nee | PLAYER-01..07, TRAINER-01..03, FILE-01, FILE-03, FILE-04, VALID-01..06, DOM-CAT-01..02, I18N-06, I18N-08 |
 | 3 | Kalender | Ja | Nee | CAL-01..08, VALID-07..08 |
 | 4 | Kerndomein | Ja | Ja (intern) | TRAIN-01..06, TOURN-01..06, RANK-01..07, DOM-RESULT-01..04, DOM-RANK-01 |
-| 5 | Uitgebreid domein | Ja | Ja (intern) | SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04, DOM-SPAR-AVAIL-01, DOM-MED-CONFLICT-01..02, DOM-EVAL-VIS-01..02 |
+| 5 | Uitgebreid domein | Ja | Ja (intern) | SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04, DOM-SPAR-AVAIL-01, DOM-MED-CONFLICT-01..02, DOM-EVAL-VIS-01..02, FILE-02 (medical bucket), FILE-05 (evaluation attachments) |
 | 6 | Communicatie | Ja | Nee | MSG-01..05, MSG-CHANNEL-01..03 |
 | 7 | Synthese | Ja | Nee | VIEW-01..05, SEARCH-01..02, GDPR-05..06 |
 | 8 | Kwaliteit & Release | Nee | Ja (intern) | CAL-06 (ICS), OPS-07..12, I18N-10 (catalog coverage), productieklaar |
@@ -170,7 +170,9 @@ Beperkt — alleen de login-pagina, wachtwoordreset-flow, en het TD-gebruikersbe
 Het platform heeft volledige speler- en trainerprofielen met foto-upload en correct gescopede bestandstoegang, zodat het dagelijks beheer van de spelerslijst operationeel is.
 
 ### Vereisten
-PLAYER-01..07, TRAINER-01..03, FILE-01..05, VALID-01..06, DOM-CAT-01..02, I18N-06, I18N-08
+PLAYER-01..07, TRAINER-01..03, FILE-01, FILE-03, FILE-04, VALID-01..06, DOM-CAT-01..02, I18N-06, I18N-08
+
+> FILE-02 (medical bucket separation) en FILE-05 (evaluation attachments) zijn verplaatst naar Phase 5 — beide raken medical/evaluation-tabellen die pas in Phase 5 bestaan. Phase 2 scope is profielfoto's (`profiles/` bucket); medische bucket-RLS in Phase 5.
 
 ### Succescriteria
 1. Een technisch directeur kan een volledig spelerprofiel aanmaken met foto; het profiel is direct zichtbaar in de spelerslijst.
