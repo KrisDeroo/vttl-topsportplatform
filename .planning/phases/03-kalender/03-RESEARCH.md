@@ -1432,37 +1432,37 @@ ROADMAP Phase 3 succescriteria 1–5 → test files:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `medical_appointments.doctor` be encrypted?**
    - What we know: per D-47, the Phase 3 extension stores doctor as **free text**. Phase 1's `medical_events` uses pgcrypto for diagnosis. The CONTEXT.md flags this: *"Doctor naam vrij tekst is grensgeval; valideer met legal of dit veld in cipher moet."*
    - What's unclear: whether a doctor name on a calendar event is GDPR Art. 9 (medical data) or just a contact name.
-   - Recommendation: ship as plain text in Phase 3 (consistent with location free-text); flag in Phase 5 integration-point doc; Phase 5 has the option of an additive migration to pgcrypto-encrypt the column once medical_events is fully wired.
+   - RESOLVED: ship as plain text in Phase 3 (consistent with location free-text); flag in Phase 5 integration-point doc; Phase 5 has the option of an additive migration to pgcrypto-encrypt the column once medical_events is fully wired.
 
 2. **Index strategy: B-tree composite vs GiST on `tstzrange`?**
    - What we know: per D-56 the overlap test is `tstzrange(a, b) && tstzrange(c, d)`. GiST accelerates this; B-tree on `(starts_at, ends_at)` is range-friendly via index-only scans.
    - What's unclear: at our cardinality (probably ≤ 10K events total in v1), the planner may chose seq-scan anyway and indexes are irrelevant.
-   - Recommendation: ship B-tree first; run EXPLAIN ANALYZE on Wave-0 fixture; add GiST partial index if perf test fails the 200 ms budget.
+   - RESOLVED: ship B-tree first; run EXPLAIN ANALYZE on Wave-0 fixture; add GiST partial index if perf test fails the 200 ms budget.
 
 3. **Should we split `calendar.ts` into `calendar/event.ts` + `calendar/filterOptions.ts`?**
    - What we know: CONTEXT.md leaves this as Claude's discretion.
    - What's unclear: how much code per file is healthy. Phase 1's `consent.ts` is ~480 lines and works; Phase 2's `player.ts` is ~700 lines and also works.
-   - Recommendation: start in one file `calendar.ts`. Plan a follow-up split if the file exceeds 1500 lines or test coverage gets unwieldy.
+   - RESOLVED: start in one file `calendar.ts`. Plan a follow-up split if the file exceeds 1500 lines or test coverage gets unwieldy.
 
 4. **Does the Phase 4 handover require a "frozen schema" guard (CI check)?**
    - What we know: D-51 forbids Phase 4 from modifying Phase 3 schemas.
    - What's unclear: a CI guard could refuse a PR that touches `src/server/db/schema/calendar.ts` after Phase 3 verification — but might over-block legitimate fixes.
-   - Recommendation: PLAN.md documents the contract in plain English; CI guard deferred to Phase 4 baseline if drift observed.
+   - RESOLVED: PLAN.md documents the contract in plain English; CI guard deferred to Phase 4 baseline if drift observed.
 
 5. **Conflict detection: should we also consider EVENT-creator overlap?**
    - What we know: D-56 says **per-participant** overlap, not creator. A creator who is NOT a participant of either event would not surface conflicts on their own calendar.
    - What's unclear: a TD organising 3 different trainings in the same slot but assigning different participants — should that be a "you're double-booked yourself as organizer" warning?
-   - Recommendation: D-56 is explicit — no creator-only conflict. Document in PLAN. If UAT surfaces a need, add post-Phase-3 enhancement.
+   - RESOLVED: D-56 is explicit — no creator-only conflict. Document in PLAN. If UAT surfaces a need, add post-Phase-3 enhancement.
 
 6. **Mobile breakpoint: 640px or 480px?**
    - What we know: UI3-D7 chooses 640px; CAL-08 requires "< 480px shows single-day".
    - What's unclear: nothing — UI3-D7 explicitly meets CAL-08 since anything <480 is also <640.
-   - Recommendation: 640px (UI3-D7). Planner doesn't need to revisit.
+   - RESOLVED: 640px (UI3-D7). Planner doesn't need to revisit.
 
 ---
 

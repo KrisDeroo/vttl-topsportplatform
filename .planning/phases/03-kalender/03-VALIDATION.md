@@ -50,6 +50,7 @@ Create these RED test files **before** wave-1 implementation (per Nyquist sampli
 
 - [ ] `tests/unit/rrule.test.ts` — `expandRrule`, `parseRrule`, `validateRruleHorizon` (pure-function coverage incl. DST boundary at Oct 25 Europe/Brussels)
 - [ ] `tests/unit/color-tokens.test.ts` — assert 18 `--cal-event-{type}-{bg|fg|border}` tokens × 2 modes (light + dark) in `globals.css`
+- [ ] `tests/unit/calendar-schemas.test.ts` — Zod discriminated-union per event_type (`.strict()`, i18n-key errors, write-time RRULE horizon validation, per-type required fields)
 - [ ] `tests/unit/lookup-codes.test.ts` — EXTEND with 6 `event_type` codes (training/tournament/meeting/stage/eval_conversation/medical_appointment)
 - [ ] `tests/unit/schema-locale.test.ts` — EXTEND with `calendar.*`, `lookup.eventType.*`, `errors.calendar.*` namespaces in nl/en/fr
 - [ ] `tests/unit/migration-format.test.ts` — EXTEND to assert `0009`, `0010`, `0011`, `0012` exist with rollback companions (MIG-05)
@@ -85,7 +86,7 @@ Create these RED test files **before** wave-1 implementation (per Nyquist sampli
 
 - [ ] All planner tasks have `<automated>` verify or Wave 0 dependencies (filled by gsd-planner)
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all 20 RED files above
+- [ ] Wave 0 covers all 21 RED files above
 - [ ] No watch-mode flags in CI commands
 - [ ] Feedback latency < 30s for quick filter
 - [ ] `nyquist_compliant: true` set in frontmatter once gsd-plan-checker confirms map is complete

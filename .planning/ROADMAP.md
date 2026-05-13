@@ -256,13 +256,24 @@ De kalender is de centrale dagelijkse werkvlakte van het platform; na deze fase 
 **Plans:** 8 plans in 6 waves (Wave 0: deps + RED tests; Wave 1: schema + [BLOCKING] db push; Wave 2: rrule helper + i18n catalogs run parallel; Wave 3: tRPC router; Wave 4: calendar-view + chip + toolbar; Wave 5: sheets + filter bar; Wave 6: Wave 0 tests turn GREEN + Nyquist sign-off).
 
 Plans:
+**Wave 1**
 - [ ] 03-01-PLAN.md — Wave 0: install FullCalendar 6.1.20 + rrule 2.8.1 + 6 shadcn primitives (sheet/alert/command/toggle/toggle-group/scroll-area) + scaffold 20 RED test files + shared seedCalendarFixtures stub
 - [ ] 03-02-PLAN.md — Wave 1: 4 migrations (0009 base+lookup+junction+exceptions, 0010 6 extension tables with full TRAIN-01/TOURN-01/MED-EVENT/AGE-01..04 domain columns per D-47, 0011 RLS policies + 2 SECURITY DEFINER fns per D-50+D-57, 0012 event_type seed) + Drizzle calendar.ts schema barrel + [BLOCKING] pnpm db:push to Supabase staging
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-03-PLAN.md — Wave 2a: src/lib/rrule.ts (parseRrule/expandRrule/validateHorizon/ensureHorizon per D-52/D-53/D-55) + Zod discriminated-union eventCreateInput per event type (per D-47 + I18N-08) + per-type RBAC middleware requireRoleForEventType (D-48) + src/lib/calendar/conflicts.ts redactConflict helper (D-57 + D-57b)
 - [ ] 03-04-PLAN.md — Wave 2b: messages/{nl,en,fr}.json extended with calendar.* + lookup.eventType.* + errors.calendar.* (incl. D-57b conflict body override + D-58b delete body override applied verbatim) + globals.css extended with 6 event-type token triples × light+dark + FullCalendar variable overrides + mobile @media min-height (UI-SPEC §Color + §FullCalendar overrides)
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-05-PLAN.md — Wave 3: src/server/trpc/routers/calendar.ts (9 procedures: list / event.{create,update,delete,declineParticipation,cancelOccurrence,get,detectConflicts} / filterOptions.list) wiring rrule + redactConflict + 6 audit codes + D-58c cascade order; register on _app.ts
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 03-06-PLAN.md — Wave 4: /kalender Server Component + Suspense + CalendarSkeleton + EmptyHintStrip + Client CalendarView (single 'use client', FullCalendar timeGrid/dayGrid/multiMonth/interaction, dynamic locale loading, mobile timeGridDay + vanilla pointerevents swipe per CAL-08) + CalendarToolbar (view switcher + date nav + create CTA) + EventChip (eventContent JSX, no hooks)
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 03-07-PLAN.md — Wave 5: sheets + dialogs + filter bar (EventCreateSheet with discriminated-union RHF + ConflictWarning consuming D-57b template + force-save flow / EventEditSheet with UI3-D12 Phase-4 scope disabled / EventDeleteDialog with D-58b copy / EventDetailSheet with decline + edit + delete actions / EventFilterBar with 6 type chips + 4 type-ahead combos + mobile bottom Sheet / FilterCombobox with scope-filtered tRPC / ConflictBanner top-page) + Phase 4/5-reusable common/DateTimePicker + common/RruleEditor
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 03-08-PLAN.md — Wave 6: activate all 20 Wave 0 RED test files to GREEN (rrule + color-tokens + calendar-schemas unit; calendar-rls + calendar-rrule-horizon + calendar-exceptions + calendar-conflicts + calendar-audit + calendar-cascade + calendar-decline + calendar-perf + calendar-filter-options integration; calendar-direct-query rls; calendar-week-view + calendar-create-event + calendar-mobile + calendar-drag e2e) + implement seedCalendarFixtures + flip 03-VALIDATION.md frontmatter nyquist_compliant=true + Per-Task Verification Map filled
 
 
