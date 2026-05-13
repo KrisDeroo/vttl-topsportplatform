@@ -43,6 +43,13 @@
       "when": 1777843300000,
       "tag": "0005_consenting_party_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778670719010,
+      "tag": "0006_phase2_profiles_and_files",
+      "breakpoints": true
     }
   ]
 }
