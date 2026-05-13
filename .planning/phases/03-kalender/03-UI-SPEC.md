@@ -601,8 +601,8 @@ Three locales required. Tone (inherited from Phase 2): **direct, operational, se
 | Recurrence summary (daily) | `calendar.event.recurrence.daily` | Dagelijks tot {endDate} | Daily until {endDate} | Tous les jours jusqu'au {endDate} |
 | Recurrence summary (monthly) | `calendar.event.recurrence.monthly` | Maandelijks tot {endDate} | Monthly until {endDate} | Tous les mois jusqu'au {endDate} |
 | Recurrence summary (no end) | `calendar.event.recurrence.noEnd` | Geen einddatum | No end date | Pas de date de fin |
-| Edit action | `calendar.event.actions.edit` | Bewerken | Edit | Modifier |
-| Delete action | `calendar.event.actions.delete` | Verwijderen | Delete | Supprimer |
+| Edit action | `calendar.event.actions.edit` | Afspraak bewerken | Edit event | Modifier le rendez-vous |
+| Delete action | `calendar.event.actions.delete` | Afspraak verwijderen | Delete event | Supprimer le rendez-vous |
 | Close action | `calendar.event.actions.close` | Sluiten | Close | Fermer |
 
 ### Event create / edit sheet
@@ -613,7 +613,7 @@ Three locales required. Tone (inherited from Phase 2): **direct, operational, se
 | Edit sheet title | `calendar.event.edit.title` | Afspraak wijzigen | Edit event | Modifier le rendez-vous |
 | Submit (create) | `calendar.event.create.submit` | Afspraak aanmaken | Create event | Créer le rendez-vous |
 | Submit (edit) | `calendar.event.edit.submit` | Wijzigingen opslaan | Save changes | Enregistrer les modifications |
-| Cancel | `calendar.event.actions.cancel` | Annuleren | Cancel | Annuler |
+| Cancel edit | `calendar.event.actions.cancel` | Annuleren | Discard changes | Annuler les modifications |
 | Field — title | `calendar.event.fields.title` | Titel | Title | Titre |
 | Field — type | `calendar.event.fields.type` | Type | Type | Type |
 | Field — start | `calendar.event.fields.start` | Start | Start | Début |
@@ -651,8 +651,8 @@ Three locales required. Tone (inherited from Phase 2): **direct, operational, se
 |---------|-----|----|----|----|
 | Delete dialog title | `calendar.event.delete.title` | Afspraak verwijderen? | Delete event? | Supprimer le rendez-vous ? |
 | Delete dialog body | `calendar.event.delete.body` | De afspraak wordt verwijderd uit de kalender van alle deelnemers. Dit is omkeerbaar binnen 30 dagen via de TD. | The event will be removed from every participant's calendar. This is reversible within 30 days by the TD. | Le rendez-vous sera supprimé du calendrier de tous les participants. Cela est réversible dans les 30 jours via le DT. |
-| Delete confirm CTA | `calendar.event.delete.confirm` | Verwijderen | Delete | Supprimer |
-| Delete cancel CTA | `calendar.event.delete.cancel` | Annuleren | Cancel | Annuler |
+| Delete confirm CTA | `calendar.event.delete.confirm` | Afspraak verwijderen | Delete event | Supprimer le rendez-vous |
+| Delete cancel CTA | `calendar.event.delete.cancel` | Niet verwijderen | Keep event | Conserver |
 
 ### Toasts
 
@@ -765,6 +765,7 @@ Time-axis labels: shown as 12px on all breakpoints (the time axis is dense — k
 - Screen reader announcements:
   - `<CalendarView>` is `<div role="application" aria-label="…">` per FullCalendar convention.
   - Each event chip's `aria-label` concatenates type + title + start–end time (set via `eventDidMount`).
+  - Toolbar icon-only buttons (prev, next, today) use their respective i18n key as the `aria-label` source — `calendar.actions.prev`, `calendar.actions.next`, `calendar.actions.today` — so the visible label and screen-reader label share a single translation row.
   - View change announces "Nu week 21 van 2026" via `<div role="status" aria-live="polite">` hidden visually.
   - Date change on prev/next announces "Week 22 van 2026" similarly.
   - Conflict warning uses `aria-live="assertive"` (interrupts speech — conflicts need attention).
