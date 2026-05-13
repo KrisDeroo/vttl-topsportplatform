@@ -249,44 +249,65 @@ Ja — spelersprofiel-formulier, trainerprofiel-formulier, spelerslijst, foto-up
 ## Phase 3: Kalender
 
 ### Doel
-De kalender is de centrale dagelijkse werkvlakte van het platform; na deze fase kunnen alle gebruikersrollen hun gescopede agenda zien en kunnen de eerste evenementtypen worden aangemaakt.
+De kalender is de centrale dagelijkse werkvlakte van het platform; na deze fase kunnen alle gebruikersrollen hun gescopede agenda zien en kunnen de eerste evenementtypen worden aangemaakt — inclusief volledige domeinkolommen per type (D-47 schema-uitbreiding) zodat Phase 4 uitsluitend de operationele/result-laag toevoegt.
+
+### Plans
+
+**Plans:** 8 plans in 6 waves (Wave 0: deps + RED tests; Wave 1: schema + [BLOCKING] db push; Wave 2: rrule helper + i18n catalogs run parallel; Wave 3: tRPC router; Wave 4: calendar-view + chip + toolbar; Wave 5: sheets + filter bar; Wave 6: Wave 0 tests turn GREEN + Nyquist sign-off).
+
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0: install FullCalendar 6.1.20 + rrule 2.8.1 + 6 shadcn primitives (sheet/alert/command/toggle/toggle-group/scroll-area) + scaffold 20 RED test files + shared seedCalendarFixtures stub
+- [ ] 03-02-PLAN.md — Wave 1: 4 migrations (0009 base+lookup+junction+exceptions, 0010 6 extension tables with full TRAIN-01/TOURN-01/MED-EVENT/AGE-01..04 domain columns per D-47, 0011 RLS policies + 2 SECURITY DEFINER fns per D-50+D-57, 0012 event_type seed) + Drizzle calendar.ts schema barrel + [BLOCKING] pnpm db:push to Supabase staging
+- [ ] 03-03-PLAN.md — Wave 2a: src/lib/rrule.ts (parseRrule/expandRrule/validateHorizon/ensureHorizon per D-52/D-53/D-55) + Zod discriminated-union eventCreateInput per event type (per D-47 + I18N-08) + per-type RBAC middleware requireRoleForEventType (D-48) + src/lib/calendar/conflicts.ts redactConflict helper (D-57 + D-57b)
+- [ ] 03-04-PLAN.md — Wave 2b: messages/{nl,en,fr}.json extended with calendar.* + lookup.eventType.* + errors.calendar.* (incl. D-57b conflict body override + D-58b delete body override applied verbatim) + globals.css extended with 6 event-type token triples × light+dark + FullCalendar variable overrides + mobile @media min-height (UI-SPEC §Color + §FullCalendar overrides)
+- [ ] 03-05-PLAN.md — Wave 3: src/server/trpc/routers/calendar.ts (9 procedures: list / event.{create,update,delete,declineParticipation,cancelOccurrence,get,detectConflicts} / filterOptions.list) wiring rrule + redactConflict + 6 audit codes + D-58c cascade order; register on _app.ts
+- [ ] 03-06-PLAN.md — Wave 4: /kalender Server Component + Suspense + CalendarSkeleton + EmptyHintStrip + Client CalendarView (single 'use client', FullCalendar timeGrid/dayGrid/multiMonth/interaction, dynamic locale loading, mobile timeGridDay + vanilla pointerevents swipe per CAL-08) + CalendarToolbar (view switcher + date nav + create CTA) + EventChip (eventContent JSX, no hooks)
+- [ ] 03-07-PLAN.md — Wave 5: sheets + dialogs + filter bar (EventCreateSheet with discriminated-union RHF + ConflictWarning consuming D-57b template + force-save flow / EventEditSheet with UI3-D12 Phase-4 scope disabled / EventDeleteDialog with D-58b copy / EventDetailSheet with decline + edit + delete actions / EventFilterBar with 6 type chips + 4 type-ahead combos + mobile bottom Sheet / FilterCombobox with scope-filtered tRPC / ConflictBanner top-page) + Phase 4/5-reusable common/DateTimePicker + common/RruleEditor
+- [ ] 03-08-PLAN.md — Wave 6: activate all 20 Wave 0 RED test files to GREEN (rrule + color-tokens + calendar-schemas unit; calendar-rls + calendar-rrule-horizon + calendar-exceptions + calendar-conflicts + calendar-audit + calendar-cascade + calendar-decline + calendar-perf + calendar-filter-options integration; calendar-direct-query rls; calendar-week-view + calendar-create-event + calendar-mobile + calendar-drag e2e) + implement seedCalendarFixtures + flip 03-VALIDATION.md frontmatter nyquist_compliant=true + Per-Task Verification Map filled
+
 
 ### Vereisten
 CAL-01, CAL-02, CAL-03, CAL-04, CAL-05, CAL-07, CAL-08
 
 > CAL-06 (ICS-export) is een release-quality feature en wordt afgewerkt in Fase 8.
+> **D-47 scope-uitbreiding:** Phase 3 schrijft de volledige type-specifieke evenement-kolommen (TRAIN-01 / TOURN-01 / MED-EVENT / AGE-01..04). Phase 4 reduceert tot de operationele/result-laag (session_participants quality scores, tournament_results, ranking_entries, session_sparring_partners) — **geen wijzigingen aan Phase 3 evenement-schemas (D-51)**.
 
 ### Succescriteria
 1. Een TD opent de kalender en ziet alle evenementen van alle spelers en trainers in een weekweergave (standaard), correct kleurgecodeerd per type.
 2. Een speler ziet alleen zijn/haar eigen evenementen — andere spelers zijn niet zichtbaar, ook niet via directe API-aanroep.
-3. Een sparring partner ziet alleen de sessies waaraan hij/zij gekoppeld is.
-4. De kalender geeft een conflictwaarschuwing wanneer een nieuw evenement overlapt met een bestaand evenement van dezelfde persoon.
-5. Op een scherm smaller dan 480px toont de kalender één dag per kolom met swipe-navigatie.
+3. Een sparring partner ziet alleen de sessies waaraan hij/zij gekoppeld is. (Phase 3 NO-OP per D-50; Phase 4 wires session_sparring_partners.)
+4. De kalender geeft een conflictwaarschuwing wanneer een nieuw evenement overlapt met een bestaand evenement van dezelfde persoon. (Cross-scope detection via SECURITY DEFINER + role-gated redaction per D-57 + D-57b; never blocks — D-57.)
+5. Op een scherm smaller dan 480px toont de kalender één dag per kolom met swipe-navigatie. (Implemented at < 640px breakpoint per UI3-D7, which encompasses the < 480px requirement.)
 
 ### Kerntaken
-- Polymorfisch kalendermodel: `calendar_events` basistabel + typed extensietabellen (`training_sessions`, `tournaments`, `meetings`, `stages`, `eval_conversations`, `medical_appointments`) — geen single-table inheritance
-- RRULE-veld op `calendar_events` voor herhalende evenementen (niet-gematerialiseerd); herhalingexpansie in de serviclaag voor het weergavevenster
-- tRPC-router `calendar.list`: accepteert `{ from, to, callerContext }` — retourneert alleen evenementen binnen de scope
-- FullCalendar 6.x integratie: `timeGridWeek` als standaardview, `timeGridDay`, `dayGridMonth`, `multiMonthYear`
-- Kleurcodering per evenementtype: trainingen blauw, toernooien oranje, vergaderingen groen, stages paars, evaluatiegesprekken geel, medische afspraken rood
-- Filterbalk: op speler, trainer, sparring partner, academie, evenementtype (CAL-05)
-- Conflictdetectie: server-side overlap-query bij aanmaken/wijzigen evenement (CAL-07)
-- Mobiele responsivestrategie: FullCalendar `timeGridDay` op smalle schermen + swipe-navigatie (CAL-08)
-- Zoneconversie: alle tijden opslaan als `TIMESTAMPTZ` UTC, weergeven in lokale timezone van de gebruiker
+- Polymorfisch kalendermodel: `calendar_events` basistabel + 6 typed extensietabellen met **volledige domeinkolommen per type** (`training_sessions` met TRAIN-01, `tournaments` met TOURN-01, `meetings`, `stages` met AGE-01, `eval_conversations` met AGE-03, `medical_appointments` met non-Article-9 MED-EVENT metadata) — class-table inheritance per D-49, geen single-table inheritance
+- Polymorfische participant-junction `calendar_event_participants` per D-50 + exceptions tabel `calendar_event_exceptions` met full single-occurrence override per D-54
+- 2 SECURITY DEFINER functions: `calendar_events_visible_to(uid, role)` (RLS visibility per D-50) + `overlapping_events_for_users(uids[], from, to)` (cross-scope conflict detection per D-57 — INTENTIONALLY bypasses RLS, service layer applies role-gated redaction)
+- RRULE-veld op `calendar_events` voor herhalende evenementen (niet-gematerialiseerd); server-side expansie via `rrule` npm package per D-52 + D-53; 2-jaar horizon defense in depth per D-55 (write-time validateHorizon + read-time clamp)
+- tRPC-router `calendar.*`: 9 procedures composing protectedProcedure + per-type RBAC matrix (D-48) + audit logging on every mutation (6 audit action codes per GDPR-04) + D-58c cascade-order on delete (JSONB snapshot in audit_log BEFORE FK CASCADE)
+- 3 distinct delete operations per D-58: hard delete (creator/TD with shadcn AlertDialog confirmation and D-58b copy — NO 30-day-restore promise) + RSVP decline (calendar.event.declineParticipation — every participant for self only) + cancel single occurrence (calendar_event_exceptions write)
+- FullCalendar 6.x integratie als single 'use client' boundary: `timeGridWeek` (default) / `timeGridDay` / `dayGridMonth` / `multiMonthYear`; dynamic locale loading per next-intl active locale; headerToolbar={false} (app owns toolbar)
+- Kleurcodering per evenementtype via 6 nieuwe `--cal-event-{type}-{bg|fg|border}` token triples × light+dark = 36 tokens in globals.css; FullCalendar `--fc-*` variable overrides token-driven; mobile `--fc-event-min-height: 2.75rem` (WCAG 2.5.5)
+- Filterbalk: 6 event-type chips (ToggleGroup) + 4 scope-filtered type-ahead combos (player/trainer/sparring/academy via `calendar.filterOptions.list` per CAL-04+CAL-05); desktop inline, mobile bottom Sheet; URL state `?filter=<base64>`
+- Conflictdetectie: server-side overlap-query bij aanmaken/wijzigen evenement (CAL-07); soft warning never blocks (D-57); override flow audit-logged BEFORE mutation (`calendar_event_conflict_override`); participant-named copy template per D-57b
+- Mobiele responsivestrategie: FullCalendar `timeGridDay` forced op < 640px + vanilla pointerevents swipe handler (60px x-threshold, 400ms max duration) per CAL-08
+- Zoneconversie: alle tijden opslaan als `TIMESTAMPTZ` UTC (GDPR-08), weergeven in browser-local timezone van de gebruiker
 
 ### Afhankelijkheden
-Fase 1 (CallerContext, RLS) en Fase 2 (speler-/trainersrecords bestaan) volledig afgerond.
+Fase 1 (CallerContext, RLS-fundament, audit_log, lookup-pattern) en Fase 2 (spelers + trainers FK-targets, lookup-pattern reuse, RHF + Zod patterns, react-hook-form + shadcn primitives) volledig afgerond.
 
 ### Risico's
-- **RISK-RRULE**: RRULE-expansie buiten de database kan memory/performance problemen geven bij grote bereiken (bijv. jaarsoverzicht). Begrens expansie tot max. 2 jaar vooruit; implementeer server-side paginering voor maandweergave.
-- **RISK-MOBILE**: FullCalendar mobiele weergave vereist specifieke configuratie-opties; test vroeg op iOS Safari en Android Chrome.
-- **RISK-POLYMORPH**: De polymorfische join-query (`calendar_events` + extensietabellen) kan traag worden bij grote datasets. Samengestelde index op `(user_id, starts_at, ends_at)` is verplicht.
+- **RISK-RRULE**: RRULE-expansie buiten de database kan memory/performance problemen geven bij grote bereiken (bijv. jaarsoverzicht). Begrens expansie tot max. 2 jaar vooruit per D-55 (write + read gates); read-time clamp is non-bypassable. Wave 0 test `tests/integration/calendar-rrule-horizon.test.ts` verifies beide gates.
+- **RISK-MOBILE**: FullCalendar mobiele weergave vereist specifieke configuratie-opties; test vroeg op iOS Safari en Android Chrome. Wave 0 test `tests/e2e/calendar-mobile.spec.ts` covers Pixel 5 viewport + pointerevents swipe; iOS real-device UAT documented in 03-VALIDATION.md §Manual-Only Verifications.
+- **RISK-POLYMORPH**: De polymorfische join-query (`calendar_events` + extensietabellen) kan traag worden bij grote datasets. Samengestelde index op `(starts_at, ends_at)` + `(user_id, event_id)` op de junction; perf test `tests/integration/calendar-perf.test.ts` asserts p95 < 200ms voor week-range met 200+30 fixture per RESEARCH §Validation Risks.
+- **T-03-04-CONFLICT-EXISTENCE-LEAK** (D-57 trade-off): cross-scope conflict detection deliberately leaks the existence of out-of-scope events (e.g. medical appointment surfaces as "Speler X is al geboekt voor een Medische afspraak"). Caller can only invoke detection for participants they themselves are adding — existence is implicit. Service layer blanks title + location + eventId when redacted. Documented as accepted threat in 03-RESEARCH §Pitfall 6.
+- **T-03-MEDICAL-DOCTOR-CIPHER** (CONTEXT integration-point): `medical_appointments.doctor` shipt as free-text in Phase 3 (consistent with location free-text). Phase 5 legal review may upgrade to pgcrypto cipher column via additive migration. Flagged for Phase 5 input.
 
 ### Parallelliseerbaar?
-Nee — de kalenderinfrastructuur is een blokkering voor alle evenementtypen in Fasen 4 en 5.
+Within Phase 3, plans 03-03 en 03-04 lopen parallel (verschillende file-sets); plans 03-06 en 03-07 sequentieel (UI depends-chain). Phase 3 als geheel blokkeert Phase 4 + Phase 5 (kalenderinfrastructuur is fundament voor alle evenementtypen).
 
 ### UI?
-Ja — de meest complexe UI-component van het hele project (FullCalendar-integratie, kleurcodering, filters, mobiele weergave).
+Ja — de meest complexe UI-component van het hele project (FullCalendar-integratie, 6 event-type kleurcodering, filters, mobiele weergave, 4 sheets, conflict surfaces, drag-edit). UI-SPEC vergrendeld 2026-05-13.
 
 ---
 
@@ -297,6 +318,8 @@ De drie centrale sportdomeinen — trainingen, toernooien en rankings — zijn v
 
 ### Vereisten
 TRAIN-01..06, TOURN-01..06, RANK-01..07, DOM-RESULT-01..04, DOM-RANK-01
+
+> **Phase 4 schema-handover contract (D-51 from Phase 3):** Phase 4 adds ONLY operational/result tables — `session_participants` (quality_score + feedback_text), `session_sparring_partners` (junction; Phase 5 SPAR tabel), `tournament_results`, `match_results`, `ranking_entries`. **NO changes to the Phase 3 polymorphic event schema** (`calendar_events` / `calendar_event_participants` / `calendar_event_exceptions` / the 6 extension tables `training_sessions` / `tournaments` / `meetings` / `stages` / `eval_conversations` / `medical_appointments`). The Phase 3 RLS UNION branches for `sparring_partner` (currently empty) are filled here.
 
 ### Succescriteria
 1. Een trainer kan een wekelijks terugkerende groepstraining aanmaken; individuele afwijkingen (annulering, tijdswijziging) zijn mogelijk zonder de hele reeks te verwijderen.
@@ -394,6 +417,7 @@ SPAR-01..04, AMB-01..04, EVAL-01..06, MED-01..06, AGE-01..04, DOM-SPAR-AVAIL-01,
 - DOM-MED-CONFLICT-02: aanwezigheidsmarkering defaultwaarde "afwezig met geldige reden" bij overlappende medische events
 - Getekende URL TTL voor medische scans: 5 min, max 1 refresh per sessie, vereist re-authenticatie bij refresh
 - MED-06: scan/document-upload — beslissing RISK-01 afdwingen vóór implementatie
+- **Legal review:** `medical_appointments.doctor` Phase 3 ships as free text; Phase 5 legal review may upgrade to pgcrypto cipher column (additive migration). Decision point at Phase 5 start.
 
 **Agenda-evenementtypen (parallel uitvoerbaar):**
 - Schema: `stages`, `meetings`, `meeting_invitations`, `eval_conversations` — extensietabellen van `calendar_events`
@@ -599,10 +623,11 @@ Fase 1 (Fundament)
 ```
 
 Parallellisering binnen fasen:
+- **Fase 3**: plan 03-03 en 03-04 parallel (rrule helper + i18n catalogs raken verschillende files)
 - **Fase 4**: trainingen / toernooien / rankings gelijktijdig na schema-goedkeuring
 - **Fase 5**: sparringpartners / ambities / evaluaties / medisch / agenda-types gelijktijdig na schema-goedkeuring
 - **Fase 8**: ICS / loadtest / DPIA / beveiligingsaudit gelijktijdig
 
 ---
 
-*Laatste update: 2026-05-01 na initialisatie*
+*Laatste update: 2026-05-14 — Phase 3 plans created (8 plans, 6 waves, ready for execution).*
