@@ -61,6 +61,29 @@ describe('OPS-01 — pino redact wires REDACT_PATHS', () => {
     expect(opts.redact.censor).toBe('[REDACTED]');
     expect(opts.base.service).toBe('vttl-topsport');
   });
+
+  // Phase 2 — Plan 02-15 Task 1 extension: emergency_contact_* fields are
+  // operationally-sensitive PII (parent phone numbers). The redact list MUST
+  // cover both camelCase (zod input shape) and snake_case (DB column shape)
+  // since pino renders both depending on the log call site.
+  it('redacts emergency_contact_phone (snake_case) — Phase 2 player PII', async () => {
+    const { REDACT_PATHS } = await import('@/lib/log-redact-paths');
+    // Cover the key in any nested log object (Pino dot-notation).
+    const matches = REDACT_PATHS.some((p) => p.includes('emergency_contact_phone'));
+    expect(matches, 'REDACT_PATHS must include emergency_contact_phone').toBe(true);
+  });
+
+  it('redacts emergencyContactPhone (camelCase) — Phase 2 player PII (zod input shape)', async () => {
+    const { REDACT_PATHS } = await import('@/lib/log-redact-paths');
+    const matches = REDACT_PATHS.some((p) => p.includes('emergencyContactPhone'));
+    expect(matches, 'REDACT_PATHS must include emergencyContactPhone').toBe(true);
+  });
+
+  it('redacts emergencyContactName (camelCase) — Phase 2 player PII', async () => {
+    const { REDACT_PATHS } = await import('@/lib/log-redact-paths');
+    const matches = REDACT_PATHS.some((p) => p.includes('emergencyContactName'));
+    expect(matches, 'REDACT_PATHS must include emergencyContactName').toBe(true);
+  });
 });
 
 describe('T-01-06 — Sentry beforeSend strips PII', () => {

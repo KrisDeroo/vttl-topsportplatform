@@ -76,9 +76,12 @@ export const REDACT_PATHS = [
   // Consent text snapshot (legally significant, may contain PII references)
   '*.consentTextSnapshot',
 
-  // Phase 2 (PLAYER-06): emergency contacts are minor-protected personal
-  // data — never log raw values. Both casings covered because Drizzle
-  // returns snake_case from raw queries and camelCase via the typed client.
+  // Phase 2 (PLAYER-06, Plans 02-01 + 02-15 — operational PII):
+  // emergency contacts are minor-protected personal data and become
+  // first-class fields on `players` rows. Per CRIT-7 these must be
+  // redacted both at log time (pino) and Sentry beforeSend. Cover
+  // both the camelCase zod input shape and the snake_case DB column
+  // shape since pino renders both depending on the call site.
   '*.emergencyContactName',
   '*.emergencyContactPhone',
   '*.emergencyContactRelation',

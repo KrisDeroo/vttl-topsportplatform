@@ -28,6 +28,11 @@ export const RESOURCES = [
   'medical_events',
   'audit_log',
   'parent_child_links',
+  // Phase 2 — Plan 02-15 Task 2 expansion (49+ cells minimum).
+  'players',
+  'trainers',
+  'uploaded_files',
+  'age_category_history',
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -292,6 +297,11 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'allowed',
     audit_log: 'allowed',
     parent_child_links: 'allowed',
+    // Phase 2 — TD has full visibility across all Phase 2 surfaces.
+    players: 'allowed',
+    trainers: 'allowed',
+    uploaded_files: 'allowed',
+    age_category_history: 'allowed',
   },
   academy_manager: {
     users: 'allowed',
@@ -299,6 +309,14 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'denied',
     audit_log: 'denied',
     parent_child_links: 'denied',
+    // Academy manager: scope-bound to own academies. Victim player is in
+    // academy B; academy_manager is linked to academy A → denied for
+    // players/age_category_history/trainers. uploaded_files probe targets a
+    // TD-owned file → denied.
+    players: 'denied',
+    trainers: 'denied',
+    uploaded_files: 'denied',
+    age_category_history: 'denied',
   },
   trainer: {
     users: 'allowed',
@@ -306,6 +324,12 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'denied',
     audit_log: 'denied',
     parent_child_links: 'denied',
+    // Trainer in academy A; victim in academy B → cross-academy queries are
+    // denied (RLS hides rows; tRPC layer maps to NOT_FOUND).
+    players: 'denied',
+    trainers: 'denied',
+    uploaded_files: 'denied',
+    age_category_history: 'denied',
   },
   player: {
     users: 'allowed',
@@ -313,6 +337,13 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'allowed',
     audit_log: 'denied',
     parent_child_links: 'allowed',
+    // Players read own row only; matrix probe targets the victim (not the
+    // role's own fixture) → denied for players/age_category_history. Trainer
+    // and uploaded_files probes target cross-scope objects → denied.
+    players: 'denied',
+    trainers: 'denied',
+    uploaded_files: 'denied',
+    age_category_history: 'denied',
   }, // own links via consent.listMyParentLinks
   parent: {
     users: 'allowed',
@@ -320,6 +351,13 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'allowed',
     audit_log: 'denied',
     parent_child_links: 'allowed',
+    // Parent of victim → allowed for players + age_category_history
+    // (parent_child_links seed binds parent → victim). Other resources
+    // remain denied (trainer/uploaded_files probes target out-of-scope).
+    players: 'allowed',
+    trainers: 'denied',
+    uploaded_files: 'denied',
+    age_category_history: 'allowed',
   }, // own links via consent.listMyParentLinks
   sparring_partner: {
     users: 'allowed',
@@ -327,6 +365,12 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'denied',
     audit_log: 'denied',
     parent_child_links: 'denied',
+    // Sparring partner: no visibility into player profiles, trainer
+    // records, files, history — out of scope by design.
+    players: 'denied',
+    trainers: 'denied',
+    uploaded_files: 'denied',
+    age_category_history: 'denied',
   },
   medical_staff: {
     users: 'allowed',
@@ -334,5 +378,12 @@ export const RBAC_EXPECTATIONS: Record<
     medical_events: 'allowed',
     audit_log: 'denied',
     parent_child_links: 'denied',
+    // Medical staff: read all players (for medical follow-up) + history;
+    // not trainers (Phase 5 grant scope); uploaded_files only on
+    // medical-document path (Phase 5), not generic file probe.
+    players: 'allowed',
+    trainers: 'denied',
+    uploaded_files: 'denied',
+    age_category_history: 'allowed',
   }, // Phase 1 scope; see comment above
 };

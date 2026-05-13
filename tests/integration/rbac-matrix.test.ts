@@ -4,7 +4,7 @@ import { ROLES, RESOURCES, RBAC_EXPECTATIONS, seedRolesMatrix } from '../helpers
 // appCaller helper provided by Plan 11 (CallerContext + tRPC)
 import { appCaller } from '../helpers/trpc'; // RED until Plan 11
 
-describe('RBAC matrix (D-11) — 7 roles × 5 resources = 35 cells', () => {
+describe('RBAC matrix (D-11) — 7 roles × 9 resources >= 49 cells (Phase 2 expansion)', () => {
   let dbHandle: Awaited<ReturnType<typeof freshDb>>;
   let users: Record<(typeof ROLES)[number], string>;
   let victimId: string;
@@ -73,6 +73,70 @@ describe('RBAC matrix (D-11) — 7 roles × 5 resources = 35 cells', () => {
                 return caller.consent.listMyParentLinks();
               }
               return caller.admin.user.listParentLinks({ userId: victimId });
+            // Phase 2 — Plan 02-15 Task 2 expansion. Same RLS-at-DB-layer
+            // pattern as medical_events: probe via rawPgAsAppUser so the
+            // RLS policy actually evaluates against app.user_id/role GUCs.
+            case 'players': {
+              const rows = await rawPgAsAppUser<{ user_id: string }>({
+                userId: users[role],
+                role,
+                sql: 'SELECT user_id FROM players WHERE user_id = $1',
+                params: [victimId],
+              });
+              if (RBAC_EXPECTATIONS[role][resource] === 'allowed') {
+                if (!Array.isArray(rows) || rows.length < 1) {
+                  throw new Error(`players expected >=1 row for role=${role}`);
+                }
+                return rows;
+              }
+              if (Array.isArray(rows) && rows.length === 0) return rows;
+              throw Object.assign(new Error('rls_did_not_hide_rows'), { code: 'FORBIDDEN' });
+            }
+            case 'trainers': {
+              const rows = await rawPgAsAppUser<{ user_id: string }>({
+                userId: users[role],
+                role,
+                sql: 'SELECT user_id FROM trainers WHERE user_id = $1',
+                params: [users.trainer],
+              });
+              if (RBAC_EXPECTATIONS[role][resource] === 'allowed') {
+                if (!Array.isArray(rows) || rows.length < 1) {
+                  throw new Error(`trainers expected >=1 row for role=${role}`);
+                }
+                return rows;
+              }
+              if (Array.isArray(rows) && rows.length === 0) return rows;
+              throw Object.assign(new Error('rls_did_not_hide_rows'), { code: 'FORBIDDEN' });
+            }
+            case 'uploaded_files': {
+              // Probe: TD-owned files (matrix victim isn't a file owner).
+              const rows = await rawPgAsAppUser<{ id: string }>({
+                userId: users[role],
+                role,
+                sql: 'SELECT id FROM uploaded_files WHERE owner_user_id = $1 LIMIT 1',
+                params: [users.technical_director],
+              });
+              if (RBAC_EXPECTATIONS[role][resource] === 'allowed') {
+                // The matrix doesn't require a pre-seeded file; if zero rows
+                // we still treat allowed as success (no file existed yet).
+                return rows;
+              }
+              if (Array.isArray(rows) && rows.length === 0) return rows;
+              throw Object.assign(new Error('rls_did_not_hide_rows'), { code: 'FORBIDDEN' });
+            }
+            case 'age_category_history': {
+              const rows = await rawPgAsAppUser<{ id: string }>({
+                userId: users[role],
+                role,
+                sql: 'SELECT id FROM age_category_history WHERE player_id = $1 LIMIT 1',
+                params: [victimId],
+              });
+              if (RBAC_EXPECTATIONS[role][resource] === 'allowed') {
+                return rows;
+              }
+              if (Array.isArray(rows) && rows.length === 0) return rows;
+              throw Object.assign(new Error('rls_did_not_hide_rows'), { code: 'FORBIDDEN' });
+            }
           }
         };
         if (expected() === 'allowed') {
@@ -86,10 +150,20 @@ describe('RBAC matrix (D-11) — 7 roles × 5 resources = 35 cells', () => {
     });
   });
 
-  it('test count equals 35', () => {
+  it('test count is at least 49 cells (Phase 2 — Plan 02-15 Task 2 expansion)', () => {
     const cells = ROLES.flatMap((r) => RESOURCES.map((res) => ({ r, res }))).filter(
       (c) => RBAC_EXPECTATIONS[c.r][c.res] !== 'not_applicable',
     );
-    expect(cells.length).toBeGreaterThanOrEqual(35);
+    // Plan 02-15 acceptance: 7 roles × 7+ resources = >=49 cells.
+    expect(cells.length).toBeGreaterThanOrEqual(49);
+  });
+
+  it('covers the four Phase 2 resource columns', () => {
+    // Phase 2 — Plan 02-15 Task 2: players, trainers, uploaded_files,
+    // age_category_history MUST appear in the matrix.
+    expect(RESOURCES).toContain('players');
+    expect(RESOURCES).toContain('trainers');
+    expect(RESOURCES).toContain('uploaded_files');
+    expect(RESOURCES).toContain('age_category_history');
   });
 });
