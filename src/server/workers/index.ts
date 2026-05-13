@@ -26,6 +26,7 @@ import { Worker } from 'bullmq';
 import { connection } from './connection';
 import { QUEUES } from './queues';
 import { processConsentVersionBump } from './jobs/consent-version-bump';
+import { processMalwareScan } from './jobs/malware-scan';
 import { log } from '@/lib/log';
 
 const consentWorker = new Worker(
@@ -53,9 +54,46 @@ consentWorker.on('completed', (job) => {
   log.info({ jobId: job.id, queue: QUEUES.CONSENT_NOTIFY }, 'job.completed');
 });
 
+/**
+ * Phase 2 (D-21, D-22, VALID-04) — async malware scan worker.
+ *
+ * concurrency=2 (NOT 5): clamd is largely single-threaded; running 5 parallel
+ * scans queues at the daemon and burns worker memory holding 5 file buffers
+ * simultaneously. 2 gives headroom without saturation. WARNING-10 in
+ * 02-PLAN-CHECK pins this value. Raise after Phase 8 load profile establishes
+ * a realistic concurrency budget against the deployed clamd sizing.
+ */
+const malwareScanWorker = new Worker(
+  QUEUES.MALWARE_SCAN,
+  async (job) => processMalwareScan(job.data),
+  {
+    connection,
+    concurrency: 2,
+    autorun: true,
+    settings: {
+      backoffStrategy: (attemptsMade: number) =>
+        Math.min(Math.pow(2, attemptsMade) * 1000, 30_000),
+    },
+  },
+);
+
+malwareScanWorker.on('failed', (job, err) => {
+  log.error(
+    { jobId: job?.id, queue: QUEUES.MALWARE_SCAN, err: err.message },
+    'job.failed',
+  );
+});
+
+malwareScanWorker.on('completed', (job) => {
+  log.info({ jobId: job.id, queue: QUEUES.MALWARE_SCAN }, 'job.completed');
+});
+
 async function shutdown(signal: 'SIGTERM' | 'SIGINT'): Promise<void> {
   log.info({ signal }, 'worker.shutdown');
-  await consentWorker.close();
+  await Promise.all([
+    consentWorker.close(),
+    malwareScanWorker.close(),
+  ]);
   process.exit(0);
 }
 
