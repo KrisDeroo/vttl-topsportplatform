@@ -72,13 +72,13 @@ This is the canonical staging-push artifact for the project; the full output, ha
 
 ## Task Commits
 
-Three commits anticipated (executor-side):
+Three commits on the worktree branch (off base `af3f30b`):
 
-1. **fix(02-14): sequence grant in 0000_initial.sql** — `drizzle/0000_initial.sql` (the one-line Phase-1 bug-fix that unblocked migrate())
-2. **chore(02-14): gitignore one-shot operator scripts** — `.gitignore`
-3. **docs(02-14): migration log + summary** — `02-14-MIGRATION-LOG.md` + `02-14-SUMMARY.md`
+1. **`d854511`** — `fix(02-14): sequence grant in 0000_initial.sql (Postgres 0LP01)` — `drizzle/0000_initial.sql` (the one-line Phase-1 bug-fix that unblocked migrate())
+2. **`53e2a29`** — `chore(02-14): gitignore one-shot operator scripts` — `.gitignore`
+3. **`646fddb`** — `docs(02-14): migration log + summary — 9 migrations live on dev/staging` — `02-14-MIGRATION-LOG.md` + `02-14-SUMMARY.md`
 
-(Hashes recorded by the orchestrator's merge of this worktree.)
+(Final orchestrator-side merge hash will land on `main` when this worktree merges.)
 
 ## Files Created/Modified
 
