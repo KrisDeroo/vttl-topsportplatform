@@ -68,4 +68,39 @@ export default [
     files: ['src/server/db/helpers/timestamps.ts'],
     rules: { 'no-restricted-syntax': 'off' },
   },
+  // Plan 02-13 Task 5: BLOCKER-08 fix — scope to src/components/**/*.tsx
+  // ONLY. The original glob proposal included src/app/**/*.tsx, which
+  // would have mis-fired on Phase 1 Server Components (e.g. the admin
+  // pages and the new Plan 02-13 player/trainer pages) that legitimately
+  // import @/server/storage/* + @/server/workers/* for server-side
+  // prefetch + signed-URL minting. Server-side files keep the `'server-only'`
+  // directive on the imported module as the absolute backstop; this lint
+  // rule is the second layer for Client Components — Pitfall 4 mitigation.
+  {
+    files: ['src/components/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/server/storage/*'],
+              message:
+                'Server-only module imported from Client Component. Service-role key MUST NOT bundle into the client. Move the call to a Server Component or tRPC mutation. See Pitfall 4 in 02-RESEARCH.md.',
+            },
+            {
+              group: ['@/server/workers/*'],
+              message:
+                'Worker modules are server-only — BullMQ + ioredis cannot run in the browser. Move the call to a tRPC mutation.',
+            },
+            {
+              group: ['@/server/db/client'],
+              message:
+                'Direct DB client imported from Client Component. Use tRPC procedures from `@/lib/trpc-client` instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
