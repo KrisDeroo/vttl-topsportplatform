@@ -13,6 +13,12 @@ playwright-report/
 test-results/
 .vitest-cache/
 
+# Generated test fixtures (built by tests/fixtures/build-*.ts before test runs).
+# EICAR is documented in tests/fixtures/README.md — do not commit the
+# generated artefact to avoid AV-scanner false positives at git push time
+# (T-02-15-FIXTURE-LEAK mitigation).
+tests/fixtures/eicar.png
+
 # IDE
 .vscode/
 .idea/
