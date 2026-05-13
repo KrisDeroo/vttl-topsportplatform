@@ -22,9 +22,13 @@
  *   resource `parent_child_links`:  `consent.give_for_minor` for parents,
  *                                   `user.link_parent` for TD,
  *                                   own-link visibility via consent.read_own
+ *   resource `players`:             players.read_{own,assigned,any} + write + update_*
+ *   resource `trainers`:            trainers.read_{own,assigned,any} + write + update_self
+ *   resource `uploaded_files`:      files.upload + read_{own,any} + delete_any
  *
  * Reference: .planning/phases/01-fundament/01-CONTEXT.md §D-11
  *            .planning/phases/01-fundament/01-RESEARCH.md §Better Auth Integration
+ *            .planning/phases/02-identiteit-bestanden/02-CONTEXT.md §D-37, §D-38
  */
 
 /**
@@ -72,7 +76,26 @@ export type Permission =
   | 'medical.read_traffic_light'
   | 'audit.read_any'
   | 'audit.read_self_actions'
-  | 'lookup.write';
+  | 'lookup.write'
+  // ── Phase 2 — players (D-37) ────────────────────────────────────────────
+  | 'players.read_any'         // TD, medical_staff
+  | 'players.read_assigned'    // trainer, academy_manager, parent
+  | 'players.read_own'         // player (self)
+  | 'players.write'            // TD only (create / delete)
+  | 'players.update_any'       // TD; academy_manager in scope (RLS narrows)
+  | 'players.update_self'      // player editing own non-sensitive fields (D-37)
+  | 'players.set_age_category' // TD only (D-32)
+  // ── Phase 2 — trainers (D-38) ───────────────────────────────────────────
+  | 'trainers.read_any'        // TD, medical_staff
+  | 'trainers.read_assigned'   // trainer, academy_manager in same academy
+  | 'trainers.read_own'        // trainer (self)
+  | 'trainers.write'           // TD only (create / delete)
+  | 'trainers.update_self'     // trainer editing own non-sensitive fields (D-38)
+  // ── Phase 2 — uploaded_files (FILE-03) ──────────────────────────────────
+  | 'files.upload'             // any authenticated user (own files)
+  | 'files.read_any'           // TD, medical_staff
+  | 'files.read_own'           // owner of the file
+  | 'files.delete_any';        // TD only
 
 /**
  * The full role-to-permission grant matrix.
@@ -102,12 +125,30 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'medical.write',
     'audit.read_any',
     'lookup.write',
+    // Phase 2 — full access to player + trainer + file resources.
+    'players.read_any',
+    'players.write',
+    'players.update_any',
+    'players.set_age_category',
+    'trainers.read_any',
+    'trainers.write',
+    'files.upload',
+    'files.read_any',
+    'files.read_own',
+    'files.delete_any',
   ],
   academy_manager: [
     'consent.give_self',
     'consent.withdraw_self',
     'consent.read_own',
     'audit.read_self_actions',
+    // Phase 2 — read + update players in own academies; RLS narrows update_any
+    // to in-scope rows. Trainer scope is read-only.
+    'players.read_assigned',
+    'players.update_any',
+    'trainers.read_assigned',
+    'files.upload',
+    'files.read_own',
   ],
   trainer: [
     'consent.give_self',
@@ -115,12 +156,25 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'consent.read_own',
     'medical.read_traffic_light',
     'audit.read_self_actions',
+    // Phase 2 — read-only on players (D-37: trainers cannot edit player profiles);
+    // read peers + self in trainers; edit own trainer profile (D-38).
+    'players.read_assigned',
+    'trainers.read_assigned',
+    'trainers.read_own',
+    'trainers.update_self',
+    'files.upload',
+    'files.read_own',
   ],
   player: [
     'consent.give_self',
     'consent.withdraw_self',
     'consent.read_own',
     'medical.read_own',
+    // Phase 2 — read + edit own non-sensitive fields (D-37); upload own files.
+    'players.read_own',
+    'players.update_self',
+    'files.upload',
+    'files.read_own',
   ],
   parent: [
     'consent.give_self',
@@ -128,11 +182,21 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'consent.withdraw_self',
     'consent.read_own',
     'medical.read_assigned',
+    // Phase 2 — read + edit own children via parent_child_links (RLS scopes
+    // both predicates). update_self carries the same shape as for player —
+    // server-side enforces field-set restriction, not RLS.
+    'players.read_assigned',
+    'players.update_self',
+    'files.upload',
+    'files.read_own',
   ],
   sparring_partner: [
     'consent.give_self',
     'consent.withdraw_self',
     'consent.read_own',
+    // Phase 2 — sparring partners do NOT have player/trainer scope in v1
+    // (Phase 5 wires session-based scope). Files: own only (e.g. own profile).
+    'files.read_own',
   ],
   medical_staff: [
     'medical.read_any',
@@ -140,6 +204,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'consent.give_self',
     'consent.withdraw_self',
     'consent.read_own',
+    // Phase 2 — medical staff need patient context: read all players + trainers,
+    // read all files (for evaluation/medical document review in Phase 5).
+    'players.read_any',
+    'trainers.read_any',
+    'files.read_any',
   ],
 };
 
