@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 3 UI-SPEC approved — awaiting CONTEXT / planning
-last_updated: "2026-05-13T22:30:00.000Z"
+status: Phase 3 CONTEXT gathered — ready for planning
+last_updated: "2026-05-14T00:15:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
@@ -16,12 +16,12 @@ progress:
 
 ## Current Status
 
-Phase: 3 — Kalender ◆ UI-SPEC approved
-Active Phase: 03-kalender (UI design contract locked; awaiting CONTEXT / planning)
-Last Action: Phase 3 UI-SPEC approved (6/6 dimensions pass on pass 3 of 3; 1 non-blocking FLAG on `calendar.filters.apply` fr = "Appliquer" single-word, idiomatic). Locks visual + interaction contracts: FullCalendar 6 (timeGridWeek default, timeGridDay mobile <640px), six event-type color tokens (CAL-03), right-side `<Sheet>` for event detail + create/edit, inline `<Alert>` conflict UI with audit-logged "Save anyway" override, URL-persisted view/date/filter state. 12 default design decisions flagged in spec for user override before planning.
+Phase: 3 — Kalender ◆ CONTEXT gathered
+Active Phase: 03-kalender (UI design contract locked; CONTEXT.md captures 4-area implementation discussion; ready for planning)
+Last Action: Phase 3 CONTEXT.md committed (2026-05-14, hash 404eceb). Captures: D-47..D-51 schema scope (all 6 event types with full domain-specific fields in Phase 3; class-table inheritance; polymorphic `calendar_event_participants` junction; Phase 4 reduces to operational/result layer only); D-52..D-55 RRULE (server-side expansion with `rrule` npm; `calendar_event_exceptions` table with full single-occurrence override; 2y horizon enforced at write + read time); D-56..D-57b conflict detection (per-participant overlap, soft warning only, cross-scope detection via SECURITY DEFINER bypass + role-gated detail-redaction uniform across all 6 types, participant-named copy override); D-58..D-58c delete model (hard delete + AlertDialog + audit-log JSONB snapshot; three distinct operations: globaal verwijderen / Ik kan niet aanwezig zijn / cancel single occurrence; UI-SPEC delete copy override drops 30-day restore promise).
 
-Resume: `/gsd-discuss-phase 3` (gather CONTEXT for planning — 12 spec defaults to confirm or override) OR `/gsd-plan-phase 3` (skip discussion, plan directly with UI-SPEC as design context).
-Artifacts: `.planning/phases/03-kalender/03-UI-SPEC.md` (875 lines, status: approved)
+Resume: `/clear` then `/gsd-plan-phase 3` (plan with UI-SPEC + CONTEXT as design + implementation context).
+Artifacts: `.planning/phases/03-kalender/03-UI-SPEC.md` (875 lines, approved 2026-05-13); `03-CONTEXT.md` (~360 lines, gathered 2026-05-14); `03-DISCUSSION-LOG.md` (audit trail).
 
 ## Project Reference
 
@@ -36,7 +36,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 |-------|------|--------|
 | 1 | Fundament | ✅ Complete (18/18 plans, 1 code-review fix cycle, verifier human_needed deferred to UAT) |
 | 2 | Identiteit & Bestanden | ✅ Complete (16/16 plans + verifier gap-closure; live on Supabase eu-west-1; 4 UAT items deferred) |
-| 3 | Kalender | ◆ UI-SPEC approved (awaiting CONTEXT / planning) |
+| 3 | Kalender | ◆ UI-SPEC approved + CONTEXT gathered (awaiting planning) |
 | 4 | Kerndomein | ⬜ Not started |
 | 5 | Uitgebreid domein | ⬜ Not started |
 | 6 | Communicatie | ⬜ Not started |
