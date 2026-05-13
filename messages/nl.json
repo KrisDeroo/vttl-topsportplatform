@@ -62,7 +62,27 @@
     },
     "academy": {
       "topsportschool": "Topsportschool",
-      "academy_antwerpen": "Academy Antwerpen"
+      "academy_antwerpen": "Academy Antwerpen",
+      "academy_brussel": "Academy Brussel",
+      "academy_oost_vlaanderen": "Academy Oost-Vlaanderen",
+      "academy_west_vlaanderen": "Academy West-Vlaanderen",
+      "academy_limburg": "Academy Limburg"
+    },
+    "ageCategory": {
+      "age_pre_minor": "Preminiemen",
+      "age_minor": "Miniemen",
+      "age_cadet": "Cadetten",
+      "age_junior": "Junioren",
+      "age_senior": "Senioren",
+      "age_veteran": "Veteranen",
+      "age_unknown": "Niet bepaald"
+    },
+    "trainerDiploma": {
+      "diploma_none": "Geen",
+      "diploma_a": "Diploma A",
+      "diploma_b": "Diploma B",
+      "diploma_a_in_training": "Diploma A in opleiding",
+      "diploma_b_in_training": "Diploma B in opleiding"
     },
     "trainingType": {
       "training_type_group": "Groep",
@@ -132,7 +152,25 @@
     "forbidden": "Je hebt geen toegang tot deze pagina.",
     "notFound": "Pagina niet gevonden.",
     "validationFailed": "De gegevens zijn niet correct ingevuld.",
-    "csrfRejected": "Verzoek geweigerd om veiligheidsredenen."
+    "csrfRejected": "Verzoek geweigerd om veiligheidsredenen.",
+    "field": {
+      "required": "Dit veld is verplicht",
+      "email": "Geen geldig e-mailadres",
+      "dateInPast": "Datum moet in het verleden liggen",
+      "belgianPostalCode": "Geef een postcode van 4 cijfers",
+      "country": "Geef een geldige landcode (2 letters)",
+      "phone": "Geef een geldig telefoonnummer",
+      "emergencyContactRequiredForMinor": "Noodcontact is verplicht voor minderjarigen"
+    },
+    "file": {
+      "tooLarge": "Bestand is te groot. Maximum 2 MB.",
+      "unknownType": "Bestandstype kon niet worden bepaald.",
+      "disallowedType": "Dit bestandstype is niet toegestaan voor dit upload-veld.",
+      "filenameTooLong": "Bestandsnaam is te lang. Maximum 255 tekens.",
+      "uploadFailed": "Upload mislukt. Probeer opnieuw.",
+      "signedUrlFailed": "Kon geen download-link genereren.",
+      "scanNotClean": "Bestand is nog niet beschikbaar — de virusscan loopt nog of het bestand werd geweigerd."
+    }
   },
   "admin": {
     "users": {
@@ -149,6 +187,121 @@
         "role": "Rol",
         "status": "Status",
         "locale": "Taal"
+      }
+    }
+  },
+  "players": {
+    "list": {
+      "title": "Spelers",
+      "empty": {
+        "title": "Geen spelers in jouw scope",
+        "body": "Spelers verschijnen hier zodra ze aan jouw academie zijn gekoppeld.",
+        "ctaTd": "Nieuwe speler"
+      },
+      "actions": {
+        "open": "Open profiel",
+        "setAgeCategory": "Leeftijdscategorie wijzigen"
+      }
+    },
+    "create": {
+      "title": "Nieuwe speler aanmaken",
+      "submit": "Speler aanmaken"
+    },
+    "detail": {
+      "title": "Spelerprofiel",
+      "readOnly": "Alleen-lezen"
+    },
+    "edit": {
+      "submit": "Wijzigingen opslaan",
+      "toast": {
+        "saved": "Profiel opgeslagen",
+        "error": "Opslaan mislukt — controleer de gegevens en probeer opnieuw"
+      }
+    },
+    "sections": {
+      "identity": "Identiteit",
+      "sport": "Sport",
+      "address": "Adres",
+      "emergencyContact": "Noodcontact",
+      "photo": "Profielfoto"
+    },
+    "fields": {
+      "school": {
+        "description": "(optioneel)"
+      },
+      "gender": {
+        "label": "Geslacht",
+        "male": "Man",
+        "female": "Vrouw",
+        "x": "X"
+      }
+    },
+    "ageCategoryChange": {
+      "title": "Leeftijdscategorie wijzigen?",
+      "body": "Deze wijziging is doorzoekbaar in de historie. Toekomstige toernooi-validatie gebruikt deze categorie vanaf de ingangsdatum.",
+      "confirm": "Wijzigen"
+    }
+  },
+  "trainers": {
+    "list": {
+      "title": "Trainers",
+      "empty": {
+        "title": "Geen trainers in jouw scope",
+        "body": "Trainers verschijnen hier zodra zij aan jouw academie zijn gekoppeld.",
+        "ctaTd": "Nieuwe trainer"
+      },
+      "actions": {
+        "open": "Open profiel"
+      }
+    },
+    "create": {
+      "title": "Nieuwe trainer aanmaken",
+      "submit": "Trainer aanmaken"
+    },
+    "detail": {
+      "title": "Trainersprofiel",
+      "readOnly": "Alleen-lezen"
+    },
+    "edit": {
+      "submit": "Wijzigingen opslaan",
+      "toast": {
+        "saved": "Profiel opgeslagen",
+        "error": "Opslaan mislukt — controleer de gegevens en probeer opnieuw"
+      }
+    }
+  },
+  "me": {
+    "profile": {
+      "title": "Mijn profiel"
+    }
+  },
+  "files": {
+    "photo": {
+      "dropzone": {
+        "idle": "Sleep een foto hierheen of klik om te bladeren — JPEG of PNG, max 2 MB",
+        "dragging": "Laat los om te uploaden"
+      },
+      "uploading": "Bezig met uploaden…",
+      "scanPending": "Foto wordt gescand op virussen — duurt meestal 1–5 seconden",
+      "scanInfected": "Bestand afgekeurd door scan. Kies een andere foto.",
+      "scanTimeout": "Scan duurt langer dan verwacht. Klik op vernieuwen om opnieuw te controleren.",
+      "actions": {
+        "replace": "Vervangen",
+        "delete": "Verwijderen"
+      },
+      "toast": {
+        "uploaded": "Foto opgeslagen"
+      },
+      "deleteConfirm": {
+        "title": "Profielfoto verwijderen?",
+        "body": "De huidige foto wordt vervangen door initialen. Dit is omkeerbaar — een nieuwe foto kan altijd worden geüpload.",
+        "confirm": "Verwijderen",
+        "cancel": "Annuleren"
+      },
+      "errors": {
+        "tooLarge": "Bestand is te groot. Maximum 2 MB.",
+        "wrongType": "Alleen JPEG of PNG toegestaan.",
+        "multiFile": "Eén foto tegelijk"
       }
     }
   }
