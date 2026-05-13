@@ -57,6 +57,13 @@
       "when": 1778671729617,
       "tag": "0007_phase2_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778671729800,
+      "tag": "0008_phase2_lookup_seed",
+      "breakpoints": true
     }
   ]
 }
