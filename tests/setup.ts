@@ -24,6 +24,13 @@ const STUB_ENV: Record<string, string> = {
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
   NODE_ENV: 'test',
   LOG_LEVEL: 'info',
+  // Phase 2 — Supabase Storage + ClamAV stubs (env.ts validation; Plan 02-01).
+  // Real values come from Coolify Secrets in production; tests never touch the
+  // network for either (Storage is mocked in 02-04 tests, ClamAV in 02-06 tests).
+  SUPABASE_URL: 'https://stub-project.supabase.co',
+  SUPABASE_SERVICE_ROLE_KEY: 'stub-service-role-key-for-tests-must-be-40-chars-min',
+  CLAMAV_HOST: 'clamav',
+  CLAMAV_PORT: '3310',
 };
 
 function ensureStubEnv() {

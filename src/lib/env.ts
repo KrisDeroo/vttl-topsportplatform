@@ -17,7 +17,15 @@
  *  - REDIS_URL: ioredis-compatible TCP/TLS endpoint for BullMQ workers
  *    (BullMQ requires Lua scripts + blocking commands — REST cannot do this)
  *
+ * Phase 2 additions (file pipeline — FILE-01 / VALID-04):
+ *  - SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY (D-22, FILE-01): server-only
+ *    Supabase Storage client used by file.upload + signed URL generation.
+ *    NEVER bundle into client — see src/server/storage/client.ts header.
+ *  - CLAMAV_HOST/CLAMAV_PORT (D-22): TCP socket for clamd; default
+ *    'clamav':3310 matches the Coolify sidecar service name.
+ *
  * Reference: .planning/phases/01-fundament/01-RESEARCH.md §Environment variables
+ *            .planning/phases/02-identiteit-bestanden/02-RESEARCH.md §Runtime State Inventory
  */
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
@@ -39,6 +47,11 @@ export const env = createEnv({
     MEDICAL_ENCRYPTION_KEY: z.string().min(32),
     LOGFLARE_API_KEY: z.string().optional(),
     LOGFLARE_SOURCE: z.string().optional(),
+    // Phase 2 — Supabase Storage (FILE-01) + ClamAV (VALID-04); D-22
+    SUPABASE_URL: z.string().url(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(40),
+    CLAMAV_HOST: z.string().min(1).default('clamav'),
+    CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -60,6 +73,10 @@ export const env = createEnv({
     MEDICAL_ENCRYPTION_KEY: process.env.MEDICAL_ENCRYPTION_KEY,
     LOGFLARE_API_KEY: process.env.LOGFLARE_API_KEY,
     LOGFLARE_SOURCE: process.env.LOGFLARE_SOURCE,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    CLAMAV_HOST: process.env.CLAMAV_HOST,
+    CLAMAV_PORT: process.env.CLAMAV_PORT,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
   },

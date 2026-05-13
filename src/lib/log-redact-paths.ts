@@ -75,6 +75,16 @@ export const REDACT_PATHS = [
 
   // Consent text snapshot (legally significant, may contain PII references)
   '*.consentTextSnapshot',
+
+  // Phase 2 (PLAYER-06): emergency contacts are minor-protected personal
+  // data — never log raw values. Both casings covered because Drizzle
+  // returns snake_case from raw queries and camelCase via the typed client.
+  '*.emergencyContactName',
+  '*.emergencyContactPhone',
+  '*.emergencyContactRelation',
+  '*.emergency_contact_name',
+  '*.emergency_contact_phone',
+  '*.emergency_contact_relation',
 ] as const;
 
 export type RedactPath = (typeof REDACT_PATHS)[number];
