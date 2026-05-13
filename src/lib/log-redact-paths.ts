@@ -75,6 +75,18 @@ export const REDACT_PATHS = [
 
   // Consent text snapshot (legally significant, may contain PII references)
   '*.consentTextSnapshot',
+
+  // Phase 2 (Plan 02-15 — operational PII) — emergency contact details
+  // become first-class fields on `players` rows. Per CRIT-7 these must
+  // be redacted both at log time (pino) and Sentry beforeSend. Cover
+  // both the camelCase zod input shape and the snake_case DB column
+  // shape since pino renders both depending on the call site.
+  '*.emergencyContactName',
+  '*.emergencyContactPhone',
+  '*.emergencyContactRelation',
+  '*.emergency_contact_name',
+  '*.emergency_contact_phone',
+  '*.emergency_contact_relation',
 ] as const;
 
 export type RedactPath = (typeof REDACT_PATHS)[number];
