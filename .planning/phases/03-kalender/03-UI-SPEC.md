@@ -78,14 +78,25 @@ Inherited 1:1 from Phase 2. No new tokens.
 
 ## Typography
 
-Inherited from Phase 2. **Three sizes + one display, two weights — strict. No new typography roles introduced for Phase 3.**
+Inherited from Phase 2. **Three sizes + one display. Phase 3 declares exactly 2 weights (400 + 500) for its own components; shadcn primitives retain their inherited 600 — see breakdown below.** No new typography roles introduced for Phase 3.
+
+### Phase 3 component weights (net-new declarations)
 
 | Role | Size | Weight | Line Height | Tailwind |
 |------|------|--------|-------------|----------|
 | Body | 14px | 400 (regular) | 1.5 (21px) | `text-sm leading-relaxed` |
-| Label / Form | 14px | 500 (medium) | 1.4 | `text-sm font-medium` |
-| Heading (Sheet title, Card title) | 18px | 600 (semibold) | 1.3 | `text-lg font-semibold` |
-| Display (Page title) | 24px | 600 (semibold) | 1.25 | `text-2xl font-semibold` |
+| Emphasis (Label, Form, event-chip title, day header) | 14px | 500 (medium) | 1.4 | `text-sm font-medium` |
+
+> **Phase 3 declares exactly 2 weights: 400 + 500.** No new weight roles are introduced for Phase 3 components.
+
+### Inherited from shadcn (NOT a Phase 3 declaration)
+
+shadcn primitives ship `font-semibold` (600) inside their default templates for Card titles, AlertDialog titles, Sheet titles, and the page-level `<h1>` (per Phase 1's `text-2xl font-semibold` page-title convention). Phase 3 reuses these primitives unchanged — the 600 weight on those surfaces is design-system inheritance, identical to Phase 1/2 (already approved). It is not counted as a Phase 3 weight role.
+
+| Surface (shadcn-inherited, NOT Phase-3-declared) | Size | Weight | Tailwind |
+|------|------|--------|----------|
+| Heading (Sheet title, Card title, AlertDialog title) | 18px | 600 (semibold) — inherited | `text-lg font-semibold` |
+| Display (Page title `<h1>`) | 24px | 600 (semibold) — inherited | `text-2xl font-semibold` |
 
 **Calendar-internal text (FullCalendar-managed):**
 
@@ -577,7 +588,7 @@ Three locales required. Tone (inherited from Phase 2): **direct, operational, se
 | Combobox placeholder | `calendar.filters.searchPlaceholder` | Zoeken… | Search… | Rechercher… |
 | Combobox empty | `calendar.filters.empty` | Geen resultaten in jouw scope | No results in your scope | Aucun résultat dans votre périmètre |
 | Clear filters | `calendar.filters.clear` | Filters wissen | Clear filters | Effacer les filtres |
-| Apply filters (mobile sheet) | `calendar.filters.apply` | Toepassen | Apply | Appliquer |
+| Apply filters (mobile sheet) | `calendar.filters.apply` | Toepassen | Apply filters | Appliquer |
 
 ### Empty + hint states
 
@@ -859,7 +870,7 @@ The following Phase-3-specific choices were resolved by default in this spec giv
 - [ ] Dimension 1 Copywriting: PASS  *(all UI strings declared as i18n keys with nl/en/fr canonical text in §Copywriting Contract; tone consistent with Phase 2; no emoji; no exclamation marks outside success toasts; proper-noun rule inherited; FullCalendar built-in locale-file boundary declared)*
 - [ ] Dimension 2 Visuals: PASS  *(component inventory complete; calendar page mapped to route + roles; loading + error + empty + read-only states declared; event-chip contract explicit including a11y; responsive behavior at sm/md/lg/2xl specified)*
 - [ ] Dimension 3 Color: PASS  *(60/30/10 inherits Phase 2 neutral preset; accent reserved-for list short and explicit; six new semantic event-type tokens declared with both light and dark values + WCAG AA contrast notes; destructive distinguished from medical-red; FullCalendar CSS-variable overrides token-driven)*
-- [ ] Dimension 4 Typography: PASS  *(3 sizes + 1 display, 2 weights — inherited unchanged; two declared exceptions for FullCalendar time-axis + event chip secondary line, both scoped to calendar root; system stack only — no Google Fonts CDN load)*
+- [ ] Dimension 4 Typography: PASS  *(3 sizes + 1 display; Phase 3 declares 2 weights (400 + 500); inherited shadcn 600 on Card/Sheet/AlertDialog/page-H1 documented separately as design-system inheritance; two declared exceptions for FullCalendar time-axis + event chip secondary line, both scoped to calendar root; system stack only — no Google Fonts CDN load)*
 - [ ] Dimension 5 Spacing: PASS  *(8-pt scale inherited; declared exceptions all on 4-pt grid: 48px hour-row desktop / 64px mobile, 44px event-chip min-height mobile, 80px filter-chip min-width)*
 - [ ] Dimension 6 Registry Safety: PASS  *(shadcn official only; no third-party shadcn registries declared; FullCalendar is npm-tracked MIT, not a registry; safety gate not triggered)*
 
