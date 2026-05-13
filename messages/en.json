@@ -62,7 +62,27 @@
     },
     "academy": {
       "topsportschool": "Topsportschool",
-      "academy_antwerpen": "Academy Antwerpen"
+      "academy_antwerpen": "Academy Antwerpen",
+      "academy_brussel": "Academy Brussel",
+      "academy_oost_vlaanderen": "Academy Oost-Vlaanderen",
+      "academy_west_vlaanderen": "Academy West-Vlaanderen",
+      "academy_limburg": "Academy Limburg"
+    },
+    "ageCategory": {
+      "age_pre_minor": "Pre-minors",
+      "age_minor": "Minors",
+      "age_cadet": "Cadets",
+      "age_junior": "Juniors",
+      "age_senior": "Seniors",
+      "age_veteran": "Veterans",
+      "age_unknown": "Not determined"
+    },
+    "trainerDiploma": {
+      "diploma_none": "None",
+      "diploma_a": "Diploma A",
+      "diploma_b": "Diploma B",
+      "diploma_a_in_training": "Diploma A in training",
+      "diploma_b_in_training": "Diploma B in training"
     },
     "trainingType": {
       "training_type_group": "Group",
@@ -132,7 +152,25 @@
     "forbidden": "You do not have access to this page.",
     "notFound": "Page not found.",
     "validationFailed": "The data is not filled in correctly.",
-    "csrfRejected": "Request rejected for security reasons."
+    "csrfRejected": "Request rejected for security reasons.",
+    "field": {
+      "required": "This field is required",
+      "email": "Not a valid email address",
+      "dateInPast": "Date must be in the past",
+      "belgianPostalCode": "Enter a 4-digit postal code",
+      "country": "Enter a valid country code (2 letters)",
+      "phone": "Enter a valid phone number",
+      "emergencyContactRequiredForMinor": "Emergency contact is required for minors"
+    },
+    "file": {
+      "tooLarge": "File is too large. Maximum 2 MB.",
+      "unknownType": "File type could not be determined.",
+      "disallowedType": "This file type is not allowed for this upload field.",
+      "filenameTooLong": "Filename is too long. Maximum 255 characters.",
+      "uploadFailed": "Upload failed. Please try again.",
+      "signedUrlFailed": "Could not generate download link.",
+      "scanNotClean": "File is not yet available — the virus scan is in progress or the file was rejected."
+    }
   },
   "admin": {
     "users": {
@@ -149,6 +187,121 @@
         "role": "Role",
         "status": "Status",
         "locale": "Language"
+      }
+    }
+  },
+  "players": {
+    "list": {
+      "title": "Players",
+      "empty": {
+        "title": "No players in your scope",
+        "body": "Players will appear here once they are linked to your academy.",
+        "ctaTd": "New player"
+      },
+      "actions": {
+        "open": "Open profile",
+        "setAgeCategory": "Change age category"
+      }
+    },
+    "create": {
+      "title": "Create new player",
+      "submit": "Create player"
+    },
+    "detail": {
+      "title": "Player profile",
+      "readOnly": "Read-only"
+    },
+    "edit": {
+      "submit": "Save changes",
+      "toast": {
+        "saved": "Profile saved",
+        "error": "Save failed — review the data and try again"
+      }
+    },
+    "sections": {
+      "identity": "Identity",
+      "sport": "Sport",
+      "address": "Address",
+      "emergencyContact": "Emergency contact",
+      "photo": "Profile photo"
+    },
+    "fields": {
+      "school": {
+        "description": "(optional)"
+      },
+      "gender": {
+        "label": "Gender",
+        "male": "Male",
+        "female": "Female",
+        "x": "X"
+      }
+    },
+    "ageCategoryChange": {
+      "title": "Change age category?",
+      "body": "This change is logged in the history. Future tournament validation uses this category from the effective date onwards.",
+      "confirm": "Change"
+    }
+  },
+  "trainers": {
+    "list": {
+      "title": "Trainers",
+      "empty": {
+        "title": "No trainers in your scope",
+        "body": "Trainers will appear here once they are linked to your academy.",
+        "ctaTd": "New trainer"
+      },
+      "actions": {
+        "open": "Open profile"
+      }
+    },
+    "create": {
+      "title": "Create new trainer",
+      "submit": "Create trainer"
+    },
+    "detail": {
+      "title": "Trainer profile",
+      "readOnly": "Read-only"
+    },
+    "edit": {
+      "submit": "Save changes",
+      "toast": {
+        "saved": "Profile saved",
+        "error": "Save failed — review the data and try again"
+      }
+    }
+  },
+  "me": {
+    "profile": {
+      "title": "My profile"
+    }
+  },
+  "files": {
+    "photo": {
+      "dropzone": {
+        "idle": "Drag a photo here or click to browse — JPEG or PNG, max 2 MB",
+        "dragging": "Release to upload"
+      },
+      "uploading": "Uploading…",
+      "scanPending": "Scanning photo for viruses — usually 1–5 seconds",
+      "scanInfected": "File rejected by scan. Pick a different photo.",
+      "scanTimeout": "Scan is taking longer than expected. Click refresh to check again.",
+      "actions": {
+        "replace": "Replace",
+        "delete": "Delete"
+      },
+      "toast": {
+        "uploaded": "Photo saved"
+      },
+      "deleteConfirm": {
+        "title": "Delete profile photo?",
+        "body": "The current photo will be replaced with initials. This is reversible — a new photo can always be uploaded.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "errors": {
+        "tooLarge": "File is too large. Maximum 2 MB.",
+        "wrongType": "Only JPEG or PNG allowed.",
+        "multiFile": "One photo at a time"
       }
     }
   }
