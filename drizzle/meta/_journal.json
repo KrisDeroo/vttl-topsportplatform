@@ -50,6 +50,13 @@
       "when": 1778670719010,
       "tag": "0006_phase2_profiles_and_files",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778670719030,
+      "tag": "0008_phase2_lookup_seed",
+      "breakpoints": true
     }
   ]
 }
