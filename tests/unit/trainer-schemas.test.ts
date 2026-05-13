@@ -65,7 +65,7 @@ describe('trainerCreateInput — Zod messages are i18n keys (I18N-08)', () => {
     const result = trainerCreateInput.safeParse({});
     expect(result.success).toBe(false);
     if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
+      const messages = result.error.issues.map((i: { message: string }) => i.message);
       expect(messages).toContain('errors.field.required');
     }
   });

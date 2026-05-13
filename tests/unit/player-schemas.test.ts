@@ -91,7 +91,7 @@ describe('playerCreateInput — Zod messages are i18n keys (I18N-08)', () => {
     const result = playerCreateInput.safeParse({});
     expect(result.success).toBe(false);
     if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
+      const messages = result.error.issues.map((i: { message: string }) => i.message);
       // At least one message must be the canonical i18n key.
       expect(messages).toContain('errors.field.required');
     }
@@ -114,7 +114,7 @@ describe('playerCreateInput — Zod messages are i18n keys (I18N-08)', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
+      const messages = result.error.issues.map((i: { message: string }) => i.message);
       expect(messages).toContain('errors.field.belgianPostalCode');
     }
   });
@@ -137,7 +137,9 @@ describe('playerCreateInput — Zod messages are i18n keys (I18N-08)', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((i) => i.message === 'errors.field.dateInPast')).toBe(true);
+      expect(
+        result.error.issues.some((i: { message: string }) => i.message === 'errors.field.dateInPast'),
+      ).toBe(true);
     }
   });
 });
