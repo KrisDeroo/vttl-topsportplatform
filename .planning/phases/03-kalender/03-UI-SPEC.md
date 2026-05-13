@@ -1,7 +1,8 @@
 ---
 phase: 3
 slug: kalender
-status: draft
+status: approved
+reviewed_at: 2026-05-13
 shadcn_initialized: true
 preset: "style=new-york, baseColor=neutral, cssVariables=true, iconLibrary=lucide, rsc=true (inherited from Phase 1)"
 created: 2026-05-13
@@ -867,11 +868,11 @@ The following Phase-3-specific choices were resolved by default in this spec giv
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS  *(all UI strings declared as i18n keys with nl/en/fr canonical text in §Copywriting Contract; tone consistent with Phase 2; no emoji; no exclamation marks outside success toasts; proper-noun rule inherited; FullCalendar built-in locale-file boundary declared)*
-- [ ] Dimension 2 Visuals: PASS  *(component inventory complete; calendar page mapped to route + roles; loading + error + empty + read-only states declared; event-chip contract explicit including a11y; responsive behavior at sm/md/lg/2xl specified)*
-- [ ] Dimension 3 Color: PASS  *(60/30/10 inherits Phase 2 neutral preset; accent reserved-for list short and explicit; six new semantic event-type tokens declared with both light and dark values + WCAG AA contrast notes; destructive distinguished from medical-red; FullCalendar CSS-variable overrides token-driven)*
-- [ ] Dimension 4 Typography: PASS  *(3 sizes + 1 display; Phase 3 declares 2 weights (400 + 500); inherited shadcn 600 on Card/Sheet/AlertDialog/page-H1 documented separately as design-system inheritance; two declared exceptions for FullCalendar time-axis + event chip secondary line, both scoped to calendar root; system stack only — no Google Fonts CDN load)*
-- [ ] Dimension 5 Spacing: PASS  *(8-pt scale inherited; declared exceptions all on 4-pt grid: 48px hour-row desktop / 64px mobile, 44px event-chip min-height mobile, 80px filter-chip min-width)*
-- [ ] Dimension 6 Registry Safety: PASS  *(shadcn official only; no third-party shadcn registries declared; FullCalendar is npm-tracked MIT, not a registry; safety gate not triggered)*
+- [x] Dimension 1 Copywriting: PASS  *(all UI strings declared as i18n keys with nl/en/fr canonical text in §Copywriting Contract; tone consistent with Phase 2; no emoji; no exclamation marks outside success toasts; proper-noun rule inherited; FullCalendar built-in locale-file boundary declared)*
+- [x] Dimension 2 Visuals: PASS  *(component inventory complete; calendar page mapped to route + roles; loading + error + empty + read-only states declared; event-chip contract explicit including a11y; responsive behavior at sm/md/lg/2xl specified)*
+- [x] Dimension 3 Color: PASS  *(60/30/10 inherits Phase 2 neutral preset; accent reserved-for list short and explicit; six new semantic event-type tokens declared with both light and dark values + WCAG AA contrast notes; destructive distinguished from medical-red; FullCalendar CSS-variable overrides token-driven)*
+- [x] Dimension 4 Typography: PASS  *(3 sizes + 1 display; Phase 3 declares 2 weights (400 + 500); inherited shadcn 600 on Card/Sheet/AlertDialog/page-H1 documented separately as design-system inheritance; two declared exceptions for FullCalendar time-axis + event chip secondary line, both scoped to calendar root; system stack only — no Google Fonts CDN load)*
+- [x] Dimension 5 Spacing: PASS  *(8-pt scale inherited; declared exceptions all on 4-pt grid: 48px hour-row desktop / 64px mobile, 44px event-chip min-height mobile, 80px filter-chip min-width)*
+- [x] Dimension 6 Registry Safety: PASS  *(shadcn official only; no third-party shadcn registries declared; FullCalendar is npm-tracked MIT, not a registry; safety gate not triggered)*
 
-**Approval:** pending  *(awaits gsd-ui-checker)*
+**Approval:** approved  *(gsd-ui-checker — 2026-05-13, pass 3 of 3; 1 non-blocking FLAG on `calendar.filters.apply` fr = "Appliquer" single-word, idiomatic)*
