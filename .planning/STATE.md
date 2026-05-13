@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 2 complete — awaiting Phase 3 kickoff
-last_updated: "2026-05-13T20:35:00.000Z"
+status: Phase 3 UI-SPEC approved — awaiting CONTEXT / planning
+last_updated: "2026-05-13T22:30:00.000Z"
 progress:
   total_phases: 8
   completed_phases: 2
@@ -16,12 +16,12 @@ progress:
 
 ## Current Status
 
-Phase: 2 — Identiteit & Bestanden ✅ Complete
-Active Phase: 02-identiteit-bestanden (done; awaiting Phase 3)
-Last Action: Phase 2 ✅ Complete. 16/16 plans across 9 waves + verifier gap-closure (player.create / player.updateAsTd now map Postgres 23514 on players_minor_emergency_contact → TRPCError BAD_REQUEST with i18n key). Live on Supabase `uxgqsaphmmzholxkuuym` (eu-west-1, Postgres 17, 13/13 smoke checks PASS). 4 UAT items pending manual verification.
+Phase: 3 — Kalender ◆ UI-SPEC approved
+Active Phase: 03-kalender (UI design contract locked; awaiting CONTEXT / planning)
+Last Action: Phase 3 UI-SPEC approved (6/6 dimensions pass on pass 3 of 3; 1 non-blocking FLAG on `calendar.filters.apply` fr = "Appliquer" single-word, idiomatic). Locks visual + interaction contracts: FullCalendar 6 (timeGridWeek default, timeGridDay mobile <640px), six event-type color tokens (CAL-03), right-side `<Sheet>` for event detail + create/edit, inline `<Alert>` conflict UI with audit-logged "Save anyway" override, URL-persisted view/date/filter state. 12 default design decisions flagged in spec for user override before planning.
 
-Resume: `/gsd-progress` (Phase 3 — Kalender is next per ROADMAP)
-Artifacts: `.planning/phases/02-identiteit-bestanden/` (CONTEXT.md, RESEARCH.md, UI-SPEC.md, PLAN-CHECK.md, 16 PLAN.md + 16 SUMMARY.md files, MIGRATION-LOG.md, VERIFICATION.md)
+Resume: `/gsd-discuss-phase 3` (gather CONTEXT for planning — 12 spec defaults to confirm or override) OR `/gsd-plan-phase 3` (skip discussion, plan directly with UI-SPEC as design context).
+Artifacts: `.planning/phases/03-kalender/03-UI-SPEC.md` (875 lines, status: approved)
 
 ## Project Reference
 
@@ -36,7 +36,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 |-------|------|--------|
 | 1 | Fundament | ✅ Complete (18/18 plans, 1 code-review fix cycle, verifier human_needed deferred to UAT) |
 | 2 | Identiteit & Bestanden | ✅ Complete (16/16 plans + verifier gap-closure; live on Supabase eu-west-1; 4 UAT items deferred) |
-| 3 | Kalender | ⬜ Not started |
+| 3 | Kalender | ◆ UI-SPEC approved (awaiting CONTEXT / planning) |
 | 4 | Kerndomein | ⬜ Not started |
 | 5 | Uitgebreid domein | ⬜ Not started |
 | 6 | Communicatie | ⬜ Not started |
