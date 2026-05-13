@@ -177,7 +177,12 @@ END $$;--> statement-breakpoint
 
 GRANT USAGE ON SCHEMA public TO app_user, app_audit_writer;--> statement-breakpoint
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;--> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL SEQUENCES IN SCHEMA public TO app_user;--> statement-breakpoint
+-- Sequence privileges: Postgres only accepts USAGE / SELECT / UPDATE on
+-- sequences (INSERT/DELETE are table-only and raise 0LP01 when issued
+-- against sequence objects). Granting all three sequence privileges keeps
+-- app_user able to call currval, nextval, and setval on every public-schema
+-- sequence — which matches the intent of the table-level grant on line 179.
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_user;--> statement-breakpoint
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;--> statement-breakpoint
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO app_user;--> statement-breakpoint
 

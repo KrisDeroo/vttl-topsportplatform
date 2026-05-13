@@ -23,3 +23,10 @@ Thumbs.db
 # Note: drizzle/meta/_journal.json is NOT gitignored — must be committed
 # (Drizzle Kit consults it to generate the next migration in sequence)
 tsconfig.tsbuildinfo
+
+# One-shot operator scripts (e.g. plan 02-14 migration runner). Underscore
+# prefix marks them as ephemeral; they MUST NOT be committed because they
+# can carry env-loading or paths specific to a single operator/session.
+scripts/_*.mjs
+scripts/_*.ts
+
