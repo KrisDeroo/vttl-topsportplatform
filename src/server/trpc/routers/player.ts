@@ -116,52 +116,69 @@ export const playerRouter = router({
         emergencyContactRelation: input.emergencyContactRelation,
       };
 
-      const created = await dbHandle.transaction(async (tx) => {
-        const [row] = await tx
-          .insert(players)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .values(playerValues as any)
-          .returning();
-        if (!row) {
+      let created;
+      try {
+        created = await dbHandle.transaction(async (tx) => {
+          const [row] = await tx
+            .insert(players)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .values(playerValues as any)
+            .returning();
+          if (!row) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'player_insert_returned_no_row',
+            });
+          }
+
+          // WARNING-02 fix: register academy_memberships so the player is
+          // visible to trainers/academy_managers via `players_visible_to()`.
+          // ON CONFLICT DO NOTHING keeps this idempotent against retries.
+          await tx
+            .insert(academyMemberships)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .values({
+              userId: input.userId,
+              academyCode: input.academyCode,
+              role: 'player',
+              linkedBy: ctx.scope!.userId,
+            } as any)
+            .onConflictDoNothing();
+
+          // BLOCKER-07 fix: effective_from = TODAY (creation date), NOT DOB.
+          // Phase 4 tournament-time queries via getAgeCategoryAt(playerId,
+          // tournament_date) will return NULL for dates before player
+          // creation, which is the correct semantics — there is no
+          // historical category record before the player existed in the
+          // platform.
+          await tx
+            .insert(ageCategoryHistory)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .values({
+              playerId: input.userId,
+              ageCategoryCode,
+              categoryYear,
+              effectiveFrom: todayIso,
+              setBy: ctx.scope!.userId,
+            } as any);
+
+          return row;
+        });
+      } catch (err: unknown) {
+        // Gap-closure (verifier verdict 2026-05-13): map the Postgres
+        // CHECK-constraint violation `players_minor_emergency_contact`
+        // (SQLSTATE 23514) to a clean BAD_REQUEST. Without this catch,
+        // the TD sees a generic 500 when emergency contact is missing
+        // for a minor — breaks Phase 2 succescriterium #5 (PLAYER-06).
+        const e = err as { code?: string; constraint?: string };
+        if (e.code === '23514' && e.constraint === 'players_minor_emergency_contact') {
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'player_insert_returned_no_row',
+            code: 'BAD_REQUEST',
+            message: 'errors.field.emergencyContactRequiredForMinor',
           });
         }
-
-        // WARNING-02 fix: register academy_memberships so the player is
-        // visible to trainers/academy_managers via `players_visible_to()`.
-        // ON CONFLICT DO NOTHING keeps this idempotent against retries.
-        await tx
-          .insert(academyMemberships)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .values({
-            userId: input.userId,
-            academyCode: input.academyCode,
-            role: 'player',
-            linkedBy: ctx.scope!.userId,
-          } as any)
-          .onConflictDoNothing();
-
-        // BLOCKER-07 fix: effective_from = TODAY (creation date), NOT DOB.
-        // Phase 4 tournament-time queries via getAgeCategoryAt(playerId,
-        // tournament_date) will return NULL for dates before player
-        // creation, which is the correct semantics — there is no
-        // historical category record before the player existed in the
-        // platform.
-        await tx
-          .insert(ageCategoryHistory)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .values({
-            playerId: input.userId,
-            ageCategoryCode,
-            categoryYear,
-            effectiveFrom: todayIso,
-            setBy: ctx.scope!.userId,
-          } as any);
-
-        return row;
-      });
+        throw err;
+      }
 
       await writeAudit(ctx, {
         action: 'player.create',
@@ -381,34 +398,51 @@ export const playerRouter = router({
       const recomputedIsMinor = isMinorAt(input.dateOfBirth, new Date());
       const newIsMinor = recomputedIsMinor === null ? false : recomputedIsMinor;
 
-      const [updated] = await dbHandle
-        .update(players)
-        .set({
-          firstName: input.firstName,
-          lastName: input.lastName,
-          dateOfBirth: input.dateOfBirth.toISOString().slice(0, 10),
-          gender: input.gender,
-          school: input.school,
-          street: input.street,
-          streetNumber: input.streetNumber,
-          postalCode: input.postalCode,
-          city: input.city,
-          province: input.province,
-          country: input.country,
-          phone: input.phone,
-          email: input.email,
-          club: input.club,
-          statusCode: input.statusCode,
-          academyCode: input.academyCode,
-          isMinor: newIsMinor,
-          profilePhotoFileId: input.profilePhotoFileId,
-          emergencyContactName: input.emergencyContactName,
-          emergencyContactPhone: input.emergencyContactPhone,
-          emergencyContactRelation: input.emergencyContactRelation,
-          updatedAt: new Date(),
-        })
-        .where(eq(players.userId, input.playerId))
-        .returning();
+      let updated;
+      try {
+        const rows = await dbHandle
+          .update(players)
+          .set({
+            firstName: input.firstName,
+            lastName: input.lastName,
+            dateOfBirth: input.dateOfBirth.toISOString().slice(0, 10),
+            gender: input.gender,
+            school: input.school,
+            street: input.street,
+            streetNumber: input.streetNumber,
+            postalCode: input.postalCode,
+            city: input.city,
+            province: input.province,
+            country: input.country,
+            phone: input.phone,
+            email: input.email,
+            club: input.club,
+            statusCode: input.statusCode,
+            academyCode: input.academyCode,
+            isMinor: newIsMinor,
+            profilePhotoFileId: input.profilePhotoFileId,
+            emergencyContactName: input.emergencyContactName,
+            emergencyContactPhone: input.emergencyContactPhone,
+            emergencyContactRelation: input.emergencyContactRelation,
+            updatedAt: new Date(),
+          })
+          .where(eq(players.userId, input.playerId))
+          .returning();
+        updated = rows[0];
+      } catch (err: unknown) {
+        // Same gap-closure as player.create: an UPDATE that flips
+        // is_minor=true without emergency contact would otherwise raise
+        // a generic 500. Map SQLSTATE 23514 on this constraint to a
+        // BAD_REQUEST with the locale-aware i18n key.
+        const e = err as { code?: string; constraint?: string };
+        if (e.code === '23514' && e.constraint === 'players_minor_emergency_contact') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'errors.field.emergencyContactRequiredForMinor',
+          });
+        }
+        throw err;
+      }
       if (!updated) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
