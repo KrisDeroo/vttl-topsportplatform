@@ -75,7 +75,7 @@ Real defenses are layered. The body-size cap is the outer ring; the validation/s
 | Layer            | Enforcement                                                                  | Where                                                  |
 | ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Zod input cap    | `contentBase64.max(3 * 1024 * 1024)` (~2.25 MB raw) — fails fast with `BAD_REQUEST` | `src/server/trpc/schemas/file.ts` (Plan 02-07)         |
-| Reverse-proxy cap | Caddy `request_body { max_size 5MB }` — drops request before it reaches Node | Coolify proxy config (see `docs/deployment.md` ##Proxy) |
+| Reverse-proxy cap | Caddy `request_body { max_size 5mb }` — drops request before it reaches Node | Coolify proxy config (see `docs/deployment.md` ##Proxy) |
 | Runtime cap      | Next.js App Router defaults the Node runtime body to whatever the platform allows — typically ~10 MB on Coolify | implicit |
 | Rate limit       | SEC-08 — 10 uploads/min/user via `rateLimit` middleware                      | Phase 1                                                |
 
@@ -88,7 +88,7 @@ Phase 5 medical PDFs (5 MB raw → ~6.66 MB base64) will need both the Zod cap a
 ```caddyfile
 # Per-app section in Coolify's proxy config
 request_body {
-  max_size 5MB
+  max_size 5mb
 }
 ```
 
