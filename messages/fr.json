@@ -62,7 +62,27 @@
     },
     "academy": {
       "topsportschool": "Topsportschool",
-      "academy_antwerpen": "Academy Antwerpen"
+      "academy_antwerpen": "Academy Antwerpen",
+      "academy_brussel": "Academy Brussel",
+      "academy_oost_vlaanderen": "Academy Oost-Vlaanderen",
+      "academy_west_vlaanderen": "Academy West-Vlaanderen",
+      "academy_limburg": "Academy Limburg"
+    },
+    "ageCategory": {
+      "age_pre_minor": "Préminimes",
+      "age_minor": "Minimes",
+      "age_cadet": "Cadets",
+      "age_junior": "Juniors",
+      "age_senior": "Seniors",
+      "age_veteran": "Vétérans",
+      "age_unknown": "Non déterminé"
+    },
+    "trainerDiploma": {
+      "diploma_none": "Aucun",
+      "diploma_a": "Diplôme A",
+      "diploma_b": "Diplôme B",
+      "diploma_a_in_training": "Diplôme A en formation",
+      "diploma_b_in_training": "Diplôme B en formation"
     },
     "trainingType": {
       "training_type_group": "Groupe",
@@ -132,7 +152,25 @@
     "forbidden": "Vous n'avez pas accès à cette page.",
     "notFound": "Page introuvable.",
     "validationFailed": "Les données ne sont pas correctement remplies.",
-    "csrfRejected": "Requête refusée pour des raisons de sécurité."
+    "csrfRejected": "Requête refusée pour des raisons de sécurité.",
+    "field": {
+      "required": "Ce champ est obligatoire",
+      "email": "Adresse e-mail non valide",
+      "dateInPast": "La date doit être dans le passé",
+      "belgianPostalCode": "Entrez un code postal de 4 chiffres",
+      "country": "Entrez un code pays valide (2 lettres)",
+      "phone": "Entrez un numéro de téléphone valide",
+      "emergencyContactRequiredForMinor": "Un contact d'urgence est obligatoire pour les mineurs"
+    },
+    "file": {
+      "tooLarge": "Le fichier est trop volumineux. Maximum 2 Mo.",
+      "unknownType": "Le type de fichier n'a pas pu être déterminé.",
+      "disallowedType": "Ce type de fichier n'est pas autorisé pour ce champ.",
+      "filenameTooLong": "Le nom du fichier est trop long. Maximum 255 caractères.",
+      "uploadFailed": "Échec du téléversement. Veuillez réessayer.",
+      "signedUrlFailed": "Impossible de générer le lien de téléchargement.",
+      "scanNotClean": "Fichier non encore disponible — l'analyse antivirus est en cours ou le fichier a été rejeté."
+    }
   },
   "admin": {
     "users": {
@@ -149,6 +187,121 @@
         "role": "Rôle",
         "status": "Statut",
         "locale": "Langue"
+      }
+    }
+  },
+  "players": {
+    "list": {
+      "title": "Joueurs",
+      "empty": {
+        "title": "Aucun joueur dans votre périmètre",
+        "body": "Les joueurs apparaîtront ici dès qu'ils seront liés à votre académie.",
+        "ctaTd": "Nouveau joueur"
+      },
+      "actions": {
+        "open": "Ouvrir le profil",
+        "setAgeCategory": "Changer la catégorie d'âge"
+      }
+    },
+    "create": {
+      "title": "Créer un nouveau joueur",
+      "submit": "Créer le joueur"
+    },
+    "detail": {
+      "title": "Profil du joueur",
+      "readOnly": "Lecture seule"
+    },
+    "edit": {
+      "submit": "Enregistrer les modifications",
+      "toast": {
+        "saved": "Profil enregistré",
+        "error": "Échec de l'enregistrement — vérifiez les données et réessayez"
+      }
+    },
+    "sections": {
+      "identity": "Identité",
+      "sport": "Sport",
+      "address": "Adresse",
+      "emergencyContact": "Contact d'urgence",
+      "photo": "Photo de profil"
+    },
+    "fields": {
+      "school": {
+        "description": "(optionnel)"
+      },
+      "gender": {
+        "label": "Genre",
+        "male": "Homme",
+        "female": "Femme",
+        "x": "X"
+      }
+    },
+    "ageCategoryChange": {
+      "title": "Changer la catégorie d'âge ?",
+      "body": "Cette modification est enregistrée dans l'historique. La validation des futurs tournois utilisera cette catégorie à partir de la date d'effet.",
+      "confirm": "Changer"
+    }
+  },
+  "trainers": {
+    "list": {
+      "title": "Entraîneurs",
+      "empty": {
+        "title": "Aucun entraîneur dans votre périmètre",
+        "body": "Les entraîneurs apparaîtront ici dès qu'ils seront liés à votre académie.",
+        "ctaTd": "Nouvel entraîneur"
+      },
+      "actions": {
+        "open": "Ouvrir le profil"
+      }
+    },
+    "create": {
+      "title": "Créer un nouvel entraîneur",
+      "submit": "Créer l'entraîneur"
+    },
+    "detail": {
+      "title": "Profil de l'entraîneur",
+      "readOnly": "Lecture seule"
+    },
+    "edit": {
+      "submit": "Enregistrer les modifications",
+      "toast": {
+        "saved": "Profil enregistré",
+        "error": "Échec de l'enregistrement — vérifiez les données et réessayez"
+      }
+    }
+  },
+  "me": {
+    "profile": {
+      "title": "Mon profil"
+    }
+  },
+  "files": {
+    "photo": {
+      "dropzone": {
+        "idle": "Glissez une photo ici ou cliquez pour parcourir — JPEG ou PNG, max 2 Mo",
+        "dragging": "Relâchez pour téléverser"
+      },
+      "uploading": "Téléversement…",
+      "scanPending": "Analyse antivirus en cours — généralement 1 à 5 secondes",
+      "scanInfected": "Fichier rejeté par l'analyse. Choisissez une autre photo.",
+      "scanTimeout": "L'analyse prend plus de temps que prévu. Cliquez sur actualiser pour vérifier à nouveau.",
+      "actions": {
+        "replace": "Remplacer",
+        "delete": "Supprimer"
+      },
+      "toast": {
+        "uploaded": "Photo enregistrée"
+      },
+      "deleteConfirm": {
+        "title": "Supprimer la photo de profil ?",
+        "body": "La photo actuelle sera remplacée par les initiales. Cette action est réversible — une nouvelle photo peut toujours être téléversée.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler"
+      },
+      "errors": {
+        "tooLarge": "Le fichier est trop volumineux. Maximum 2 Mo.",
+        "wrongType": "Seuls les fichiers JPEG ou PNG sont autorisés.",
+        "multiFile": "Une seule photo à la fois"
       }
     }
   }
