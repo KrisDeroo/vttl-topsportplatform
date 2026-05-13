@@ -1,11 +1,19 @@
 /**
- * Schema barrel re-export — ALL Phase-1 core tables.
+ * Schema barrel re-export — ALL core tables.
  *
- * Plan 02 wired auth, lookups, memberships, consent, audit, and
- * idempotency. Plan 03 (this update) appends `./medical` for the
- * pgcrypto-encrypted Article-9 tables and the dedicated
- * `medical_access_audit`. Plan 04 will extend with RLS policies (no
- * additional table imports — policies live in the migration SQL).
+ * Phase 1 wired auth, lookups, memberships, consent, audit, idempotency,
+ * and medical (pgcrypto-encrypted Article-9 + dedicated
+ * `medical_access_audit`). RLS policies live in the migration SQL, not
+ * here.
+ *
+ * Phase 2 (02-02) appends `./files`, `./players`, and `./trainers`:
+ *  - `./files` exports `uploadedFiles` (single source of truth for every
+ *    file managed by the platform — D-30).
+ *  - `./players` exports `players` + `ageCategoryHistory` (D-26..D-34,
+ *    PLAYER-01..06).
+ *  - `./trainers` exports `trainers` (D-26/D-38, TRAINER-01..02).
+ *  - The Phase-2 lookup additions (`ageCategories`, `trainerDiploma`)
+ *    re-export through the existing `./lookups` line.
  *
  * Drizzle Kit reads this barrel as the single source of truth for
  * `drizzle-kit generate` / `migrate` (see drizzle.config.ts).
@@ -20,3 +28,6 @@ export * from './consent';
 export * from './audit';
 export * from './idempotency';
 export * from './medical';
+export * from './files';
+export * from './players';
+export * from './trainers';

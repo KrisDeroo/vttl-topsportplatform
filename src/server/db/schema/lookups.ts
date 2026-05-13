@@ -69,3 +69,39 @@ export const outcomeLevel = pgTable('outcome_level', {
   sortOrder: integer('sort_order').notNull(),
   active: boolean('active').notNull().default(true),
 });
+
+// ─── Phase 2 additions ──────────────────────────────────────────────────
+
+/**
+ * age_categories — Belgian table tennis age cohorts (DOM-CAT-01).
+ *
+ * Birth-year boundaries are inclusive on both sides. Phase 2's seed migration
+ * (02-08) inserts placeholder NULLs until the TD confirms the canonical
+ * boundaries (RESEARCH §Open Questions point 4 — ASSUMED A2). Until set,
+ * `deriveAgeCategory()` returns the special `'age_unknown'` code (helper in
+ * 02-04). Once confirmed, an UPDATE migration in the same migration chain
+ * fills the boundaries.
+ *
+ * No per-locale display columns — labels live in `messages/{nl,en,fr}.json`
+ * under `lookups.ageCategory.*` (I18N-06 / D-45 — proper nouns not in DB).
+ */
+export const ageCategories = pgTable('age_categories', {
+  code: text('code').primaryKey(), // 'age_pre_minor' | 'age_minor' | 'age_cadet' | 'age_junior' | 'age_senior' | 'age_veteran' | 'age_unknown'
+  sortOrder: integer('sort_order').notNull(),
+  bornAfterOrEqual: integer('born_after_or_equal'), // null = open lower bound
+  bornBeforeOrEqual: integer('born_before_or_equal'), // null = open upper bound
+  active: boolean('active').notNull().default(true),
+});
+
+/**
+ * trainer_diploma — 5-code lookup per TRAINER-02 (verbatim from REQUIREMENTS).
+ *
+ * Codes: 'diploma_none' | 'diploma_a' | 'diploma_b' | 'diploma_a_in_training'
+ *        | 'diploma_b_in_training'.
+ * Labels resolved via `messages/{nl,en,fr}.json` `lookups.trainerDiploma.*`.
+ */
+export const trainerDiploma = pgTable('trainer_diploma', {
+  code: text('code').primaryKey(), // 'diploma_none' | 'diploma_a' | 'diploma_b' | 'diploma_a_in_training' | 'diploma_b_in_training'
+  sortOrder: integer('sort_order').notNull(),
+  active: boolean('active').notNull().default(true),
+});
