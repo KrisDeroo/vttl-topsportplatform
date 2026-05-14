@@ -44,3 +44,28 @@ describe('schema locale + role enums — I18N-02, USER-04, D-11', () => {
     expect(col.hasDefault).toBe(true);
   });
 });
+
+/**
+ * Phase 3 — calendar i18n namespace coverage (I18N-05/06/07/08).
+ *
+ * Wave 0 RED scaffold: Wave 4 adds the `calendar.*`, `lookup.eventType.*`,
+ * and `errors.calendar.*` message keys to `messages/{nl,en,fr}.json`.
+ * Until then the per-locale catalog tree assertions are it.todo; the
+ * canonical namespaces are spelled out here so a planner/checker can
+ * grep for the expected coverage.
+ */
+describe('Phase 3 — calendar namespace coverage (nl/en/fr)', () => {
+  const PHASE3_NAMESPACES = ['calendar', 'lookup.eventType', 'errors.calendar'] as const;
+
+  it('declares all 3 Phase 3 namespaces (manifest)', () => {
+    expect(PHASE3_NAMESPACES).toHaveLength(3);
+  });
+
+  it.todo('messages/nl.json contains every calendar.* key required by UI-SPEC');
+  it.todo('messages/en.json contains every calendar.* key required by UI-SPEC');
+  it.todo('messages/fr.json contains every calendar.* key required by UI-SPEC');
+  it.todo('errors.calendar.endBeforeStart present in all 3 locales');
+  it.todo('errors.calendar.rruleHorizonExceeded present in all 3 locales');
+  it.todo('errors.calendar.rangeTooLarge present in all 3 locales');
+  it.todo('lookup.eventType.training present in all 3 locales (6 event-type labels total)');
+});

@@ -60,3 +60,35 @@ describe('lookup tables — I18N-05', () => {
     expect(c.canonicalName).toBeDefined();
   });
 });
+
+/**
+ * Phase 3 — event_type lookup coverage (UI3-D11, D-47).
+ *
+ * Wave 0 RED scaffold: the `eventType` table is added by Wave 2 migration
+ * `drizzle/0012_phase3_event_type_seed.sql` + the lookup is registered in
+ * `src/server/db/schema/lookups.ts`. Until then the existence checks are
+ * it.todo so the suite stays parsable; the canonical 6 codes are spelled
+ * out here so a planner/checker can grep for them.
+ */
+describe('Phase 3 — event_type lookup (UI3-D11, D-47)', () => {
+  // Canonical 6 codes per UI3-D11 + D-47 (CONTEXT.md). These strings are
+  // the exact `code` PK values seeded by migration 0012.
+  const EVENT_TYPE_CODES = [
+    'event_type_training',
+    'event_type_tournament',
+    'event_type_meeting',
+    'event_type_stage',
+    'event_type_eval_conversation',
+    'event_type_medical',
+  ] as const;
+
+  it('declares all 6 canonical event_type codes (Phase 3 Wave 0 manifest)', () => {
+    // RED-friendly: assert the manifest array is the exact set of canonical
+    // codes — flips to a DB query in Wave 5 once the seed lands.
+    expect(EVENT_TYPE_CODES).toHaveLength(6);
+    expect(new Set(EVENT_TYPE_CODES).size).toBe(6);
+  });
+
+  it.todo('eventType pgTable has a "code" PK column (Wave 2)');
+  it.todo('eventType seed migration inserts the 6 canonical codes (Wave 2)');
+});
