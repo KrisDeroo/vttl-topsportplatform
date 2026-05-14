@@ -268,7 +268,7 @@ Plans:
 - [x] 03-05-PLAN.md — Wave 3: src/server/trpc/routers/calendar.ts (9 procedures: list / event.{create,update,delete,declineParticipation,cancelOccurrence,get,detectConflicts} / filterOptions.list) wiring rrule + redactConflict + 6 audit codes + D-58c cascade order; register on _app.ts
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-06-PLAN.md — Wave 4: /kalender Server Component + Suspense + CalendarSkeleton + EmptyHintStrip + Client CalendarView (single 'use client', FullCalendar timeGrid/dayGrid/multiMonth/interaction, dynamic locale loading, mobile timeGridDay + vanilla pointerevents swipe per CAL-08) + CalendarToolbar (view switcher + date nav + create CTA) + EventChip (eventContent JSX, no hooks)
+- [x] 03-06-PLAN.md — Wave 4: /kalender Server Component + Suspense + CalendarSkeleton + EmptyHintStrip + Client CalendarView (single 'use client', FullCalendar timeGrid/dayGrid/multiMonth/interaction, dynamic locale loading, mobile timeGridDay + vanilla pointerevents swipe per CAL-08) + CalendarToolbar (view switcher + date nav + create CTA) + EventChip (eventContent JSX, no hooks)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 03-07-PLAN.md — Wave 5: sheets + dialogs + filter bar (EventCreateSheet with discriminated-union RHF + ConflictWarning consuming D-57b template + force-save flow / EventEditSheet with UI3-D12 Phase-4 scope disabled / EventDeleteDialog with D-58b copy / EventDetailSheet with decline + edit + delete actions / EventFilterBar with 6 type chips + 4 type-ahead combos + mobile bottom Sheet / FilterCombobox with scope-filtered tRPC / ConflictBanner top-page) + Phase 4/5-reusable common/DateTimePicker + common/RruleEditor
