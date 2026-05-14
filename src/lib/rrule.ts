@@ -1,0 +1,240 @@
+/**
+ * RRULE helpers — server-side RFC 5545 expansion + D-55 horizon defense in depth.
+ *
+ * Single source of truth for parsing and expanding recurring-event rules.
+ * FullCalendar receives concrete EventInstance[] from the server — never
+ * raw RRULE strings — per D-53. Mobile clients and alt front-ends get the
+ * same correct expansion for free.
+ *
+ * Public API:
+ *   parseRrule(s, dtstart)        — parse + return RRule. Throws TRPCError
+ *                                    BAD_REQUEST on invalid RFC 5545 or
+ *                                    DTSTART:-containing strings.
+ *   validateHorizon(s, createdAt) — D-55 write-time gate. Throws TRPCError
+ *                                    BAD_REQUEST 'errors.calendar.rruleHorizonExceeded' on:
+ *                                      - missing UNTIL and COUNT
+ *                                      - UNTIL > createdAt + 2y
+ *                                      - rrule string containing 'DTSTART:'
+ *                                        (Anti-Pattern 1: dual source of truth).
+ *   ensureHorizon(s, createdAt)   — UI helper: when user picks "Eindigt: Nooit"
+ *                                    the UI sends a rrule without UNTIL/COUNT;
+ *                                    this function auto-injects UNTIL =
+ *                                    createdAt + 2y using RRule.optionsToString()
+ *                                    (NEVER string-concat per Pitfall 8).
+ *                                    Returns the new rrule string.
+ *   expandRrule(rrule, dtstart, durationMs, from, to, exceptions[]) — expand
+ *                                    to EventInstance[] with exceptions
+ *                                    applied. Read-time horizon clamp per
+ *                                    D-55: clampedTo = min(to, dtstart + 2y)
+ *                                    so legacy/migrated rows can't explode.
+ *                                    Cancelled exceptions are skipped via
+ *                                    RRuleSet.exdate(); override fields
+ *                                    applied in a post-processing pass.
+ *
+ * Pitfalls covered:
+ *   - Pitfall 3 (DST drift): we pass Date objects from Postgres TIMESTAMPTZ
+ *     which are always UTC; rrule's default UTC semantics handle DST
+ *     correctly.
+ *   - Pitfall 8 (invalid RFC 5545 UNTIL format): we never string-concat;
+ *     rrule's RRule.optionsToString() always emits valid
+ *     `UNTIL=YYYYMMDDTHHMMSSZ`.
+ *   - Anti-Pattern 1: parseRrule rejects rrule strings containing 'DTSTART:'
+ *     so the source of truth stays on calendar_events.starts_at.
+ *
+ * Reference: .planning/phases/03-kalender/03-CONTEXT.md D-52..D-55
+ *            .planning/phases/03-kalender/03-RESEARCH.md §Pattern 3
+ */
+import { TRPCError } from '@trpc/server';
+import { addYears } from 'date-fns';
+import { RRule, RRuleSet, rrulestr } from 'rrule';
+
+const MAX_HORIZON_YEARS = 2; // D-55
+
+/** Output of expandRrule — one concrete instance per occurrence in the window. */
+export interface ExpandedOccurrence {
+  /** UTC date of this occurrence (rrule's "anchor" for the day). */
+  occurrenceDate: Date;
+  /** Resolved start time — override applied if exception exists for this date. */
+  startsAt: Date;
+  /** Resolved end time — override applied if exception exists. */
+  endsAt: Date;
+  /** Title override applied to this occurrence — null if none. */
+  titleOverride: string | null;
+  /** Location override applied to this occurrence — null if none. */
+  locationOverride: string | null;
+  /** Description override applied to this occurrence — null if none. */
+  descriptionOverride: string | null;
+}
+
+/** Shape of an exception row from calendar_event_exceptions. */
+export interface ExceptionInput {
+  occurrenceDate: Date | string; // date column — Date or 'YYYY-MM-DD'
+  cancelled: boolean;
+  overrideStartsAt: Date | null;
+  overrideEndsAt: Date | null;
+  overrideTitle: string | null;
+  overrideLocation: string | null;
+  overrideDescription: string | null;
+}
+
+/**
+ * Parse an RFC 5545 RRULE string with an explicit dtstart from
+ * calendar_events.starts_at. Throws TRPCError BAD_REQUEST if the string is
+ * invalid or contains DTSTART: (dual-source-of-truth guard — Anti-Pattern 1).
+ */
+export function parseRrule(rruleStr: string, dtstart: Date): RRule {
+  if (rruleStr.includes('DTSTART:')) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'errors.calendar.rruleHorizonExceeded',
+    });
+  }
+  let parsed: RRule | RRuleSet;
+  try {
+    // rrulestr returns RRule | RRuleSet; we expect a single RRULE for the
+    // stored calendar_events.rrule column. RRuleSet is constructed internally
+    // only when applying EXDATEs from exceptions (inside expandRrule).
+    parsed = rrulestr(rruleStr, { dtstart });
+  } catch {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'errors.calendar.rruleHorizonExceeded',
+    });
+  }
+  if (parsed instanceof RRuleSet) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'errors.calendar.rruleHorizonExceeded',
+    });
+  }
+  return parsed;
+}
+
+/**
+ * D-55 write-time gate. Reject:
+ *   - rrule string containing DTSTART: (dual-source-of-truth — Anti-Pattern 1)
+ *   - rule without UNTIL AND without COUNT (open-ended → expansion DoS risk)
+ *   - rule with UNTIL > createdAt + 2y (horizon exceeded)
+ *
+ * Throws TRPCError BAD_REQUEST 'errors.calendar.rruleHorizonExceeded' on any
+ * failure.
+ */
+export function validateHorizon(
+  rruleStr: string,
+  createdAt: Date = new Date(),
+): void {
+  // For the horizon-validation call, dtstart is irrelevant — we only inspect
+  // origOptions.until and origOptions.count. Use createdAt as a harmless
+  // anchor so the parse succeeds.
+  const dtstart = createdAt;
+  const rule = parseRrule(rruleStr, dtstart);
+  const opts = rule.origOptions;
+  if (!opts.until && !opts.count) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'errors.calendar.rruleHorizonExceeded',
+    });
+  }
+  if (opts.until && opts.until > addYears(createdAt, MAX_HORIZON_YEARS)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'errors.calendar.rruleHorizonExceeded',
+    });
+  }
+}
+
+/**
+ * Auto-inject UNTIL = createdAt + 2y when the UI sends a rrule without
+ * UNTIL/COUNT (user picked "Eindigt: Nooit" in UI3-D12 RruleEditor).
+ * Returns the new rrule string. If the input already has UNTIL or COUNT,
+ * it is returned unchanged.
+ *
+ * NEVER string-concat — uses RRule.optionsToString() per Pitfall 8.
+ */
+export function ensureHorizon(
+  rruleStr: string,
+  createdAt: Date = new Date(),
+): string {
+  const dtstart = createdAt;
+  const rule = parseRrule(rruleStr, dtstart);
+  const opts = rule.origOptions;
+  if (opts.until || opts.count) return rruleStr; // already bounded
+  // Strip dtstart from the spread — the source of truth is
+  // calendar_events.starts_at (Anti-Pattern 1: never write DTSTART: into the
+  // stored rrule string). `exactOptionalPropertyTypes` requires omission
+  // rather than `undefined`.
+  const { dtstart: _stripDtstart, ...rest } = opts;
+  void _stripDtstart;
+  const newOpts = {
+    ...rest,
+    until: addYears(createdAt, MAX_HORIZON_YEARS),
+  };
+  return RRule.optionsToString(newOpts);
+}
+
+/**
+ * Expand a rrule string + exceptions into concrete occurrences within
+ * [from, to]. Read-time horizon clamp per D-55: clamps `to` to `dtstart + 2y`
+ * so legacy rows with UNTIL beyond that point cannot blow up an unsuspecting
+ * list query.
+ */
+export function expandRrule(
+  rruleStr: string,
+  dtstart: Date,
+  durationMs: number,
+  from: Date,
+  to: Date,
+  exceptions: ReadonlyArray<ExceptionInput>,
+): ExpandedOccurrence[] {
+  const rule = parseRrule(rruleStr, dtstart);
+  const horizonMax = addYears(dtstart, MAX_HORIZON_YEARS);
+  const clampedTo = new Date(Math.min(to.getTime(), horizonMax.getTime()));
+
+  // Build an RRuleSet so we can apply EXDATEs for cancelled occurrences.
+  const set = new RRuleSet();
+  set.rrule(rule);
+  for (const ex of exceptions) {
+    if (ex.cancelled) {
+      const exDate =
+        ex.occurrenceDate instanceof Date
+          ? ex.occurrenceDate
+          : new Date(ex.occurrenceDate);
+      // Express the EXDATE at the same time-of-day as dtstart for the
+      // cancelled calendar date — rrule's exdate match is exact.
+      const exInstant = new Date(
+        Date.UTC(
+          exDate.getUTCFullYear(),
+          exDate.getUTCMonth(),
+          exDate.getUTCDate(),
+          dtstart.getUTCHours(),
+          dtstart.getUTCMinutes(),
+          dtstart.getUTCSeconds(),
+        ),
+      );
+      set.exdate(exInstant);
+    }
+  }
+
+  const dates = set.between(from, clampedTo, true);
+
+  return dates.map((d) => {
+    // Find a non-cancelled override matching this occurrence's calendar date.
+    const isoDate = d.toISOString().slice(0, 10);
+    const ex = exceptions.find((e) => {
+      if (e.cancelled) return false;
+      const ed =
+        e.occurrenceDate instanceof Date
+          ? e.occurrenceDate
+          : new Date(e.occurrenceDate);
+      return ed.toISOString().slice(0, 10) === isoDate;
+    });
+    return {
+      occurrenceDate: d,
+      startsAt: ex?.overrideStartsAt ?? d,
+      endsAt: ex?.overrideEndsAt ?? new Date(d.getTime() + durationMs),
+      titleOverride: ex?.overrideTitle ?? null,
+      locationOverride: ex?.overrideLocation ?? null,
+      descriptionOverride: ex?.overrideDescription ?? null,
+    };
+  });
+}
