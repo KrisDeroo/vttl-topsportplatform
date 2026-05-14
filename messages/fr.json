@@ -126,6 +126,128 @@
       "outcome_group_phase": "Phase de groupe"
     }
   },
+  "calendar": {
+    "title": "Calendrier",
+    "loading": "Chargement de l'agenda…",
+    "views": {
+      "week": "Semaine",
+      "day": "Jour",
+      "month": "Mois",
+      "year": "Année"
+    },
+    "actions": {
+      "today": "Aujourd'hui",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "create": "Nouveau rendez-vous",
+      "filters": "Filtres"
+    },
+    "filters": {
+      "byType": "Type",
+      "byPlayer": "Joueur",
+      "byTrainer": "Entraîneur",
+      "bySparring": "Partenaire de sparring",
+      "byAcademy": "Académie",
+      "searchPlaceholder": "Rechercher…",
+      "empty": "Aucun résultat dans votre périmètre",
+      "clear": "Effacer les filtres",
+      "apply": "Appliquer",
+      "countSuffix": " · {count}"
+    },
+    "emptyHint": "Aucun rendez-vous sur cette période. Ajoutez-en un ou naviguez vers une autre semaine.",
+    "emptyFiltered": "Aucun rendez-vous ne correspond à ces filtres. Ajustez-les ou effacez-les.",
+    "event": {
+      "untitled": "Rendez-vous sans titre",
+      "sections": {
+        "when": "Quand",
+        "where": "Où",
+        "who": "Qui",
+        "description": "Description",
+        "recurrence": "Récurrence"
+      },
+      "recurrence": {
+        "weekly": "Toutes les semaines jusqu'au {endDate}",
+        "daily": "Tous les jours jusqu'au {endDate}",
+        "monthly": "Tous les mois jusqu'au {endDate}",
+        "noEnd": "Pas de date de fin",
+        "frequency": "Fréquence",
+        "interval": "Tous les {n} {unit}",
+        "endLabel": "Se termine",
+        "endNever": "Jamais",
+        "endOnDate": "À la date",
+        "endAfter": "Après {n} fois",
+        "scopeThis": "Cet événement",
+        "scopeFuture": "Cet événement et les suivants (Phase 4)",
+        "scopeAll": "Tous les événements de la série (Phase 4)"
+      },
+      "fields": {
+        "title": "Titre",
+        "type": "Type",
+        "start": "Début",
+        "end": "Fin",
+        "allDay": "Toute la journée",
+        "location": "Lieu",
+        "description": "Description",
+        "recurring": "Récurrent",
+        "participants": "Participants"
+      },
+      "actions": {
+        "edit": "Modifier le rendez-vous",
+        "delete": "Supprimer le rendez-vous",
+        "close": "Fermer",
+        "cancel": "Annuler les modifications"
+      },
+      "create": {
+        "title": "Nouveau rendez-vous",
+        "submit": "Créer le rendez-vous"
+      },
+      "edit": {
+        "title": "Modifier le rendez-vous",
+        "submit": "Enregistrer les modifications"
+      },
+      "delete": {
+        "title": "Supprimer le rendez-vous ?",
+        "body": "Ce rendez-vous sera supprimé définitivement pour tous les participants.",
+        "confirm": "Supprimer le rendez-vous",
+        "cancel": "Conserver"
+      },
+      "decline": {
+        "title": "Je ne peux pas être présent",
+        "submit": "Confirmer",
+        "toast": "Votre participation a été mise à jour"
+      },
+      "toast": {
+        "created": "Rendez-vous créé",
+        "updated": "Modifications enregistrées",
+        "deleted": "Rendez-vous supprimé",
+        "error": "Échec de l'enregistrement — vérifiez les données et réessayez",
+        "notFound": "Rendez-vous introuvable",
+        "moved": "Rendez-vous déplacé",
+        "resized": "Horaires modifiés"
+      }
+    },
+    "conflict": {
+      "title": "Conflit avec un rendez-vous existant",
+      "body": "**{participant}** est déjà réservé pour {detail} {start}–{end}. Enregistrer quand même ?",
+      "extra": "+{n} autres conflits",
+      "saveAnyway": "Enregistrer quand même",
+      "adjustTime": "Ajuster les horaires",
+      "moveAnyway": "Déplacer quand même",
+      "undoMove": "Annuler",
+      "detailFull": "**{title}** ({typeLabel})",
+      "detailRedacted": "un **{typeLabel}**"
+    }
+  },
+  "lookup": {
+    "eventType": {
+      "event_type_training": "Entraînement",
+      "event_type_tournament": "Tournoi",
+      "event_type_meeting": "Réunion",
+      "event_type_stage": "Stage",
+      "event_type_eval_conversation": "Entretien d'évaluation",
+      "event_type_medical": "Rendez-vous médical"
+    }
+  },
   "common": {
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -170,6 +292,15 @@
       "uploadFailed": "Échec du téléversement. Veuillez réessayer.",
       "signedUrlFailed": "Impossible de générer le lien de téléchargement.",
       "scanNotClean": "Fichier non encore disponible — l'analyse antivirus est en cours ou le fichier a été rejeté."
+    },
+    "calendar": {
+      "endBeforeStart": "La fin doit être après le début",
+      "rruleHorizonExceeded": "La récurrence peut s'étendre au maximum sur 2 ans",
+      "rangeTooLarge": "Un rendez-vous peut durer 24 heures maximum en v1",
+      "titleRequired": "Un titre est obligatoire",
+      "typeRequired": "Un type est obligatoire",
+      "medicalPastStart": "Les rendez-vous médicaux ne peuvent pas être créés dans le passé",
+      "participantNotInScope": "Un ou plusieurs participants sélectionnés sont hors de votre périmètre"
     }
   },
   "admin": {

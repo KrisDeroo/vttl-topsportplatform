@@ -58,3 +58,42 @@ as a Phase 8 quality/release hardening task or a one-off `/gsd-quick`.
 - **Scope verdict:** Out of scope. Pre-existed at the Phase 3 base commit;
   not caused by Phase 3 deps. ESLint config tidy-up is a Phase 8 release
   hardening task.
+
+---
+
+## 03-04 — Wave 2 i18n + design tokens
+
+### DI-03: `pnpm build` lint/type pipeline fails on unrelated files
+
+- **Found during:** 03-04 Task 2 verification — running `pnpm build` to
+  confirm Tailwind v4 + PostCSS parses the new `--cal-event-*` tokens and
+  `.fc { ... }` override block.
+- **Build status:** CSS / Next.js compile step **succeeds** ("✓ Compiled
+  successfully in 9.2s") — the Tailwind v4 pipeline accepts the new tokens
+  cleanly. This is the signal that matters for this plan (CSS contract
+  ships intact).
+- **Failure source 1:** ESLint runner throws
+  `Converting circular structure to JSON     --> starting at object with constructor 'Object' ... property 'react' closes the circle`.
+  Same pre-existing ESLint 10 vs plugin peer-dep mismatch documented as
+  DI-02; ESLint can load the config but cannot serialise it.
+- **Failure source 2:** TypeScript error in
+  `src/app/[locale]/(app)/admin/users/page.tsx:56:14` —
+  ```
+  Argument of type '`/${string}/login`' is not assignable to parameter of
+  type 'RouteImpl<`/${string}/login`>'.
+  ```
+  Surfaces because `experimental.typedRoutes` was promoted to top-level
+  `typedRoutes: true` in Next.js 15.5 and the build warning explicitly
+  flags this drift. Path-literal coercion was looser under the experimental
+  flag; promoted typedRoutes enforces stricter `RouteImpl` checks on
+  `redirect()` and `Link` `href` arguments.
+- **Scope verdict:** Out of scope for Plan 03-04. Pre-existing failure on a
+  Phase 1 file (`admin/users/page.tsx`) — not introduced or touched by
+  i18n catalog or globals.css edits. The CSS contract this plan delivers
+  is unaffected.
+- **Suggested resolution path:** Phase 8 release-hardening pass — move
+  `typedRoutes` out of `experimental` in `next.config.ts` (per the build
+  warning) and either (a) cast the route literal with `as Route` or
+  (b) define a typed route helper module that returns
+  `RouteImpl<'/${L}/login'>`. The DI-02 ESLint circular-structure issue
+  resolves naturally when the eslint peer-dep mismatch is fixed.
