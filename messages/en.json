@@ -126,6 +126,128 @@
       "outcome_group_phase": "Group phase"
     }
   },
+  "calendar": {
+    "title": "Calendar",
+    "loading": "Loading calendar…",
+    "views": {
+      "week": "Week",
+      "day": "Day",
+      "month": "Month",
+      "year": "Year"
+    },
+    "actions": {
+      "today": "Today",
+      "prev": "Previous",
+      "next": "Next",
+      "create": "New event",
+      "filters": "Filters"
+    },
+    "filters": {
+      "byType": "Type",
+      "byPlayer": "Player",
+      "byTrainer": "Trainer",
+      "bySparring": "Sparring partner",
+      "byAcademy": "Academy",
+      "searchPlaceholder": "Search…",
+      "empty": "No results in your scope",
+      "clear": "Clear filters",
+      "apply": "Apply filters",
+      "countSuffix": " · {count}"
+    },
+    "emptyHint": "No events in this range. Add one or navigate to another week.",
+    "emptyFiltered": "No events match these filters. Adjust them or clear all.",
+    "event": {
+      "untitled": "Untitled event",
+      "sections": {
+        "when": "When",
+        "where": "Where",
+        "who": "Who",
+        "description": "Description",
+        "recurrence": "Recurrence"
+      },
+      "recurrence": {
+        "weekly": "Weekly until {endDate}",
+        "daily": "Daily until {endDate}",
+        "monthly": "Monthly until {endDate}",
+        "noEnd": "No end date",
+        "frequency": "Frequency",
+        "interval": "Every {n} {unit}",
+        "endLabel": "Ends",
+        "endNever": "Never",
+        "endOnDate": "On date",
+        "endAfter": "After {n} times",
+        "scopeThis": "This event",
+        "scopeFuture": "This and future events (Phase 4)",
+        "scopeAll": "All events in the series (Phase 4)"
+      },
+      "fields": {
+        "title": "Title",
+        "type": "Type",
+        "start": "Start",
+        "end": "End",
+        "allDay": "All day",
+        "location": "Location",
+        "description": "Description",
+        "recurring": "Recurring",
+        "participants": "Participants"
+      },
+      "actions": {
+        "edit": "Edit event",
+        "delete": "Delete event",
+        "close": "Close",
+        "cancel": "Discard changes"
+      },
+      "create": {
+        "title": "New event",
+        "submit": "Create event"
+      },
+      "edit": {
+        "title": "Edit event",
+        "submit": "Save changes"
+      },
+      "delete": {
+        "title": "Delete event?",
+        "body": "This event will be permanently deleted for all participants.",
+        "confirm": "Delete event",
+        "cancel": "Keep event"
+      },
+      "decline": {
+        "title": "I cannot attend",
+        "submit": "Confirm",
+        "toast": "Your participation has been updated"
+      },
+      "toast": {
+        "created": "Event created",
+        "updated": "Changes saved",
+        "deleted": "Event deleted",
+        "error": "Save failed — review the data and try again",
+        "notFound": "Event not found",
+        "moved": "Event moved",
+        "resized": "Times updated"
+      }
+    },
+    "conflict": {
+      "title": "Conflicts with existing event",
+      "body": "**{participant}** is already booked for {detail} {start}–{end}. Save anyway?",
+      "extra": "+{n} other conflicts",
+      "saveAnyway": "Save anyway",
+      "adjustTime": "Adjust times",
+      "moveAnyway": "Move anyway",
+      "undoMove": "Undo",
+      "detailFull": "**{title}** ({typeLabel})",
+      "detailRedacted": "a **{typeLabel}**"
+    }
+  },
+  "lookup": {
+    "eventType": {
+      "event_type_training": "Training",
+      "event_type_tournament": "Tournament",
+      "event_type_meeting": "Meeting",
+      "event_type_stage": "Camp",
+      "event_type_eval_conversation": "Evaluation conversation",
+      "event_type_medical": "Medical appointment"
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -170,6 +292,15 @@
       "uploadFailed": "Upload failed. Please try again.",
       "signedUrlFailed": "Could not generate download link.",
       "scanNotClean": "File is not yet available — the virus scan is in progress or the file was rejected."
+    },
+    "calendar": {
+      "endBeforeStart": "End must be after start",
+      "rruleHorizonExceeded": "Recurrence can extend at most 2 years ahead",
+      "rangeTooLarge": "An event can last up to 24 hours in v1",
+      "titleRequired": "A title is required",
+      "typeRequired": "A type is required",
+      "medicalPastStart": "Medical events cannot be created in the past",
+      "participantNotInScope": "One or more selected participants are outside your scope"
     }
   },
   "admin": {

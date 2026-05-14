@@ -126,6 +126,128 @@
       "outcome_group_phase": "Groepsfase"
     }
   },
+  "calendar": {
+    "title": "Kalender",
+    "loading": "Agenda wordt geladen…",
+    "views": {
+      "week": "Week",
+      "day": "Dag",
+      "month": "Maand",
+      "year": "Jaar"
+    },
+    "actions": {
+      "today": "Vandaag",
+      "prev": "Vorige",
+      "next": "Volgende",
+      "create": "Nieuwe afspraak",
+      "filters": "Filters"
+    },
+    "filters": {
+      "byType": "Type",
+      "byPlayer": "Speler",
+      "byTrainer": "Trainer",
+      "bySparring": "Sparring partner",
+      "byAcademy": "Academie",
+      "searchPlaceholder": "Zoeken…",
+      "empty": "Geen resultaten in jouw scope",
+      "clear": "Filters wissen",
+      "apply": "Toepassen",
+      "countSuffix": " · {count}"
+    },
+    "emptyHint": "Geen afspraken in deze periode. Voeg er een toe of navigeer naar een andere week.",
+    "emptyFiltered": "Geen afspraken bij deze filters. Pas de filters aan of wis ze.",
+    "event": {
+      "untitled": "Naamloze afspraak",
+      "sections": {
+        "when": "Wanneer",
+        "where": "Waar",
+        "who": "Wie",
+        "description": "Beschrijving",
+        "recurrence": "Herhaling"
+      },
+      "recurrence": {
+        "weekly": "Wekelijks tot {endDate}",
+        "daily": "Dagelijks tot {endDate}",
+        "monthly": "Maandelijks tot {endDate}",
+        "noEnd": "Geen einddatum",
+        "frequency": "Frequentie",
+        "interval": "Elke {n} {unit}",
+        "endLabel": "Eindigt",
+        "endNever": "Nooit",
+        "endOnDate": "Op datum",
+        "endAfter": "Na {n} keer",
+        "scopeThis": "Deze afspraak",
+        "scopeFuture": "Deze en toekomstige (Fase 4)",
+        "scopeAll": "Alle afspraken in de reeks (Fase 4)"
+      },
+      "fields": {
+        "title": "Titel",
+        "type": "Type",
+        "start": "Start",
+        "end": "Einde",
+        "allDay": "Hele dag",
+        "location": "Locatie",
+        "description": "Beschrijving",
+        "recurring": "Herhalend",
+        "participants": "Deelnemers"
+      },
+      "actions": {
+        "edit": "Afspraak bewerken",
+        "delete": "Afspraak verwijderen",
+        "close": "Sluiten",
+        "cancel": "Annuleren"
+      },
+      "create": {
+        "title": "Nieuwe afspraak",
+        "submit": "Afspraak aanmaken"
+      },
+      "edit": {
+        "title": "Afspraak wijzigen",
+        "submit": "Wijzigingen opslaan"
+      },
+      "delete": {
+        "title": "Afspraak verwijderen?",
+        "body": "Deze afspraak wordt definitief verwijderd voor alle deelnemers.",
+        "confirm": "Verwijderen",
+        "cancel": "Niet verwijderen"
+      },
+      "decline": {
+        "title": "Ik kan niet aanwezig zijn",
+        "submit": "Bevestigen",
+        "toast": "Je deelname is gewijzigd"
+      },
+      "toast": {
+        "created": "Afspraak aangemaakt",
+        "updated": "Wijzigingen opgeslagen",
+        "deleted": "Afspraak verwijderd",
+        "error": "Opslaan mislukt — controleer de gegevens en probeer opnieuw",
+        "notFound": "Afspraak niet gevonden",
+        "moved": "Afspraak verplaatst",
+        "resized": "Tijden aangepast"
+      }
+    },
+    "conflict": {
+      "title": "Conflicteert met bestaande afspraak",
+      "body": "**{participant}** is al geboekt voor {detail} {start}–{end}. Toch opslaan?",
+      "extra": "+{n} andere conflicten",
+      "saveAnyway": "Toch opslaan",
+      "adjustTime": "Tijden aanpassen",
+      "moveAnyway": "Toch verplaatsen",
+      "undoMove": "Ongedaan maken",
+      "detailFull": "**{title}** ({typeLabel})",
+      "detailRedacted": "een **{typeLabel}**"
+    }
+  },
+  "lookup": {
+    "eventType": {
+      "event_type_training": "Training",
+      "event_type_tournament": "Toernooi",
+      "event_type_meeting": "Vergadering",
+      "event_type_stage": "Stage",
+      "event_type_eval_conversation": "Evaluatiegesprek",
+      "event_type_medical": "Medische afspraak"
+    }
+  },
   "common": {
     "save": "Opslaan",
     "cancel": "Annuleren",
@@ -170,6 +292,15 @@
       "uploadFailed": "Upload mislukt. Probeer opnieuw.",
       "signedUrlFailed": "Kon geen download-link genereren.",
       "scanNotClean": "Bestand is nog niet beschikbaar — de virusscan loopt nog of het bestand werd geweigerd."
+    },
+    "calendar": {
+      "endBeforeStart": "Einde moet na de start liggen",
+      "rruleHorizonExceeded": "Herhaling kan maximaal 2 jaar vooruit lopen",
+      "rangeTooLarge": "Een afspraak kan maximaal 24 uur duren in v1",
+      "titleRequired": "Een titel is verplicht",
+      "typeRequired": "Een type is verplicht",
+      "medicalPastStart": "Medische afspraken kunnen niet in het verleden worden aangemaakt",
+      "participantNotInScope": "Eén of meer geselecteerde deelnemers vallen buiten je bereik"
     }
   },
   "admin": {
