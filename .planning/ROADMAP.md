@@ -265,7 +265,7 @@ Plans:
 - [x] 03-04-PLAN.md — Wave 2b: messages/{nl,en,fr}.json extended with calendar.* + lookup.eventType.* + errors.calendar.* (incl. D-57b conflict body override + D-58b delete body override applied verbatim) + globals.css extended with 6 event-type token triples × light+dark + FullCalendar variable overrides + mobile @media min-height (UI-SPEC §Color + §FullCalendar overrides)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-05-PLAN.md — Wave 3: src/server/trpc/routers/calendar.ts (9 procedures: list / event.{create,update,delete,declineParticipation,cancelOccurrence,get,detectConflicts} / filterOptions.list) wiring rrule + redactConflict + 6 audit codes + D-58c cascade order; register on _app.ts
+- [x] 03-05-PLAN.md — Wave 3: src/server/trpc/routers/calendar.ts (9 procedures: list / event.{create,update,delete,declineParticipation,cancelOccurrence,get,detectConflicts} / filterOptions.list) wiring rrule + redactConflict + 6 audit codes + D-58c cascade order; register on _app.ts
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 03-06-PLAN.md — Wave 4: /kalender Server Component + Suspense + CalendarSkeleton + EmptyHintStrip + Client CalendarView (single 'use client', FullCalendar timeGrid/dayGrid/multiMonth/interaction, dynamic locale loading, mobile timeGridDay + vanilla pointerevents swipe per CAL-08) + CalendarToolbar (view switcher + date nav + create CTA) + EventChip (eventContent JSX, no hooks)
