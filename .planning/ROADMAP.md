@@ -258,7 +258,7 @@ De kalender is de centrale dagelijkse werkvlakte van het platform; na deze fase 
 Plans:
 **Wave 1**
 - [x] 03-01-PLAN.md — Wave 0: install FullCalendar 6.1.20 + rrule 2.8.1 + 6 shadcn primitives (sheet/alert/command/toggle/toggle-group/scroll-area) + scaffold 20 RED test files + shared seedCalendarFixtures stub
-- [ ] 03-02-PLAN.md — Wave 1: 4 migrations (0009 base+lookup+junction+exceptions, 0010 6 extension tables with full TRAIN-01/TOURN-01/MED-EVENT/AGE-01..04 domain columns per D-47, 0011 RLS policies + 2 SECURITY DEFINER fns per D-50+D-57, 0012 event_type seed) + Drizzle calendar.ts schema barrel + [BLOCKING] pnpm db:push to Supabase staging
+- [x] 03-02-PLAN.md — Wave 1: 4 migrations (0009 base+lookup+junction+exceptions, 0010 6 extension tables with full TRAIN-01/TOURN-01/MED-EVENT/AGE-01..04 domain columns per D-47, 0011 RLS policies + 2 SECURITY DEFINER fns per D-50+D-57, 0012 event_type seed) + Drizzle calendar.ts schema barrel + [BLOCKING] pnpm db:push to Supabase staging
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-03-PLAN.md — Wave 2a: src/lib/rrule.ts (parseRrule/expandRrule/validateHorizon/ensureHorizon per D-52/D-53/D-55) + Zod discriminated-union eventCreateInput per event type (per D-47 + I18N-08) + per-type RBAC middleware requireRoleForEventType (D-48) + src/lib/calendar/conflicts.ts redactConflict helper (D-57 + D-57b)
