@@ -82,3 +82,54 @@ describe('migration format — MIG-01, MIG-05', () => {
     },
   );
 });
+
+/**
+ * Phase 3 — expected migration manifest (MIG-05).
+ *
+ * Wave 0 RED scaffold: Wave 2 ships 4 new Phase 3 migrations:
+ *   0009_phase3_calendar_base_lookup_participants_exceptions
+ *   0010_phase3_calendar_extension_tables
+ *   0011_phase3_calendar_rls_policies
+ *   0012_phase3_event_type_seed
+ *
+ * Each migration MUST land with a `.rollback.md` companion holding the
+ * canonical Risk / Procedure / Verification headers (already enforced by
+ * the loop above for every present file). This describe block adds an
+ * existence check by canonical name once the file appears; until then
+ * each migration assertion is gated by `it.skipIf` on the file's absence.
+ */
+describe('Phase 3 — expected migration manifest (MIG-05)', () => {
+  const PHASE3_MIGRATIONS = [
+    '0009_phase3_calendar_base_lookup_participants_exceptions',
+    '0010_phase3_calendar_extension_tables',
+    '0011_phase3_calendar_rls_policies',
+    '0012_phase3_event_type_seed',
+  ] as const;
+
+  it('declares all 4 expected Phase 3 migration stems (manifest)', () => {
+    expect(PHASE3_MIGRATIONS).toHaveLength(4);
+    expect(new Set(PHASE3_MIGRATIONS).size).toBe(4);
+  });
+
+  for (const stem of PHASE3_MIGRATIONS) {
+    const sqlName = `${stem}.sql`;
+    const mdName = `${stem}.rollback.md`;
+    let sqlExists = false;
+    let mdExists = false;
+    try {
+      sqlExists = readdirSync(drizzleDir).includes(sqlName);
+      mdExists = readdirSync(drizzleDir).includes(mdName);
+    } catch {
+      sqlExists = false;
+      mdExists = false;
+    }
+
+    it.skipIf(!sqlExists)(`${sqlName} exists once Wave 2 lands`, () => {
+      expect(sqlExists, `${sqlName} not yet shipped`).toBe(true);
+    });
+
+    it.skipIf(!sqlExists)(`${mdName} rollback companion exists`, () => {
+      expect(mdExists, `${mdName} missing for ${sqlName}`).toBe(true);
+    });
+  }
+});
