@@ -15,7 +15,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Calendar — drag-create + conflict warning (CAL-07)', () => {
   test.skip(true, 'RED scaffold — implementation lands in Wave 4');
-  test.todo('drag-select range on grid → EventCreateSheet opens with start/end pre-filled');
-  test.todo('overlapping participant → ConflictWarning surfaces with participant-name copy');
-  test.todo('clicking "Toch opslaan" succeeds and audit_log gets calendar_event_conflict_override row');
+  test('drag-select range on grid → EventCreateSheet opens with start/end pre-filled', async () => {});
+  test('overlapping participant → ConflictWarning surfaces with participant-name copy', async () => {});
+  test('clicking "Toch opslaan" succeeds and audit_log gets calendar_event_conflict_override row', async () => {});
 });

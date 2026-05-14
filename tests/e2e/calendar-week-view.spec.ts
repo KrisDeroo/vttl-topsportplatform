@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Calendar — week view (CAL-01, CAL-03)', () => {
   test.skip(true, 'RED scaffold — implementation lands in Wave 4');
-  test.todo('TD login → /nl/calendar loads, week view is the default, 6 event-type colors are visible');
-  test.todo('clicking an event opens EventDetailSheet with title + type chip + time range');
-  test.todo('Month + Year view buttons in toolbar switch the visible view (CAL-02)');
+  test('TD login → /nl/calendar loads, week view is the default, 6 event-type colors are visible', async () => {});
+  test('clicking an event opens EventDetailSheet with title + type chip + time range', async () => {});
+  test('Month + Year view buttons in toolbar switch the visible view (CAL-02)', async () => {});
 });

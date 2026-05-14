@@ -20,7 +20,7 @@ test.use({ viewport: { width: 360, height: 640 } });
 
 test.describe('Calendar — mobile single-day + swipe (CAL-08)', () => {
   test.skip(true, 'RED scaffold — implementation lands in Wave 4');
-  test.todo('< 640px viewport forces timeGridDay; week/year buttons hidden');
-  test.todo('horizontal swipe (60px x-delta) calls FullCalendar API .next() / .prev()');
-  test.todo('"Nieuwe afspraak" CTA floats bottom-right via fixed positioning');
+  test('< 640px viewport forces timeGridDay; week/year buttons hidden', async () => {});
+  test('horizontal swipe (60px x-delta) calls FullCalendar API .next() / .prev()', async () => {});
+  test('"Nieuwe afspraak" CTA floats bottom-right via fixed positioning', async () => {});
 });
