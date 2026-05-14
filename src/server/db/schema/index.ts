@@ -31,3 +31,4 @@ export * from './medical';
 export * from './files';
 export * from './players';
 export * from './trainers';
+export * from './calendar';
