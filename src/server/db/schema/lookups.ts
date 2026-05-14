@@ -105,3 +105,20 @@ export const trainerDiploma = pgTable('trainer_diploma', {
   sortOrder: integer('sort_order').notNull(),
   active: boolean('active').notNull().default(true),
 });
+
+// ─── Phase 3 additions ──────────────────────────────────────────────────
+
+/**
+ * event_type — 6 calendar event types per UI3-D11 + D-47.
+ *
+ * Codes are language-neutral per I18N-05; labels live in
+ * messages/{nl,en,fr}.json under lookup.eventType.*. The 6 codes are
+ * seeded by migration 0012_phase3_event_type_seed.sql.
+ *
+ * Phase 4 does NOT add codes (D-51 schema freeze contract).
+ */
+export const eventType = pgTable('event_type', {
+  code: text('code').primaryKey(), // 'event_type_training' | 'event_type_tournament' | ...
+  sortOrder: integer('sort_order').notNull(),
+  active: boolean('active').notNull().default(true),
+});
