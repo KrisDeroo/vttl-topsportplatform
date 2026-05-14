@@ -261,8 +261,8 @@ Plans:
 - [x] 03-02-PLAN.md — Wave 1: 4 migrations (0009 base+lookup+junction+exceptions, 0010 6 extension tables with full TRAIN-01/TOURN-01/MED-EVENT/AGE-01..04 domain columns per D-47, 0011 RLS policies + 2 SECURITY DEFINER fns per D-50+D-57, 0012 event_type seed) + Drizzle calendar.ts schema barrel + [BLOCKING] pnpm db:push to Supabase staging
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-03-PLAN.md — Wave 2a: src/lib/rrule.ts (parseRrule/expandRrule/validateHorizon/ensureHorizon per D-52/D-53/D-55) + Zod discriminated-union eventCreateInput per event type (per D-47 + I18N-08) + per-type RBAC middleware requireRoleForEventType (D-48) + src/lib/calendar/conflicts.ts redactConflict helper (D-57 + D-57b)
-- [ ] 03-04-PLAN.md — Wave 2b: messages/{nl,en,fr}.json extended with calendar.* + lookup.eventType.* + errors.calendar.* (incl. D-57b conflict body override + D-58b delete body override applied verbatim) + globals.css extended with 6 event-type token triples × light+dark + FullCalendar variable overrides + mobile @media min-height (UI-SPEC §Color + §FullCalendar overrides)
+- [x] 03-03-PLAN.md — Wave 2a: src/lib/rrule.ts (parseRrule/expandRrule/validateHorizon/ensureHorizon per D-52/D-53/D-55) + Zod discriminated-union eventCreateInput per event type (per D-47 + I18N-08) + per-type RBAC middleware requireRoleForEventType (D-48) + src/lib/calendar/conflicts.ts redactConflict helper (D-57 + D-57b)
+- [x] 03-04-PLAN.md — Wave 2b: messages/{nl,en,fr}.json extended with calendar.* + lookup.eventType.* + errors.calendar.* (incl. D-57b conflict body override + D-58b delete body override applied verbatim) + globals.css extended with 6 event-type token triples × light+dark + FullCalendar variable overrides + mobile @media min-height (UI-SPEC §Color + §FullCalendar overrides)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-05-PLAN.md — Wave 3: src/server/trpc/routers/calendar.ts (9 procedures: list / event.{create,update,delete,declineParticipation,cancelOccurrence,get,detectConflicts} / filterOptions.list) wiring rrule + redactConflict + 6 audit codes + D-58c cascade order; register on _app.ts
