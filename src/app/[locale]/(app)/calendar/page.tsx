@@ -93,7 +93,26 @@ export default async function CalendarPage({ params, searchParams }: PageProps) 
   const { from, to } = computeRange(view, anchor);
 
   const caller = appRouter.createCaller(ctx);
-  const initialEvents = await caller.calendar.list({ from, to });
+  // The server router types `typeCode` as `string` (loose) but the DB layer
+  // only ever stores the 6 canonical D-47 codes. The client <CalendarView>
+  // mirrors the narrow union (so its event-chip renderer can map codes to
+  // colour-token slugs at the type level). Cast at this trust boundary —
+  // the values themselves are already constrained by the calendar_events
+  // type_code FK + the discriminated-union Zod schema on create/update.
+  const initialEvents = (await caller.calendar.list({ from, to })) as Array<
+    Omit<
+      Awaited<ReturnType<typeof caller.calendar.list>>[number],
+      'typeCode'
+    > & {
+      typeCode:
+        | 'event_type_training'
+        | 'event_type_tournament'
+        | 'event_type_meeting'
+        | 'event_type_stage'
+        | 'event_type_eval_conversation'
+        | 'event_type_medical';
+    }
+  >;
 
   // Cosmetic CTA gate — the real RBAC for `calendar.event.create` lives in
   // canCreateEventType (D-48). Showing/hiding the button is UI sugar, not
