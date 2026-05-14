@@ -62,6 +62,31 @@
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
   --radius: 0.5rem;
+
+  /* Phase 3 — event-type color tokens (UI-SPEC §Color). LOCKED. */
+  --cal-event-training-bg: oklch(0.96 0.04 250); /* blue tint */
+  --cal-event-training-fg: oklch(0.35 0.15 250); /* deep blue */
+  --cal-event-training-border: oklch(0.55 0.18 250); /* mid blue */
+
+  --cal-event-tournament-bg: oklch(0.96 0.05 60); /* orange tint */
+  --cal-event-tournament-fg: oklch(0.4 0.18 50); /* deep orange */
+  --cal-event-tournament-border: oklch(0.65 0.2 55); /* mid orange */
+
+  --cal-event-meeting-bg: oklch(0.96 0.04 145); /* green tint */
+  --cal-event-meeting-fg: oklch(0.38 0.13 145); /* deep green */
+  --cal-event-meeting-border: oklch(0.55 0.16 145); /* mid green */
+
+  --cal-event-stage-bg: oklch(0.96 0.04 295); /* purple tint */
+  --cal-event-stage-fg: oklch(0.38 0.15 295); /* deep purple */
+  --cal-event-stage-border: oklch(0.55 0.18 295); /* mid purple */
+
+  --cal-event-evalconv-bg: oklch(0.96 0.05 90); /* yellow tint */
+  --cal-event-evalconv-fg: oklch(0.4 0.12 85); /* deep amber */
+  --cal-event-evalconv-border: oklch(0.7 0.16 90); /* mid yellow */
+
+  --cal-event-medical-bg: oklch(0.96 0.05 25); /* red tint */
+  --cal-event-medical-fg: oklch(0.38 0.16 25); /* deep red */
+  --cal-event-medical-border: oklch(0.55 0.2 25); /* mid red */
 }
 
 .dark {
@@ -84,6 +109,60 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
+
+  /* Phase 3 — event-type color tokens (UI-SPEC §Color). LOCKED. */
+  --cal-event-training-bg: oklch(0.25 0.04 250);
+  --cal-event-training-fg: oklch(0.85 0.08 250);
+  --cal-event-training-border: oklch(0.6 0.15 250);
+
+  --cal-event-tournament-bg: oklch(0.25 0.05 50);
+  --cal-event-tournament-fg: oklch(0.85 0.1 60);
+  --cal-event-tournament-border: oklch(0.65 0.18 55);
+
+  --cal-event-meeting-bg: oklch(0.25 0.04 145);
+  --cal-event-meeting-fg: oklch(0.85 0.08 145);
+  --cal-event-meeting-border: oklch(0.6 0.14 145);
+
+  --cal-event-stage-bg: oklch(0.25 0.04 295);
+  --cal-event-stage-fg: oklch(0.85 0.09 295);
+  --cal-event-stage-border: oklch(0.6 0.15 295);
+
+  --cal-event-evalconv-bg: oklch(0.25 0.05 85);
+  --cal-event-evalconv-fg: oklch(0.85 0.1 90);
+  --cal-event-evalconv-border: oklch(0.7 0.15 90);
+
+  --cal-event-medical-bg: oklch(0.25 0.05 25);
+  --cal-event-medical-fg: oklch(0.85 0.1 25);
+  --cal-event-medical-border: oklch(0.65 0.18 25);
+}
+
+/* Phase 3 — FullCalendar v6 CSS-variable overrides (UI-SPEC §FullCalendar built-in CSS-variable overrides) */
+.fc {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--background);
+  --fc-neutral-bg-color: var(--muted);
+  --fc-neutral-text-color: var(--muted-foreground);
+  --fc-today-bg-color: color-mix(in oklch, var(--primary) 6%, transparent);
+  --fc-button-bg-color: var(--secondary);
+  --fc-button-text-color: var(--secondary-foreground);
+  --fc-button-border-color: var(--border);
+  --fc-button-active-bg-color: var(--primary);
+  --fc-button-active-text-color: var(--primary-foreground);
+  --fc-button-active-border-color: var(--primary);
+  --fc-button-hover-bg-color: var(--accent);
+  --fc-button-hover-text-color: var(--accent-foreground);
+  --fc-event-text-color: var(--foreground);
+  --fc-event-border-color: var(--border);
+  --fc-event-selected-overlay-color: color-mix(in oklch, var(--primary) 12%, transparent);
+  --fc-now-indicator-color: var(--primary);
+  --fc-small-font-size: 0.75rem; /* time-axis labels at 12px — declared exception per UI-SPEC §Typography */
+  --fc-event-min-height: 1.5rem; /* desktop default */
+}
+
+@media (max-width: 640px) {
+  .fc {
+    --fc-event-min-height: 2.75rem; /* 44px — WCAG 2.5.5 mobile tap target — UI-SPEC §Spacing exceptions */
+  }
 }
 
 @layer base {
