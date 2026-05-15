@@ -525,6 +525,19 @@ export const calendarRouter = router({
           }
         }
 
+        // CR-04: validate every participant userId is in the caller's
+        // visibility scope BEFORE any DB writes. Without this gate, the
+        // schema only checks UUIDs, RLS only checks event ownership, and
+        // the SECURITY DEFINER conflict probe (which deliberately bypasses
+        // RLS per D-57) would leak overlap data for arbitrary userIds.
+        if (input.participants.length > 0) {
+          await assertParticipantsInScope(
+            db,
+            ctx.scope,
+            input.participants.map((p) => p.userId),
+          );
+        }
+
         // D-57: conflict probe before write (unless force:true).
         if (!input.force && input.participants.length > 0) {
           const conflicts = await detectConflictsForParticipants(
@@ -680,6 +693,18 @@ export const calendarRouter = router({
         if (rruleToStore) {
           rruleToStore = ensureHorizon(rruleToStore, existingRow.createdAt);
           validateHorizon(rruleToStore, existingRow.createdAt);
+        }
+
+        // CR-04: same participant-scope guard as create — re-validated here
+        // because update replaces the participant list whole (CR-03 also
+        // changes that to a diff-then-merge, but the scope check still must
+        // run on whatever set the caller is sending).
+        if (input.participants.length > 0) {
+          await assertParticipantsInScope(
+            db,
+            ctx.scope,
+            input.participants.map((p) => p.userId),
+          );
         }
 
         // D-57: conflict probe (excludeEventId = this event).
@@ -1063,6 +1088,101 @@ export const calendarRouter = router({
       }),
   }),
 });
+
+// ─── Helper: participant-scope guard (CR-04) ───────────────────────────
+
+/**
+ * CR-04: validate that every userId the caller wants to add as a participant
+ * is visible to them. Without this gate, the Zod schema only required UUIDs,
+ * RLS `cep_insert` only checked the EVENT's ownership, and the SECURITY
+ * DEFINER conflict probe would happily leak overlap data for arbitrary
+ * userIds — a directory-enumeration primitive.
+ *
+ * Visibility rules (mirror calendar_events_visible_to from migration 0011):
+ *   - technical_director / medical_staff see every active user.
+ *   - All other roles see:
+ *       • themselves (self-add is always allowed)
+ *       • every user_id returned by `players_visible_to(caller_id, role)`
+ *         (the Phase 1 canonical visibility helper — covers parents' children
+ *         AND trainers'/academy_managers' academy peers).
+ *       • every user_id sharing an academy_membership with the caller (TD's
+ *         academy management + trainer-of-trainer cross-coverage cases —
+ *         participants in calendar events can be other trainers, not only
+ *         players, and players_visible_to() is the player-only helper).
+ *
+ * Throws TRPCError FORBIDDEN with `errors.calendar.participantNotInScope`
+ * (i18n key already shipped in all three catalogs — line 303 nl/en/fr) if
+ * any participantId is outside scope.
+ *
+ * The check uses ONE SQL round-trip — UNION'd visibility set, intersected
+ * with the input array. No N+1.
+ */
+async function assertParticipantsInScope(
+  db: DbClient,
+  caller: { userId: string; role: Role },
+  participantIds: string[],
+): Promise<void> {
+  if (participantIds.length === 0) return;
+
+  // TD / medical_staff see everyone — short-circuit. The DB query below
+  // would also handle this via players_visible_to (which returns SELECT id
+  // FROM users for these roles), but skipping the round-trip is cheaper
+  // and removes a layer of indirection in the common TD case.
+  if (
+    caller.role === 'technical_director' ||
+    caller.role === 'medical_staff'
+  ) {
+    return;
+  }
+
+  // Deduplicate input — we don't care if the same id appears twice in the
+  // payload (CR-03 still preserves it on the participant list write).
+  const ids = Array.from(new Set(participantIds));
+
+  // UNION the four visibility lanes into a single SELECT and ANY() the
+  // result against the input. Returns visible user_ids only.
+  const result = await db.execute<{ user_id: string }>(sql`
+    SELECT DISTINCT user_id
+      FROM (
+        -- Lane 1: self
+        SELECT ${caller.userId}::uuid AS user_id
+
+        UNION
+
+        -- Lane 2: Phase 1 canonical helper — covers parent→child and
+        -- trainer/academy_manager→academy-peer-players.
+        SELECT player_user_id AS user_id
+          FROM players_visible_to(${caller.userId}::uuid, ${caller.role}::text)
+
+        UNION
+
+        -- Lane 3: anyone sharing an academy_membership with the caller.
+        -- Picks up trainer↔trainer and trainer↔academy_manager visibility
+        -- which players_visible_to() (player-only) does not surface.
+        SELECT peer.user_id
+          FROM academy_memberships me
+          JOIN academy_memberships peer
+            ON peer.academy_code = me.academy_code
+         WHERE me.user_id = ${caller.userId}::uuid
+      ) AS scope
+     WHERE user_id = ANY(${ids}::uuid[])
+  `);
+
+  // postgres-js returns an array; pg-style drivers wrap in {rows}.
+  const rows: { user_id: string }[] = Array.isArray(result)
+    ? (result as { user_id: string }[])
+    : (
+        (result as unknown as { rows?: { user_id: string }[] }).rows ?? []
+      );
+  const visibleSet = new Set(rows.map((r) => r.user_id));
+  const outOfScope = ids.filter((id) => !visibleSet.has(id));
+  if (outOfScope.length > 0) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'errors.calendar.participantNotInScope',
+    });
+  }
+}
 
 // ─── Helper: cross-scope SECURITY DEFINER overlap + redaction ──────────
 
