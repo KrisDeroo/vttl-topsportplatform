@@ -296,11 +296,14 @@
     "calendar": {
       "endBeforeStart": "End must be after start",
       "rruleHorizonExceeded": "Recurrence can extend at most 2 years ahead",
+      "rruleInvalid": "Invalid recurrence rule",
       "rangeTooLarge": "An event can last up to 24 hours in v1",
       "titleRequired": "A title is required",
       "typeRequired": "A type is required",
+      "typeImmutable": "Event type cannot be changed after creation",
       "medicalPastStart": "Medical events cannot be created in the past",
-      "participantNotInScope": "One or more selected participants are outside your scope"
+      "participantNotInScope": "One or more selected participants are outside your scope",
+      "conflictDetected": "An overlapping event already exists"
     }
   },
   "admin": {

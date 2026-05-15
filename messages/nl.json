@@ -296,11 +296,14 @@
     "calendar": {
       "endBeforeStart": "Einde moet na de start liggen",
       "rruleHorizonExceeded": "Herhaling kan maximaal 2 jaar vooruit lopen",
+      "rruleInvalid": "Ongeldige herhalingsregel",
       "rangeTooLarge": "Een afspraak kan maximaal 24 uur duren in v1",
       "titleRequired": "Een titel is verplicht",
       "typeRequired": "Een type is verplicht",
+      "typeImmutable": "Het type van een afspraak kan na het aanmaken niet meer worden gewijzigd",
       "medicalPastStart": "Medische afspraken kunnen niet in het verleden worden aangemaakt",
-      "participantNotInScope": "Eén of meer geselecteerde deelnemers vallen buiten je bereik"
+      "participantNotInScope": "Eén of meer geselecteerde deelnemers vallen buiten je bereik",
+      "conflictDetected": "Er bestaat al een afspraak met overlap"
     }
   },
   "admin": {

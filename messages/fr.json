@@ -296,11 +296,14 @@
     "calendar": {
       "endBeforeStart": "La fin doit être après le début",
       "rruleHorizonExceeded": "La récurrence peut s'étendre au maximum sur 2 ans",
+      "rruleInvalid": "Règle de récurrence invalide",
       "rangeTooLarge": "Un rendez-vous peut durer 24 heures maximum en v1",
       "titleRequired": "Un titre est obligatoire",
       "typeRequired": "Un type est obligatoire",
+      "typeImmutable": "Le type d'un rendez-vous ne peut pas être modifié après la création",
       "medicalPastStart": "Les rendez-vous médicaux ne peuvent pas être créés dans le passé",
-      "participantNotInScope": "Un ou plusieurs participants sélectionnés sont hors de votre périmètre"
+      "participantNotInScope": "Un ou plusieurs participants sélectionnés sont hors de votre périmètre",
+      "conflictDetected": "Un rendez-vous se chevauche déjà"
     }
   },
   "admin": {

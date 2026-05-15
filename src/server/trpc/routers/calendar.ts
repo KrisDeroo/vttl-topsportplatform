@@ -688,6 +688,36 @@ export const calendarRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND' });
         }
 
+        // CR-02: lock event type at create (UI-SPEC line 317 already prevents
+        // the user changing it via the UI). Without this gate, a player who
+        // created a meeting (D-48: meetings are open to everyone) could
+        // submit an update with `type: 'event_type_tournament'` (D-48:
+        // TD-only) and bypass the create-time RBAC matrix entirely.
+        // Additionally, the old code did NOT update calendar_events.type_code
+        // and called deleteExtensionRow with the NEW type — leaving the old
+        // extension row orphaned and a new extension row in a second table,
+        // violating the D-49 polymorphic invariant (one extension row per
+        // event matching the base type_code).
+        if (input.type !== existingRow.typeCode) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'errors.calendar.typeImmutable',
+          });
+        }
+
+        // CR-02 defence-in-depth: re-apply the D-48 RBAC gate on update. The
+        // type is already locked above, so this only protects against a
+        // user whose role has been DOWNGRADED between create and update
+        // (e.g. a trainer demoted to player tries to edit the tournament
+        // they created as TD — RLS allows the update because they're the
+        // creator, but the role no longer permits the event_type).
+        if (!canCreateEventType(ctx.scope.role, input.type)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'role_not_allowed',
+          });
+        }
+
         // D-55: re-validate horizon on update if rrule changes.
         let rruleToStore = input.rrule;
         if (rruleToStore) {
@@ -765,7 +795,14 @@ export const calendarRouter = router({
           }
           // Extension table update is per-type — we delete + re-insert for
           // simplicity (foreign tables only have a PK to calendar_events).
-          await deleteExtensionRow(tx, input.type, input.eventId);
+          //
+          // CR-02: pass the EXISTING typeCode to deleteExtensionRow so we
+          // remove the right extension row. After the type-immutability
+          // check above input.type === existingRow.typeCode, but we read
+          // from existingRow defensively to make the orphan-row scenario
+          // impossible to reintroduce by accident if the immutability
+          // guard is ever relaxed.
+          await deleteExtensionRow(tx, existingRow.typeCode, input.eventId);
           await insertExtensionRow(tx, input, input.eventId);
         });
 
