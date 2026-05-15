@@ -274,7 +274,7 @@ Plans:
 - [x] 03-07-PLAN.md — Wave 5: sheets + dialogs + filter bar (EventCreateSheet with discriminated-union RHF + ConflictWarning consuming D-57b template + force-save flow / EventEditSheet with UI3-D12 Phase-4 scope disabled / EventDeleteDialog with D-58b copy / EventDetailSheet with decline + edit + delete actions / EventFilterBar with 6 type chips + 4 type-ahead combos + mobile bottom Sheet / FilterCombobox with scope-filtered tRPC / ConflictBanner top-page) + Phase 4/5-reusable common/DateTimePicker + common/RruleEditor
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 03-08-PLAN.md — Wave 6: activate all 20 Wave 0 RED test files to GREEN (rrule + color-tokens + calendar-schemas unit; calendar-rls + calendar-rrule-horizon + calendar-exceptions + calendar-conflicts + calendar-audit + calendar-cascade + calendar-decline + calendar-perf + calendar-filter-options integration; calendar-direct-query rls; calendar-week-view + calendar-create-event + calendar-mobile + calendar-drag e2e) + implement seedCalendarFixtures + flip 03-VALIDATION.md frontmatter nyquist_compliant=true + Per-Task Verification Map filled
+- [x] 03-08-PLAN.md — Wave 6: activate all 20 Wave 0 RED test files to GREEN (rrule + color-tokens + calendar-schemas unit; calendar-rls + calendar-rrule-horizon + calendar-exceptions + calendar-conflicts + calendar-audit + calendar-cascade + calendar-decline + calendar-perf + calendar-filter-options integration; calendar-direct-query rls; calendar-week-view + calendar-create-event + calendar-mobile + calendar-drag e2e) + implement seedCalendarFixtures + flip 03-VALIDATION.md frontmatter nyquist_compliant=true + Per-Task Verification Map filled
 
 
 ### Vereisten
