@@ -756,7 +756,30 @@ export const calendarRouter = router({
           }
         }
 
+        // WR-05: assemble a richer audit snapshot. Capture the pre-state
+        // (existing base row + existing extension row + existing
+        // participant list) for `oldValues`, and the merged final state
+        // for `newValues`. The previous code only stored {title, startsAt,
+        // endsAt} on both sides, making a venue or description rename
+        // invisible to GDPR Article 30 forensic recovery.
+        //
+        // Audit accumulators are populated inside the tx (where we already
+        // SELECT the rows) and emitted via writeAudit after the tx commits.
+        let auditOldValues: Record<string, unknown> = {};
+        let auditNewValues: Record<string, unknown> = {};
+
         await db.transaction(async (tx) => {
+          // Fetch the existing extension row pre-update for the audit
+          // snapshot. The base + participant rows are already SELECTed
+          // below in the CR-03 diff path. NOTE: this duplicates a tiny
+          // read but keeps the audit block self-contained — refactoring
+          // to share the read is a Phase 4 polish.
+          const oldExtension = await fetchExtensionRow(
+            tx,
+            existingRow.typeCode,
+            input.eventId,
+          );
+
           await tx
             .update(calendarEvents)
             .set({
@@ -886,6 +909,51 @@ export const calendarRouter = router({
           // guard is ever relaxed.
           await deleteExtensionRow(tx, existingRow.typeCode, input.eventId);
           await insertExtensionRow(tx, input, input.eventId);
+
+          // WR-05: assemble the audit snapshot inside the tx where we
+          // have first-class access to pre-state + the merged desired
+          // set. Full base row (oldValues) + merged final state
+          // (newValues). The 1 KB-ish JSONB overhead is the Phase 1
+          // pattern (event.delete already snapshots the full base +
+          // extension + participants + exceptions).
+          auditOldValues = {
+            base: {
+              ...existingRow,
+              startsAt: existingRow.startsAt.toISOString(),
+              endsAt: existingRow.endsAt.toISOString(),
+              createdAt: existingRow.createdAt.toISOString(),
+              updatedAt: existingRow.updatedAt.toISOString(),
+            },
+            extension: oldExtension,
+            participants: existingParticipants.map((p) => ({
+              userId: p.userId,
+              roleInEvent: p.roleInEvent,
+              rsvpStatus: p.rsvpStatus,
+            })),
+          };
+          auditNewValues = {
+            base: {
+              id: existingRow.id,
+              typeCode: input.type,
+              title: input.title,
+              startsAt: input.startsAt.toISOString(),
+              endsAt: input.endsAt.toISOString(),
+              allDay: input.allDay,
+              location: input.location ?? null,
+              description: input.description ?? null,
+              rrule: rruleToStore ?? null,
+              createdBy: existingRow.createdBy,
+            },
+            // The merged participants reflect the desired set after the
+            // CR-03 diff-then-merge above — including caller self-add.
+            participants: Array.from(desired.entries()).map(
+              ([userId, want]) => ({
+                userId,
+                roleInEvent: want.roleInEvent,
+                rsvpStatus: want.rsvpStatus,
+              }),
+            ),
+          };
         });
 
         if (input.force && input.participants.length > 0) {
@@ -900,16 +968,12 @@ export const calendarRouter = router({
           action: 'calendar_event_updated',
           resourceType: 'calendar_event',
           resourceId: input.eventId,
-          oldValues: {
-            title: existingRow.title,
-            startsAt: existingRow.startsAt.toISOString(),
-            endsAt: existingRow.endsAt.toISOString(),
-          },
-          newValues: {
-            title: input.title,
-            startsAt: input.startsAt.toISOString(),
-            endsAt: input.endsAt.toISOString(),
-          },
+          // WR-05: full pre/post snapshots (base + extension + merged
+          // participants), populated inside the tx above. The Phase 1
+          // pattern for forensic recovery — GDPR Article 30 needs to be
+          // able to reconstruct who-changed-what at any audit timestamp.
+          oldValues: auditOldValues,
+          newValues: auditNewValues,
         });
 
         return { ok: true };
