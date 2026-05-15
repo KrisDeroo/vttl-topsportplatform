@@ -25,6 +25,15 @@ export default defineConfig({
     jsx: 'automatic',
   },
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      // Next.js `server-only` is a virtual package shipped only by Next at
+      // build time; in a vitest (Node) run we alias it to a no-op stub so
+      // any source module guarded by `import 'server-only'` loads cleanly.
+      // Without this alias every test that transitively imports the tRPC
+      // app router fails at module-load time (the storage client guards
+      // itself with `server-only`). Plan 03-08 Rule 3 deviation.
+      'server-only': path.resolve(__dirname, './tests/stubs/server-only.ts'),
+    },
   },
 });

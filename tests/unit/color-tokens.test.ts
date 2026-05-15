@@ -47,6 +47,29 @@ describe('Phase 3 design tokens — UI-SPEC §Color', () => {
     }
   });
 
-  it.todo('FullCalendar variable overrides --fc-border-color / --fc-page-bg-color present in .fc block');
-  it.todo('Mobile @media (max-width: 640px) overrides --fc-event-min-height: 2.75rem');
+  it('FullCalendar variable overrides --fc-border-color / --fc-page-bg-color present in .fc block', () => {
+    // Find the .fc { ... } block in globals.css.
+    const fcBlockMatch = css.match(/\.fc\s*\{([\s\S]*?)\}/);
+    expect(fcBlockMatch, '.fc {} block not found in globals.css').toBeTruthy();
+    const fcBlock = fcBlockMatch?.[1] ?? '';
+    expect(fcBlock).toContain('--fc-border-color:');
+    expect(fcBlock).toContain('--fc-page-bg-color:');
+    // Spot-check a couple more tokens declared by UI-SPEC.
+    expect(fcBlock).toContain('--fc-today-bg-color:');
+    expect(fcBlock).toContain('--fc-event-min-height:');
+  });
+
+  it('Mobile @media (max-width: 640px) overrides --fc-event-min-height: 2.75rem', () => {
+    // Match the @media block precisely so the assertion can't drift on any
+    // surrounding declaration.
+    const mediaMatch = css.match(
+      /@media\s*\(\s*max-width:\s*640px\s*\)\s*\{[\s\S]*?\.fc\s*\{([\s\S]*?)\}\s*\}/,
+    );
+    expect(
+      mediaMatch,
+      '@media (max-width: 640px) { .fc { ... } } block not found',
+    ).toBeTruthy();
+    const block = mediaMatch?.[1] ?? '';
+    expect(block).toMatch(/--fc-event-min-height:\s*2\.75rem/);
+  });
 });
