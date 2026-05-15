@@ -97,3 +97,33 @@ as a Phase 8 quality/release hardening task or a one-off `/gsd-quick`.
   (b) define a typed route helper module that returns
   `RouteImpl<'/${L}/login'>`. The DI-02 ESLint circular-structure issue
   resolves naturally when the eslint peer-dep mismatch is fixed.
+
+---
+
+## 03-07 — Wave 5 write-side UI
+
+### DI-04: Same `pnpm build` typed-routes error still blocks Plan 07 verification
+
+- **Found during:** 03-07 Task 3 verification — running `pnpm build` to
+  confirm the new sheets/dialogs/banner compile and the page.tsx mount
+  points wire correctly.
+- **Build status:** CSS / Next.js compile step **succeeds** ("✓ Compiled
+  successfully in 4.3s"). All 10 new Plan 07 components and the
+  page.tsx modification compile cleanly. `pnpm typecheck` (the
+  `tsc --noEmit` step that runs ahead of Next.js's typed-routes pass)
+  passes with exit code 0 across the entire repo.
+- **Failure source:** Identical to DI-03 — same line in
+  `src/app/[locale]/(app)/admin/users/page.tsx:56:14`. Confirmed
+  pre-existing by checking out the Plan 03-07 base commit
+  (`9d1b9750ace0ce0be929df5f60dbdc10e50d285c`, "docs(phase-03): update
+  tracking after wave 4 (03-06 read-side UI)") and reproducing the
+  identical error without any Plan 07 work in the tree.
+- **Scope verdict:** Out of scope. Phase 1 file untouched by Plan 07.
+  `pnpm typecheck` (the local TS gate) is green; the only outstanding
+  failure is the same Next.js typed-routes drift documented in DI-03,
+  inherited unchanged from the base commit.
+- **Suggested resolution path:** Same as DI-03. When Phase 8 release-
+  hardening lands the typed-routes fix, the calendar page.tsx
+  `redirect(\`/\${locale}/login\`)` on line 82 (also added in Plan 03-06,
+  not touched by 03-07) will also start type-checking under typed routes.
+  Both files require the same one-line cast.
