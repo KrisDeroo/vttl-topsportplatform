@@ -22,6 +22,7 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import type { z } from 'zod';
 import {
   endOfDay,
   endOfMonth,
@@ -47,7 +48,42 @@ import { EventEditSheet } from '@/components/calendar/event-edit-sheet';
 import { EventFilterBar } from '@/components/calendar/event-filter-bar';
 import { appRouter } from '@/server/trpc/routers/_app';
 import { createContext } from '@/server/trpc/server-context';
+import { listInput } from '@/server/trpc/schemas/calendar';
 import type { Locale } from '@/i18n/routing';
+
+/**
+ * WR-02: decode the base64-encoded JSON filter blob the EventFilterBar
+ * writes to the URL. Returns the Zod-validated shape (or undefined if the
+ * param is missing/malformed/tampered).
+ *
+ * The encode side lives in src/components/calendar/event-filter-bar.tsx
+ * (`encodeFilter` / `b64encode`). Schema is the same as
+ * listInput.shape.filters so any tampering is rejected loudly here
+ * rather than passed to the SQL layer as a corrupt object.
+ */
+function decodeFilterParam(
+  raw: string | undefined,
+): z.infer<typeof listInput>['filters'] {
+  if (!raw) return undefined;
+  let json: string;
+  try {
+    // Node-side base64 decode — Server Components run on the server.
+    json = Buffer.from(raw, 'base64').toString('utf8');
+  } catch {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+  // Re-validate via the canonical Zod shape (single source of truth for
+  // the filter payload shape between client / SSR / server router).
+  const filtersSchema = listInput.shape.filters;
+  const result = filtersSchema.safeParse(parsed);
+  return result.success ? result.data : undefined;
+}
 
 type CalendarUrlView = 'week' | 'day' | 'month' | 'year';
 const VIEW_VALUES = ['week', 'day', 'month', 'year'] as const;
@@ -99,13 +135,19 @@ export default async function CalendarPage({ params, searchParams }: PageProps) 
   const { from, to } = computeRange(view, anchor);
 
   const caller = appRouter.createCaller(ctx);
+  // WR-02: decode the ?filter=… URL parameter the EventFilterBar writes.
+  // listInput.shape.filters is the canonical Zod schema; tampered or
+  // malformed payloads return undefined and we ship the unfiltered list.
+  const filters = decodeFilterParam(sp.filter);
   // The server router types `typeCode` as `string` (loose) but the DB layer
   // only ever stores the 6 canonical D-47 codes. The client <CalendarView>
   // mirrors the narrow union (so its event-chip renderer can map codes to
   // colour-token slugs at the type level). Cast at this trust boundary —
   // the values themselves are already constrained by the calendar_events
   // type_code FK + the discriminated-union Zod schema on create/update.
-  const initialEvents = (await caller.calendar.list({ from, to })) as Array<
+  const initialEvents = (await caller.calendar.list(
+    filters ? { from, to, filters } : { from, to },
+  )) as Array<
     Omit<
       Awaited<ReturnType<typeof caller.calendar.list>>[number],
       'typeCode'
