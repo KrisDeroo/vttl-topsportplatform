@@ -224,11 +224,12 @@ describe('eventCreateInput — discriminated union per event type', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const codes = result.error.issues.map((i) => i.code);
-      // Zod 4 emits invalid_union for discriminator mismatch.
+      // Zod 4 emits invalid_union for discriminator mismatch; older
+      // versions used invalid_value (and earlier still invalid_literal,
+      // since renamed). Accept any of the three to stay version-tolerant.
       expect(
         codes.includes('invalid_union') ||
-          codes.includes('invalid_value') ||
-          codes.includes('invalid_literal'),
+          codes.includes('invalid_value'),
       ).toBe(true);
     }
   });
