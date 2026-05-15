@@ -62,9 +62,19 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import type { inferProcedureInput } from '@trpc/server';
+
 import type { RedactedConflict } from '@/lib/calendar/conflicts';
 import { trpc } from '@/lib/trpc-client';
+import type { AppRouter } from '@/server/trpc/routers/_app';
 import { EVENT_TYPE_CODES, type EventTypeCode } from '@/server/trpc/schemas/calendar';
+
+/** WR-11: typed payload for calendar.event.create — derived from the
+ *  router so a schema change becomes a compile error at the call site
+ *  instead of silently shipping under `as any`. */
+type CreatePayload = inferProcedureInput<
+  AppRouter['calendar']['event']['create']
+>;
 
 interface FormShape {
   type: EventTypeCode;
@@ -143,11 +153,15 @@ function defaultFormValues(): FormShape {
  *
  * Note: server Zod `.strict()` will reject extra keys, so we MUST omit
  * fields from non-matching branches — we don't spread the whole form.
+ *
+ * WR-11: returns the inferred `CreatePayload` (derived from the router via
+ * `inferProcedureInput`) instead of `Record<string, unknown>`. A future
+ * schema change — added required field on a type, new EventTypeCode —
+ * becomes a compile error at the switch branches rather than a silent
+ * under-specified payload sent under `as any`. The final `default` is
+ * an exhaustive-check guard.
  */
-function buildCreatePayload(
-  v: FormShape,
-  force: boolean,
-): Record<string, unknown> {
+function buildCreatePayload(v: FormShape, force: boolean): CreatePayload {
   const participants = [
     ...v.playerIds.map((userId) => ({
       userId,
@@ -217,8 +231,13 @@ function buildCreatePayload(
         isInjury: v.isInjury,
         doctor: v.doctor || undefined,
       };
-    default:
-      return { type: v.type, ...base };
+    default: {
+      // WR-11: exhaustive-check guard. Adding a new EventTypeCode here
+      // becomes a compile error: the `never` assertion fails because the
+      // new variant is not handled by any case branch.
+      const _exhaustive: never = v.type;
+      throw new Error(`Unreachable EventTypeCode: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -260,9 +279,9 @@ export function EventCreateSheet() {
   const submit = useCallback(
     async (values: FormShape, force: boolean) => {
       try {
+        // WR-11: payload is now typed `CreatePayload`, no cast required.
         const payload = buildCreatePayload(values, force);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await createMutation.mutateAsync(payload as any);
+        await createMutation.mutateAsync(payload);
         toast.success(tToast('created'));
         await utils.calendar.list.invalidate();
         setOpen(false);

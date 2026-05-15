@@ -29,6 +29,7 @@
  */
 'use client';
 
+import type { inferProcedureInput } from '@trpc/server';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
@@ -38,6 +39,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import type { RedactedConflict } from '@/lib/calendar/conflicts';
 import { trpc } from '@/lib/trpc-client';
+import type { AppRouter } from '@/server/trpc/routers/_app';
+
+/** WR-11: typed payload for calendar.event.update. Same derivation as
+ *  the create/edit sheets — schema changes become compile errors at
+ *  the switch site rather than slipping through under `as any`. */
+type UpdatePayload = inferProcedureInput<
+  AppRouter['calendar']['event']['update']
+>;
 
 interface PendingMove {
   eventId: string;
@@ -92,20 +101,24 @@ export function ConflictBanner() {
           roleInEvent: p.roleInEvent as 'organizer' | 'participant' | 'invitee',
         }));
 
-        // Build the type-specific payload. We use a loose `any`-cast at the
-        // call site because the discriminated union narrowing requires
-        // exhaustive switching per type — Phase 4 may extract this into a
-        // shared helper. The shape itself is type-checked at the Zod
-        // boundary on the server.
+        // WR-11: build the discriminated-union payload via an exhaustive
+        // switch over ev.typeCode. The `type` discriminator is set per
+        // branch; basePayload carries only fields shared across every
+        // event type. The Zod schema on the server is still the final
+        // authority — the typed payload is purely a compile-time guard.
+        // The server's typeCode is typed `string` (DB text column) but
+        // the FK + the discriminated-union schema constrain it to the
+        // 6 canonical D-47 codes; narrow at this trust boundary.
+        type TypeCode =
+          | 'event_type_training'
+          | 'event_type_tournament'
+          | 'event_type_meeting'
+          | 'event_type_stage'
+          | 'event_type_eval_conversation'
+          | 'event_type_medical';
+        const typeCode = ev.typeCode as TypeCode;
         const basePayload = {
           eventId: ev.id,
-          type: ev.typeCode as
-            | 'event_type_training'
-            | 'event_type_tournament'
-            | 'event_type_meeting'
-            | 'event_type_stage'
-            | 'event_type_eval_conversation'
-            | 'event_type_medical',
           title: ev.title,
           startsAt: new Date(detail.newStart),
           endsAt: new Date(detail.newEnd),
@@ -117,11 +130,12 @@ export function ConflictBanner() {
           force,
         };
 
-        let payload: unknown;
-        switch (ev.typeCode) {
+        let payload: UpdatePayload;
+        switch (typeCode) {
           case 'event_type_training':
             payload = {
               ...basePayload,
+              type: 'event_type_training',
               trainingTypeCode: String(ext.trainingTypeCode ?? ''),
               organisationCode: String(ext.organisationCode ?? ''),
               trainerId: String(ext.trainerId ?? ''),
@@ -131,6 +145,7 @@ export function ConflictBanner() {
           case 'event_type_tournament':
             payload = {
               ...basePayload,
+              type: 'event_type_tournament',
               city: String(ext.city ?? ''),
               country: String(ext.country ?? ''),
               ageCategoryCode: String(ext.ageCategoryCode ?? ''),
@@ -140,6 +155,7 @@ export function ConflictBanner() {
           case 'event_type_stage':
             payload = {
               ...basePayload,
+              type: 'event_type_stage',
               place: String(ext.place ?? ''),
               country: String(ext.country ?? ''),
             };
@@ -147,6 +163,7 @@ export function ConflictBanner() {
           case 'event_type_eval_conversation':
             payload = {
               ...basePayload,
+              type: 'event_type_eval_conversation',
               evaluatorUserId: String(ext.evaluatorUserId ?? ''),
               playerUserId: String(ext.playerUserId ?? ''),
             };
@@ -154,18 +171,25 @@ export function ConflictBanner() {
           case 'event_type_medical':
             payload = {
               ...basePayload,
+              type: 'event_type_medical',
               isInjury: Boolean(ext.isInjury ?? false),
               doctor: ext.doctor ? String(ext.doctor) : undefined,
             };
             break;
           case 'event_type_meeting':
-          default:
-            payload = basePayload;
+            payload = { ...basePayload, type: 'event_type_meeting' };
             break;
+          default: {
+            // WR-11: exhaustive-check guard. A new EventTypeCode added in
+            // Phase 4+ becomes a compile error here.
+            const _exhaustive: never = typeCode;
+            throw new Error(
+              `Unreachable EventTypeCode: ${String(_exhaustive)}`,
+            );
+          }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await updateMutation.mutateAsync(payload as any);
+        await updateMutation.mutateAsync(payload);
         toast.success(tToast('moved'));
         await utils.calendar.list.invalidate();
         setState(null);

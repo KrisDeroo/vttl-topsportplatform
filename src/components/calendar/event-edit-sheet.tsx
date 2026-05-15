@@ -56,12 +56,22 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import type { inferProcedureInput } from '@trpc/server';
+
 import type { RedactedConflict } from '@/lib/calendar/conflicts';
 import { trpc } from '@/lib/trpc-client';
+import type { AppRouter } from '@/server/trpc/routers/_app';
 import {
   EVENT_TYPE_CODES,
   type EventTypeCode,
 } from '@/server/trpc/schemas/calendar';
+
+/** WR-11: typed payload for calendar.event.update — derived from the
+ *  router so a schema change becomes a compile error at the call site
+ *  instead of silently shipping under `as any`. */
+type UpdatePayload = inferProcedureInput<
+  AppRouter['calendar']['event']['update']
+>;
 
 type ParticipantRole = 'organizer' | 'participant' | 'invitee';
 
@@ -139,7 +149,7 @@ function buildUpdatePayload(
   eventId: string,
   v: FormShape,
   force: boolean,
-): Record<string, unknown> {
+): UpdatePayload {
   // CR-03: round-trip the original role from `calendar.event.get` for each
   // userId. New userIds (no entry in originalRoles) default to
   // 'participant'. The server-side diff-then-merge also preserves
@@ -217,8 +227,13 @@ function buildUpdatePayload(
         isInjury: v.isInjury,
         doctor: v.doctor || undefined,
       };
-    default:
-      return { ...base, type: v.type };
+    default: {
+      // WR-11: exhaustive-check guard. Adding a new EventTypeCode here
+      // becomes a compile error: the `never` assertion fails because the
+      // new variant is not handled by any case branch.
+      const _exhaustive: never = v.type;
+      throw new Error(`Unreachable EventTypeCode: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -319,9 +334,9 @@ export function EventEditSheet() {
     async (values: FormShape, force: boolean) => {
       if (!eventId) return;
       try {
+        // WR-11: payload is now typed `UpdatePayload`, no cast required.
         const payload = buildUpdatePayload(eventId, values, force);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await updateMutation.mutateAsync(payload as any);
+        await updateMutation.mutateAsync(payload);
         toast.success(tToast('updated'));
         await utils.calendar.list.invalidate();
         setEventId(null);
