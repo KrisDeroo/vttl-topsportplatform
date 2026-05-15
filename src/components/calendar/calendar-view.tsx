@@ -124,8 +124,13 @@ export function CalendarView({
   initialView,
   initialDate,
   canCreate,
-  canEdit,
+  // WR-08: the page-level `canEdit` is no longer used for the FC
+  // editable gate — per-event flags from calendar.list drive that now.
+  // Kept in the Props signature for forward compatibility; the prop is
+  // a no-op in this component but other surfaces may want the hint.
+  canEdit: _canEdit,
 }: Props) {
+  void _canEdit;
   const calendarRef = useRef<FullCalendarRef | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [fcLocale, setFcLocale] = useState<LocaleInput | null>(null);
@@ -217,6 +222,18 @@ export function CalendarView({
         start: toIso(e.startsAt),
         end: toIso(e.endsAt),
         allDay: e.allDay,
+        // WR-08: per-event drag/resize gate. The page-level `canEdit` prop
+        // (passed from page.tsx) is the union of "any role that can create
+        // any event type"; using it on the top-level <FullCalendar
+        // editable={canEdit}> meant a medical_staff who is a non-creator
+        // participant could drag the chip, hit the conflict-banner
+        // re-fetch, and get NOT_FOUND on event.get (RLS narrows to
+        // creator-or-TD on update). Now we drive editability from the
+        // per-event flag set by calendar.list (createdBy === callerId OR
+        // role === 'technical_director'), which correctly evaluates per row.
+        editable: e.canEdit && !isMobile,
+        durationEditable: e.canEdit && !isMobile,
+        startEditable: e.canEdit && !isMobile,
         extendedProps: {
           // The real event id (without occurrence suffix) — Plan 07 sheets
           // use this to call calendar.event.get / update / delete.
@@ -231,7 +248,7 @@ export function CalendarView({
           canDelete: e.canDelete,
         },
       })),
-    [initialEvents],
+    [initialEvents, isMobile],
   );
 
   if (!fcLocale) {
@@ -256,9 +273,14 @@ export function CalendarView({
         firstDay={1} // Monday — I18N-07
         headerToolbar={false} // app owns the toolbar via <CalendarToolbar>
         events={fcEvents}
-        // Mobile drag-to-edit is intentionally off (UI-SPEC §Mobile Strategy)
-        // — long-press-to-create lands in v2.
-        editable={canEdit && !isMobile}
+        // WR-08: top-level editable enables FC's drag-and-drop machinery;
+        // per-event `editable: false` on individual rows overrides this
+        // to OFF for events the caller cannot edit (see fcEvents above).
+        // Mobile drag-to-edit is intentionally off project-wide (UI-SPEC
+        // §Mobile Strategy — long-press-to-create lands in v2). The
+        // unused `canEdit` prop is retained for forward compatibility
+        // (other surfaces may want a hint).
+        editable={!isMobile}
         selectable={canCreate && !isMobile}
         eventContent={renderEventChip}
         dayMaxEvents={4} // month-view truncation (UI-SPEC §Event Chip month view)
