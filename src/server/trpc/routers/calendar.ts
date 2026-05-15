@@ -771,27 +771,109 @@ export const calendarRouter = router({
             })
             .where(eq(calendarEvents.id, input.eventId));
 
-          // Replace participants (delete + re-insert is the simplest atomic
-          // shape; a more efficient diff is a Phase 4 optimisation).
-          await tx
-            .delete(calendarEventParticipants)
+          // CR-03: diff-then-merge participants instead of delete + reinsert.
+          // The old code reset every rsvp_status to 'pending' and dropped the
+          // 'organizer' role for the creator, undoing every accepted/declined
+          // RSVP and demoting organisers on every save.
+          //
+          // Approach:
+          //   1. SELECT existing participants → byUserId map.
+          //   2. Compute the desired set:
+          //        a. From `input.participants`, but preserve existing
+          //           rsvpStatus for any survivor. Preserve 'organizer' role
+          //           for the creator (per D-58 mental model: the creator is
+          //           always the organiser; UI does not surface a way to
+          //           demote them).
+          //        b. Always (re-)add the caller as 'organizer'/'accepted'
+          //           if missing — mirrors event.create line ~594-601.
+          //   3. DELETE rows for userIds NOT in the desired set.
+          //   4. INSERT rows for new userIds; UPDATE roleInEvent for
+          //      existing rows whose role changed (rsvp_status untouched).
+          //
+          // RLS: cep_insert / cep_delete check creator-or-TD ownership of
+          // the event — same gate as before, so RLS posture is unchanged.
+          const existingParticipants = await tx
+            .select()
+            .from(calendarEventParticipants)
             .where(eq(calendarEventParticipants.eventId, input.eventId));
-          if (input.participants.length > 0) {
-            const participantValues: Array<{
-              eventId: string;
-              userId: string;
-              roleInEvent: string;
-              rsvpStatus: string;
-            }> = input.participants.map((p) => ({
-              eventId: input.eventId,
-              userId: p.userId,
-              roleInEvent: p.roleInEvent,
-              rsvpStatus: 'pending',
-            }));
+          const existingByUserId = new Map(
+            existingParticipants.map((p) => [p.userId, p]),
+          );
+
+          const creatorId = existingRow.createdBy;
+          // Build the desired set from input + caller-self-add.
+          const desired = new Map<
+            string,
+            { roleInEvent: string; rsvpStatus: string }
+          >();
+          for (const p of input.participants) {
+            const existing = existingByUserId.get(p.userId);
+            // Preserve 'organizer' for the creator (UI lumps everyone into
+            // a single bucket and would otherwise downgrade the creator to
+            // 'participant' on every save).
+            const role =
+              p.userId === creatorId && existing?.roleInEvent === 'organizer'
+                ? 'organizer'
+                : p.roleInEvent;
+            // Preserve existing rsvp_status; default 'pending' for new
+            // participants.
+            const rsvp = existing?.rsvpStatus ?? 'pending';
+            desired.set(p.userId, { roleInEvent: role, rsvpStatus: rsvp });
+          }
+          // Caller self-add (mirrors event.create — caller is always the
+          // organiser of their own creation/edit unless explicitly someone
+          // else, which v1 UI does not surface).
+          const callerId = ctx.scope.userId;
+          if (!desired.has(callerId)) {
+            const existing = existingByUserId.get(callerId);
+            desired.set(callerId, {
+              roleInEvent: existing?.roleInEvent ?? 'organizer',
+              rsvpStatus: existing?.rsvpStatus ?? 'accepted',
+            });
+          }
+
+          // Delete rows for userIds that have been removed.
+          const removedUserIds = existingParticipants
+            .map((p) => p.userId)
+            .filter((uid) => !desired.has(uid));
+          if (removedUserIds.length > 0) {
             await tx
-              .insert(calendarEventParticipants)
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              .values(participantValues as any);
+              .delete(calendarEventParticipants)
+              .where(
+                and(
+                  eq(calendarEventParticipants.eventId, input.eventId),
+                  sql`${calendarEventParticipants.userId} = ANY(${removedUserIds}::uuid[])`,
+                ),
+              );
+          }
+
+          // Insert new rows + UPDATE role changes on existing rows.
+          for (const [userId, want] of desired) {
+            const existing = existingByUserId.get(userId);
+            if (!existing) {
+              await tx
+                .insert(calendarEventParticipants)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .values({
+                  eventId: input.eventId,
+                  userId,
+                  roleInEvent: want.roleInEvent,
+                  rsvpStatus: want.rsvpStatus,
+                } as any);
+            } else if (existing.roleInEvent !== want.roleInEvent) {
+              // Only role can change here; rsvp_status is owned by the
+              // participant themselves via declineParticipation (D-58).
+              await tx
+                .update(calendarEventParticipants)
+                .set({ roleInEvent: want.roleInEvent })
+                .where(
+                  and(
+                    eq(calendarEventParticipants.eventId, input.eventId),
+                    eq(calendarEventParticipants.userId, userId),
+                  ),
+                );
+            }
+            // else: row already in desired shape — no-op.
           }
           // Extension table update is per-type — we delete + re-insert for
           // simplicity (foreign tables only have a PK to calendar_events).

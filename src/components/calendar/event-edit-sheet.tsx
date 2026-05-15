@@ -63,6 +63,8 @@ import {
   type EventTypeCode,
 } from '@/server/trpc/schemas/calendar';
 
+type ParticipantRole = 'organizer' | 'participant' | 'invitee';
+
 interface FormShape {
   type: EventTypeCode;
   title: string;
@@ -76,6 +78,17 @@ interface FormShape {
   playerIds: string[];
   trainerIds: string[];
   sparringPartnerIds: string[];
+  /** CR-03: per-userId role map loaded from `calendar.event.get`. The
+   *  form's three id buckets stay role-agnostic at the UI level (v1 UX
+   *  lumps everyone), but `buildUpdatePayload` consults this map on save
+   *  so an explicit 'organizer' or 'invitee' from the DB is round-tripped
+   *  instead of being silently flattened to 'participant'. Any userId
+   *  added newly in the form (no entry in this map) defaults to
+   *  'participant'. The server CR-03 fix is the authoritative gate:
+   *  organizer for the creator is preserved server-side even if the
+   *  client incorrectly sends 'participant'. This map closes the gap
+   *  for non-creator organizers/invitees. */
+  originalRoles: Record<string, ParticipantRole>;
   trainingTypeCode: string;
   organisationCode: string;
   trainerId: string;
@@ -105,6 +118,7 @@ function defaultFormValues(): FormShape {
     playerIds: [],
     trainerIds: [],
     sparringPartnerIds: [],
+    originalRoles: {},
     trainingTypeCode: '',
     organisationCode: '',
     trainerId: '',
@@ -126,18 +140,25 @@ function buildUpdatePayload(
   v: FormShape,
   force: boolean,
 ): Record<string, unknown> {
+  // CR-03: round-trip the original role from `calendar.event.get` for each
+  // userId. New userIds (no entry in originalRoles) default to
+  // 'participant'. The server-side diff-then-merge also preserves
+  // 'organizer' for the creator unconditionally — this map only matters
+  // for non-creator organizers and invitees.
+  const roleFor = (userId: string): ParticipantRole =>
+    v.originalRoles[userId] ?? 'participant';
   const participants = [
     ...v.playerIds.map((userId) => ({
       userId,
-      roleInEvent: 'participant' as const,
+      roleInEvent: roleFor(userId),
     })),
     ...v.trainerIds.map((userId) => ({
       userId,
-      roleInEvent: 'participant' as const,
+      roleInEvent: roleFor(userId),
     })),
     ...v.sparringPartnerIds.map((userId) => ({
       userId,
-      roleInEvent: 'participant' as const,
+      roleInEvent: roleFor(userId),
     })),
   ];
 
@@ -244,6 +265,16 @@ export function EventEditSheet() {
     if (!loaded) return;
     const ev = loaded.event;
     const ext = (loaded.extension ?? {}) as Record<string, unknown>;
+    // CR-03: capture the original role per userId so buildUpdatePayload
+    // can round-trip it. Keys are the userIds; values are the validated
+    // 'organizer' | 'participant' | 'invitee' enum.
+    const originalRoles: Record<string, ParticipantRole> = {};
+    for (const p of loaded.participants ?? []) {
+      const r = p.roleInEvent;
+      if (r === 'organizer' || r === 'participant' || r === 'invitee') {
+        originalRoles[p.userId] = r;
+      }
+    }
     const next: FormShape = {
       ...defaultFormValues(),
       type: ev.typeCode as EventTypeCode,
@@ -258,10 +289,14 @@ export function EventEditSheet() {
       // Phase 3 splits participants into 3 buckets at submit time only —
       // we lump everyone into playerIds on load for the multi-select; the
       // server-side discriminated union doesn't distinguish bucket at the
-      // participants array level.
+      // participants array level. CR-03: originalRoles (above) carries
+      // the per-userId role through buildUpdatePayload so an 'organizer'
+      // or 'invitee' from the DB is preserved even though the UI flattens
+      // the bucket distinction.
       playerIds: (loaded.participants ?? []).map((p) => p.userId),
       trainerIds: [],
       sparringPartnerIds: [],
+      originalRoles,
       // Per-type extension fields
       trainingTypeCode: String(ext.trainingTypeCode ?? ''),
       organisationCode: String(ext.organisationCode ?? ''),
