@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 03
-last_updated: "2026-05-14T09:59:12.752Z"
+status: Ready to plan
+last_updated: "2026-05-15T20:09:22.705Z"
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 42
-  completed_plans: 34
-  percent: 81
+  completed_plans: 42
+  percent: 100
 ---
 
 # Project State — VTTL Topsportplatform
 
 ## Current Status
 
-Phase: 3 — Kalender ◆ CONTEXT gathered
+Phase: 4
 Active Phase: 03-kalender (UI design contract locked; CONTEXT.md captures 4-area implementation discussion; ready for planning)
 Last Action: Phase 3 CONTEXT.md committed (2026-05-14, hash 404eceb). Captures: D-47..D-51 schema scope (all 6 event types with full domain-specific fields in Phase 3; class-table inheritance; polymorphic `calendar_event_participants` junction; Phase 4 reduces to operational/result layer only); D-52..D-55 RRULE (server-side expansion with `rrule` npm; `calendar_event_exceptions` table with full single-occurrence override; 2y horizon enforced at write + read time); D-56..D-57b conflict detection (per-participant overlap, soft warning only, cross-scope detection via SECURITY DEFINER bypass + role-gated detail-redaction uniform across all 6 types, participant-named copy override); D-58..D-58c delete model (hard delete + AlertDialog + audit-log JSONB snapshot; three distinct operations: globaal verwijderen / Ik kan niet aanwezig zijn / cancel single occurrence; UI-SPEC delete copy override drops 30-day restore promise).
 

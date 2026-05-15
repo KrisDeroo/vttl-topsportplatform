@@ -224,4 +224,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-01 after initialization*
+*Last updated: 2026-05-15 after Phase 3 (kalender) execution — polymorphic calendar schema, 9 tRPC procedures with RLS-context, FullCalendar 6 UI with 6 color-coded event types, RRULE expansion anchored on Europe/Brussels wall clock, cross-scope conflict detection with redaction, GDPR audit logging on every mutation.*
