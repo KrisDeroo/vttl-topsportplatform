@@ -25,33 +25,46 @@ import {
 
 describe('expandRrule — RFC 5545 expansion (D-53)', () => {
   /**
-   * DST boundary check: weekly Tuesday 09:00 UTC. The 2026 EU DST end is on
-   * Sunday 2026-10-25; the immediately surrounding Tuesdays are 2026-10-20
-   * (still summer time) and 2026-10-27 (winter time). RRULE expansion runs
-   * in UTC, so every occurrence's UTC hour stays at 09:00 — that's the
-   * invariant Pitfall 3 guards (no drift).
+   * DST boundary check: weekly Tuesday 09:00 Brussels wall clock. The 2026 EU
+   * DST end is on Sunday 2026-10-25; surrounding Tuesdays are 2026-10-20
+   * (summer time, UTC+2) and 2026-10-27 (winter time, UTC+1).
+   *
+   * WR-01 (post-review fix): expandRrule anchors recurring events on
+   * Europe/Brussels wall clock — a TD who schedules "Tuesday 09:00" expects
+   * 09:00 local-time every week, NOT a UTC-locked time that drifts to 08:00
+   * local after DST end. Across the boundary the UTC hour shifts from 07:00
+   * (summer) to 08:00 (winter) but the local wall hour stays at 09:00.
    */
-  it('DST boundary: weekly Tuesday 09:00 UTC — occurrences stay at 09:00 UTC across Oct 25', () => {
-    const dtstart = new Date(Date.UTC(2026, 9, 13, 9, 0, 0)); // Tue 2026-10-13 09:00Z
-    const until = new Date(Date.UTC(2026, 10, 10, 9, 0, 0)); // Tue 2026-11-10 09:00Z
+  it('DST boundary: weekly Tuesday 09:00 Brussels — occurrences stay at 09:00 local across Oct 25', () => {
+    // 07:00 UTC on Tue 2026-10-13 = 09:00 Brussels (summer time, UTC+2).
+    // After DST end on Oct 25, 08:00 UTC = 09:00 Brussels (winter time, UTC+1).
+    // expandRrule's WR-01 fix anchors on the Brussels wall hour — the UTC
+    // hour shifts to keep the local hour stable.
+    const dtstart = new Date(Date.UTC(2026, 9, 13, 7, 0, 0));
+    const until = new Date(Date.UTC(2026, 10, 10, 8, 0, 0));
     const untilStr = until.toISOString().replace(/[-:]|\.\d{3}/g, '');
     const rrule = `RRULE:FREQ=WEEKLY;UNTIL=${untilStr};BYDAY=TU`;
     const occurrences = expandRrule(
       rrule,
       dtstart,
-      60 * 60 * 1000, // 1h duration
+      60 * 60 * 1000,
       new Date(Date.UTC(2026, 9, 1)),
       new Date(Date.UTC(2026, 10, 15)),
       [],
     );
-    // Expect Tuesdays 2026-10-13, 10-20, 10-27, 11-03, 11-10 = 5 occurrences.
     expect(occurrences.length).toBeGreaterThanOrEqual(4);
+    const brusselsHour = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Brussels',
+      hour: '2-digit',
+      hour12: false,
+    });
+    const brusselsWeekday = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Brussels',
+      weekday: 'short',
+    });
     for (const o of occurrences) {
-      // Every occurrence must be at 09:00 UTC — no DST drift.
-      expect(o.startsAt.getUTCHours()).toBe(9);
-      expect(o.startsAt.getUTCMinutes()).toBe(0);
-      // Day-of-week must remain Tuesday (UTC 2).
-      expect(o.startsAt.getUTCDay()).toBe(2);
+      expect(brusselsHour.format(o.startsAt)).toBe('09');
+      expect(brusselsWeekday.format(o.startsAt)).toBe('Tue');
     }
   });
 

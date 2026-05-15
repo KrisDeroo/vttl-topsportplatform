@@ -207,7 +207,10 @@ describe('eventCreateInput — discriminated union per event type', () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const messages = result.error.issues.map((i) => i.message);
-      expect(messages).toContain('errors.calendar.rruleHorizonExceeded');
+      // WR-04 (post-review fix): structural rrule errors (DTSTART:, parse,
+      // RRuleSet) now emit `rruleInvalid`; `rruleHorizonExceeded` is reserved
+      // for horizon-class violations only.
+      expect(messages).toContain('errors.calendar.rruleInvalid');
     }
   });
 
