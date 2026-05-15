@@ -64,6 +64,41 @@
       "when": 1778671729800,
       "tag": "0008_phase2_lookup_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778808000000,
+      "tag": "0009_phase3_calendar_base_lookup_participants_exceptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778808100000,
+      "tag": "0010_phase3_calendar_extension_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778808200000,
+      "tag": "0011_phase3_calendar_rls_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1778808300000,
+      "tag": "0012_phase3_event_type_seed",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1778849600000,
+      "tag": "0013_phase3_calendar_function_fixes",
+      "breakpoints": true
     }
   ]
 }

@@ -1073,9 +1073,11 @@ async function detectConflictsForParticipants(
   if (participantIds.length === 0) return [];
 
   // 1. Cross-scope overlap via SECURITY DEFINER fn — bypasses RLS per D-57.
-  //    The fn signature (per 03-02): overlapping_events_for_users(uuid[],
-  //    tstzrange[]). We pass a single-element tstzrange[] for the [startsAt,
-  //    endsAt] window.
+  //    Function signature (corrected in migration 0013 per CR-01):
+  //    overlapping_events_for_users(uuid[], tstzrange[]). We pass a
+  //    single-element tstzrange[] for the [startsAt, endsAt] window today;
+  //    the array shape lets future ±15d per-occurrence expansion (D-56)
+  //    probe multiple disjoint windows in one call.
   const rangeLiteral = sql`tstzrange(${startsAt}, ${endsAt}, '[)')`;
   const baseQuery = sql`
     SELECT event_id   AS "eventId",
