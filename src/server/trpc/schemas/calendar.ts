@@ -24,12 +24,16 @@ import { z } from 'zod';
 
 // ─── Shared field groups ────────────────────────────────────────────────
 
-/** RFC 5545 RRULE string guard — rejects DTSTART: per Anti-Pattern 1. */
+/** RFC 5545 RRULE string guard — rejects DTSTART: per Anti-Pattern 1.
+ *  WR-04: the DTSTART rejection is a syntax/structure failure, not a
+ *  horizon failure, so the error key is `rruleInvalid` (matches the
+ *  parseRrule branch in src/lib/rrule.ts). The 2000-char cap is also a
+ *  syntactic constraint, so same key. */
 const rruleStringSchema = z
   .string()
-  .max(2000, { message: 'errors.calendar.rruleHorizonExceeded' })
+  .max(2000, { message: 'errors.calendar.rruleInvalid' })
   .refine((s) => !s.includes('DTSTART:'), {
-    message: 'errors.calendar.rruleHorizonExceeded',
+    message: 'errors.calendar.rruleInvalid',
   });
 
 /** Participant subset accepted by event.create / event.update. */

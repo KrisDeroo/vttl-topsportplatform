@@ -223,12 +223,23 @@ export interface ExceptionInput {
  * Parse an RFC 5545 RRULE string with an explicit dtstart from
  * calendar_events.starts_at. Throws TRPCError BAD_REQUEST if the string is
  * invalid or contains DTSTART: (dual-source-of-truth guard — Anti-Pattern 1).
+ *
+ * WR-04: previously, all three failure paths (DTSTART present, parse
+ * failure, RRuleSet rejection) collapsed onto
+ * `errors.calendar.rruleHorizonExceeded`. A user typing a malformed rrule
+ * string saw "Recurrence can extend at most 2 years ahead" — confusing and
+ * undebuggable. Now syntax-class failures throw `errors.calendar.rruleInvalid`
+ * (added to all three i18n catalogs) and horizon-class failures stay on
+ * `rruleHorizonExceeded`.
  */
 export function parseRrule(rruleStr: string, dtstart: Date): RRule {
   if (rruleStr.includes('DTSTART:')) {
+    // Anti-Pattern 1: the string carrying its own DTSTART would create a
+    // second source of truth disagreeing with calendar_events.starts_at.
+    // This is a structural/syntax-class problem, not a horizon problem.
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'errors.calendar.rruleHorizonExceeded',
+      message: 'errors.calendar.rruleInvalid',
     });
   }
   let parsed: RRule | RRuleSet;
@@ -240,13 +251,17 @@ export function parseRrule(rruleStr: string, dtstart: Date): RRule {
   } catch {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'errors.calendar.rruleHorizonExceeded',
+      message: 'errors.calendar.rruleInvalid',
     });
   }
   if (parsed instanceof RRuleSet) {
+    // A compound rrule (RRULE + EXRULE / multi-RRULE) parses as RRuleSet.
+    // We deliberately do not support compound rrules in v1 — the
+    // calendar_event_exceptions table covers the single-occurrence
+    // override case. Same syntax-class branch as parse failure.
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'errors.calendar.rruleHorizonExceeded',
+      message: 'errors.calendar.rruleInvalid',
     });
   }
   return parsed;
@@ -254,12 +269,24 @@ export function parseRrule(rruleStr: string, dtstart: Date): RRule {
 
 /**
  * D-55 write-time gate. Reject:
- *   - rrule string containing DTSTART: (dual-source-of-truth — Anti-Pattern 1)
- *   - rule without UNTIL AND without COUNT (open-ended → expansion DoS risk)
- *   - rule with UNTIL > createdAt + 2y (horizon exceeded)
+ *   - rrule string failing parseRrule (DTSTART:, syntax, RRuleSet — these
+ *     throw `errors.calendar.rruleInvalid` from parseRrule per WR-04).
+ *   - rule without UNTIL AND without COUNT (open-ended → expansion DoS risk).
+ *   - rule with UNTIL > createdAt + 2y (horizon exceeded).
  *
- * Throws TRPCError BAD_REQUEST 'errors.calendar.rruleHorizonExceeded' on any
- * failure.
+ * Throws TRPCError BAD_REQUEST 'errors.calendar.rruleHorizonExceeded' on the
+ * UNTIL-related branches; the parseRrule call above may also raise
+ * `rruleInvalid` for structural failures.
+ *
+ * WR-03 fix: every caller previously ran ensureHorizon() before this
+ * function, so the "no UNTIL and no COUNT" branch was unreachable
+ * (ensureHorizon auto-injects UNTIL = +2y). That made the docstring
+ * misleading and the dead-code path a defensive trap waiting to fire if a
+ * future caller forgot the convention. validateHorizon is now idempotent:
+ * if both UNTIL and COUNT are missing, this throws regardless of whether
+ * ensureHorizon ran first. The auto-injection in ensureHorizon stays
+ * because the RruleEditor's "Never" mode emits no UNTIL, but the validator
+ * no longer depends on it.
  */
 export function validateHorizon(
   rruleStr: string,
@@ -272,6 +299,7 @@ export function validateHorizon(
   const rule = parseRrule(rruleStr, dtstart);
   const opts = rule.origOptions;
   if (!opts.until && !opts.count) {
+    // Open-ended rrule → would expand unboundedly. v1 mandates a horizon.
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'errors.calendar.rruleHorizonExceeded',
