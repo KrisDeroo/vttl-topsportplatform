@@ -32,9 +32,13 @@
  *                                    applied in a post-processing pass.
  *
  * Pitfalls covered:
- *   - Pitfall 3 (DST drift): we pass Date objects from Postgres TIMESTAMPTZ
- *     which are always UTC; rrule's default UTC semantics handle DST
- *     correctly.
+ *   - Pitfall 3 (DST drift): WR-01 fix — Postgres TIMESTAMPTZ is always
+ *     UTC, but recurring events recur in Brussels WALL-CLOCK time. The
+ *     library's default UTC math would shift "every Wednesday 10:00" to
+ *     11:00 after the spring DST change. We pre-convert dtstart to a
+ *     "naive" Brussels wall-clock Date for expansion, then convert each
+ *     occurrence back to true UTC via brusselsWallToUtc. See WR-01
+ *     comments on expandRrule for the full mechanism.
  *   - Pitfall 8 (invalid RFC 5545 UNTIL format): we never string-concat;
  *     rrule's RRule.optionsToString() always emits valid
  *     `UNTIL=YYYYMMDDTHHMMSSZ`.
@@ -82,6 +86,110 @@ export function formatOccurrenceDate(d: Date): string {
     month: '2-digit',
     day: '2-digit',
   }).format(d);
+}
+
+// ─── WR-01: DST-safe rrule expansion in Europe/Brussels wall time ──────
+
+/** Decompose a UTC `Date` into Brussels-local y/m/d/h/m/s wall clock. */
+function utcToBrusselsWall(d: Date): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+} {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: OCCURRENCE_DATE_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  });
+  const parts = Object.fromEntries(
+    fmt.formatToParts(d).map((p) => [p.type, p.value]),
+  );
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour: Number(parts.hour),
+    minute: Number(parts.minute),
+    second: Number(parts.second),
+  };
+}
+
+/**
+ * Convert a Brussels wall-clock tuple into the actual UTC instant.
+ *
+ * Strategy: start with a naive `Date.UTC(...)` guess, format it back as
+ * Brussels-local, diff against the desired wall clock, apply the delta.
+ * One iteration suffices for the normal case; the second iteration catches
+ * DST transitions (spring forward / fall back), where the offset changes
+ * mid-day. Three iterations is the upper bound (one transition + one
+ * verify).
+ */
+function brusselsWallToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+): Date {
+  const wantWall = Date.UTC(year, month - 1, day, hour, minute, second);
+  let utcMs = wantWall;
+  for (let i = 0; i < 3; i++) {
+    const got = utcToBrusselsWall(new Date(utcMs));
+    const gotWall = Date.UTC(
+      got.year,
+      got.month - 1,
+      got.day,
+      got.hour,
+      got.minute,
+      got.second,
+    );
+    const diff = wantWall - gotWall;
+    if (diff === 0) break;
+    utcMs += diff;
+  }
+  return new Date(utcMs);
+}
+
+/**
+ * Take an occurrence Date the rrule library produced (which we interpret
+ * as a "Brussels wall clock" because we fed it a naive dtstart) and
+ * return the actual UTC instant for that wall clock. This is what makes
+ * "every Wednesday 10:00 in Brussels" survive the spring/fall DST change
+ * — without this conversion, a 10:00 CET (winter) event becomes 11:00
+ * CEST (summer) because rrule's default UTC math preserves the absolute
+ * UTC offset of dtstart.
+ */
+function naiveOccurrenceToRealUtc(naive: Date): Date {
+  return brusselsWallToUtc(
+    naive.getUTCFullYear(),
+    naive.getUTCMonth() + 1,
+    naive.getUTCDate(),
+    naive.getUTCHours(),
+    naive.getUTCMinutes(),
+    naive.getUTCSeconds(),
+  );
+}
+
+/**
+ * Build a "naive" dtstart Date suitable for rrule expansion. Takes a real
+ * UTC `Date`, reads its Brussels wall-clock components, and re-encodes
+ * those components as a Date constructed via `Date.UTC` so the library
+ * sees a stable hour/minute regardless of DST.
+ */
+function realUtcDtstartToNaive(realUtc: Date): Date {
+  const w = utcToBrusselsWall(realUtc);
+  return new Date(
+    Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second),
+  );
 }
 
 /** Output of expandRrule — one concrete instance per occurrence in the window. */
@@ -211,6 +319,17 @@ export function ensureHorizon(
  * [from, to]. Read-time horizon clamp per D-55: clamps `to` to `dtstart + 2y`
  * so legacy rows with UNTIL beyond that point cannot blow up an unsuspecting
  * list query.
+ *
+ * WR-01: occurrences are anchored on Europe/Brussels wall-clock time so a
+ * recurring "every Wednesday 10:00" stays at 10:00 local across DST
+ * boundaries (the previous default-UTC behaviour drifted to 11:00 CEST
+ * after the March DST jump). The Anti-Pattern-1 guard in parseRrule
+ * still rejects DTSTART: in the stored string — the timezone is implicit
+ * (platform-wide Europe/Brussels) rather than per-event for v1.
+ * Phase 4 can introduce a per-event `tz_id` column when international
+ * tournaments arrive; the helpers (utcToBrusselsWall / brusselsWallToUtc)
+ * already take an explicit tz argument shape that makes that swap a
+ * one-line change.
  */
 export function expandRrule(
   rruleStr: string,
@@ -220,9 +339,19 @@ export function expandRrule(
   to: Date,
   exceptions: ReadonlyArray<ExceptionInput>,
 ): ExpandedOccurrence[] {
-  const rule = parseRrule(rruleStr, dtstart);
+  // WR-01: convert real-UTC dtstart to "naive" dtstart (Brussels wall
+  // clock as UTC components). The library then sees a stable hour value
+  // and propagates it across every occurrence; we convert back to real
+  // UTC after expansion.
+  const naiveDtstart = realUtcDtstartToNaive(dtstart);
+  const rule = parseRrule(rruleStr, naiveDtstart);
   const horizonMax = addYears(dtstart, MAX_HORIZON_YEARS);
   const clampedTo = new Date(Math.min(to.getTime(), horizonMax.getTime()));
+
+  // Compute the search window in the naive coordinate system too — the
+  // library does `between(naiveFrom, naiveTo)` so we re-anchor.
+  const naiveFrom = realUtcDtstartToNaive(from);
+  const naiveTo = realUtcDtstartToNaive(clampedTo);
 
   // Build an RRuleSet so we can apply EXDATEs for cancelled occurrences.
   const set = new RRuleSet();
@@ -233,25 +362,29 @@ export function expandRrule(
         ex.occurrenceDate instanceof Date
           ? ex.occurrenceDate
           : new Date(ex.occurrenceDate);
-      // Express the EXDATE at the same time-of-day as dtstart for the
-      // cancelled calendar date — rrule's exdate match is exact.
+      // Express the EXDATE at the same time-of-day as the NAIVE dtstart
+      // (Brussels wall clock) for the cancelled calendar date — rrule's
+      // exdate match is exact and our occurrences are in the naive
+      // coordinate system pre-conversion.
       const exInstant = new Date(
         Date.UTC(
           exDate.getUTCFullYear(),
           exDate.getUTCMonth(),
           exDate.getUTCDate(),
-          dtstart.getUTCHours(),
-          dtstart.getUTCMinutes(),
-          dtstart.getUTCSeconds(),
+          naiveDtstart.getUTCHours(),
+          naiveDtstart.getUTCMinutes(),
+          naiveDtstart.getUTCSeconds(),
         ),
       );
       set.exdate(exInstant);
     }
   }
 
-  const dates = set.between(from, clampedTo, true);
+  const naiveDates = set.between(naiveFrom, naiveTo, true);
 
-  return dates.map((d) => {
+  return naiveDates.map((naive) => {
+    // Convert naive → real UTC. This is where DST is correctly applied.
+    const d = naiveOccurrenceToRealUtc(naive);
     // Find a non-cancelled override matching this occurrence's calendar date.
     // CR-05: use Europe/Brussels-anchored YYYY-MM-DD (formatOccurrenceDate)
     // — see comment on OCCURRENCE_DATE_TZ above. The write path in
