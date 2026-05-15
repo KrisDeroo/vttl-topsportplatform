@@ -50,6 +50,40 @@ import { RRule, RRuleSet, rrulestr } from 'rrule';
 
 const MAX_HORIZON_YEARS = 2; // D-55
 
+/**
+ * Canonical timezone for occurrence-date math. CR-05 fix: writing exception
+ * dates with `toISOString().slice(0,10)` cancelled the wrong day for any
+ * non-UTC client (Belgian users at +01:00 / +02:00 had every CEST-midnight
+ * pick shift to the previous calendar day). We anchor on Europe/Brussels —
+ * the platform is VTTL (Flemish Table Tennis League), all academies are
+ * Belgian, and users expect "8 mei training" to map to the May 8 occurrence
+ * row regardless of how the client serialised the Date.
+ *
+ * Both the WRITE path (`event.cancelOccurrence`) and the read-side
+ * matcher (`expandRrule`) call this helper so they agree byte-for-byte;
+ * mismatches would orphan exception rows. Phase 4 may introduce a per-event
+ * `tz_id` column (see WR-01 fix) and `formatOccurrenceDate` would then
+ * become a one-line wrapper around the per-event tz.
+ */
+const OCCURRENCE_DATE_TZ = 'Europe/Brussels';
+
+/**
+ * Format a Date as YYYY-MM-DD in the platform timezone (Europe/Brussels).
+ * Uses Intl.DateTimeFormat with 'en-CA' which canonically emits ISO-8601
+ * date format. No external deps (date-fns-tz not installed).
+ *
+ * CR-05: replaces the UTC `toISOString().slice(0,10)` pattern that wrote
+ * the wrong calendar date for non-UTC clients.
+ */
+export function formatOccurrenceDate(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: OCCURRENCE_DATE_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
 /** Output of expandRrule — one concrete instance per occurrence in the window. */
 export interface ExpandedOccurrence {
   /** UTC date of this occurrence (rrule's "anchor" for the day). */
@@ -219,14 +253,19 @@ export function expandRrule(
 
   return dates.map((d) => {
     // Find a non-cancelled override matching this occurrence's calendar date.
-    const isoDate = d.toISOString().slice(0, 10);
+    // CR-05: use Europe/Brussels-anchored YYYY-MM-DD (formatOccurrenceDate)
+    // — see comment on OCCURRENCE_DATE_TZ above. The write path in
+    // calendar.ts cancelOccurrence emits the same shape so an exception
+    // row written for the user's local-May-16 morning training matches the
+    // expanded May-16 occurrence (was previously orphaned for CEST clients).
+    const isoDate = formatOccurrenceDate(d);
     const ex = exceptions.find((e) => {
       if (e.cancelled) return false;
       const ed =
         e.occurrenceDate instanceof Date
           ? e.occurrenceDate
           : new Date(e.occurrenceDate);
-      return ed.toISOString().slice(0, 10) === isoDate;
+      return formatOccurrenceDate(ed) === isoDate;
     });
     return {
       occurrenceDate: d,

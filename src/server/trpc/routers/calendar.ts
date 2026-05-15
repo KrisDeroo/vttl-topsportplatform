@@ -44,6 +44,7 @@ import type { z } from 'zod';
 import {
   ensureHorizon,
   expandRrule,
+  formatOccurrenceDate,
   validateHorizon,
   type ExceptionInput,
 } from '@/lib/rrule';
@@ -892,9 +893,16 @@ export const calendarRouter = router({
           // The `occurrence_date` column is DATE — Drizzle expects an ISO
           // YYYY-MM-DD string. We accept a Date at the Zod boundary, then
           // serialise to the DB-friendly string here.
-          const occurrenceDateIso = input.occurrenceDate
-            .toISOString()
-            .slice(0, 10);
+          //
+          // CR-05: anchor on Europe/Brussels via formatOccurrenceDate(), not
+          // UTC `toISOString().slice(0,10)`. A Belgian client sending a Date
+          // representing May 16 00:00 CEST is May 15 22:00 UTC; the old
+          // UTC-slice wrote '2026-05-15' and cancelled the wrong day. The
+          // read-side expandRrule() uses the same helper so the exception
+          // row matches the user's intended occurrence.
+          const occurrenceDateIso = formatOccurrenceDate(
+            input.occurrenceDate,
+          );
           const inserted = await db
             .insert(calendarEventExceptions)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
