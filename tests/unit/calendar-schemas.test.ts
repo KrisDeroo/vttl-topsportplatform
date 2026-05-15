@@ -9,7 +9,8 @@
  *            03-RESEARCH.md §Pattern 5 (Zod discriminated union);
  *            03-VALIDATION.md Wave 0 Requirements (calendar-schemas.test.ts).
  *
- * Implemented in Plan 03-08 (Wave 6) — all branches converted from it.todo.
+ * Implemented in Plan 03-08 (Wave 6) — all branches converted from pending
+ * placeholders to real assertions.
  * The schemas module shipped in Plan 03-03.
  */
 import { describe, it, expect } from 'vitest';

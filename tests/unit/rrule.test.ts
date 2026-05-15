@@ -5,8 +5,8 @@
  *            03-RESEARCH.md §Pattern 3 (RRULE expansion + horizon clamp);
  *            03-VALIDATION.md Wave 0 Requirements.
  *
- * Implemented in Plan 03-08 (Wave 6) — all branches converted from it.todo
- * to real assertions. The `@/lib/rrule` module shipped in Plan 03-03.
+ * Implemented in Plan 03-08 (Wave 6) — all branches converted from pending
+ * placeholders to real assertions. The `@/lib/rrule` module shipped in Plan 03-03.
  */
 import { describe, it, expect } from 'vitest';
 import { addDays, addYears } from 'date-fns';
