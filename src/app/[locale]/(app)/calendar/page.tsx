@@ -38,7 +38,13 @@ import {
 import { CalendarSkeleton } from '@/components/calendar/calendar-skeleton';
 import { CalendarToolbar } from '@/components/calendar/calendar-toolbar';
 import { CalendarView } from '@/components/calendar/calendar-view';
+import { ConflictBanner } from '@/components/calendar/conflict-banner';
 import { EmptyHintStrip } from '@/components/calendar/empty-hint-strip';
+import { EventCreateSheet } from '@/components/calendar/event-create-sheet';
+import { EventDeleteDialogMount } from '@/components/calendar/event-delete-dialog-mount';
+import { EventDetailSheet } from '@/components/calendar/event-detail-sheet';
+import { EventEditSheet } from '@/components/calendar/event-edit-sheet';
+import { EventFilterBar } from '@/components/calendar/event-filter-bar';
 import { appRouter } from '@/server/trpc/routers/_app';
 import { createContext } from '@/server/trpc/server-context';
 import type { Locale } from '@/i18n/routing';
@@ -146,6 +152,13 @@ export default async function CalendarPage({ params, searchParams }: PageProps) 
         currentDate={anchor}
         canCreate={canCreate}
       />
+      {/* Filter bar — desktop inline + mobile bottom Sheet. Listens for
+          `calendar:open-filters` from the toolbar's mobile Filter button. */}
+      <EventFilterBar />
+      {/* ConflictBanner mounts above the calendar grid; it shows up
+          dynamically when calendar:event-drop / -resize produces a server
+          CONFLICT response (CAL-07 Surface 2). */}
+      <ConflictBanner />
       <div className="mt-4">
         <Suspense fallback={<CalendarSkeleton />}>
           <CalendarView
@@ -161,6 +174,13 @@ export default async function CalendarPage({ params, searchParams }: PageProps) 
       {initialEvents.length === 0 && (
         <EmptyHintStrip filtersActive={Boolean(sp.filter)} />
       )}
+      {/* Plan 07 sheet/dialog mounts — listen for calendar:* custom events
+          dispatched by <CalendarView> and <CalendarToolbar>. Each is
+          self-contained Client Component owning its own open-state. */}
+      <EventCreateSheet />
+      <EventDetailSheet />
+      <EventEditSheet />
+      <EventDeleteDialogMount />
     </main>
   );
 }
