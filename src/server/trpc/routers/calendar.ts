@@ -1151,6 +1151,21 @@ export const calendarRouter = router({
         const db = (ctx.db as DbClient | undefined) ?? rawDb;
         const callerId = ctx.scope.userId;
 
+        // WR-07: mirror the event.update / event.delete shape — SELECT
+        // the base row first so an RLS-filtered (or genuinely missing)
+        // event returns a clean D-36 NOT_FOUND rather than letting the
+        // INSERT below trip on a WITH CHECK violation, which surfaces
+        // as an opaque tRPC error code. A player who can SEE the event
+        // (participant) but not edit it gets a consistent NOT_FOUND now,
+        // matching the rest of the calendar router's contract.
+        const baseProbe = await db
+          .select({ id: calendarEvents.id })
+          .from(calendarEvents)
+          .where(eq(calendarEvents.id, input.eventId));
+        if (baseProbe.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
+
         // Insert exception row with cancelled=true.
         // UNIQUE(event_id, occurrence_date) protects against double-cancel.
         try {
