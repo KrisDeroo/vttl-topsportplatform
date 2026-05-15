@@ -1286,17 +1286,36 @@ export const calendarRouter = router({
         if (!ctx.scope) throw new TRPCError({ code: 'UNAUTHORIZED' });
         const db = (ctx.db as DbClient | undefined) ?? rawDb;
         const MAX_OPTIONS = 50;
-        const likeArg = `%${input.query}%`;
+        // WR-09: escape user-supplied LIKE meta-characters (`%`, `_`,
+        // `\\`) so a query like "Jan%" does not silently widen the match
+        // to everything containing "Jan". Drizzle parameterises the value
+        // so this is not a security issue, but it is a correctness gap.
+        // Backslash is the escape char (matches the ESCAPE '\\' clause
+        // on the ILIKE below).
+        const escapeForLike = (s: string): string =>
+          s
+            .replaceAll('\\', '\\\\')
+            .replaceAll('%', '\\%')
+            .replaceAll('_', '\\_');
+        const likeArg = `%${escapeForLike(input.query)}%`;
 
         switch (input.kind) {
           case 'player': {
             // RLS scopes players via players_visible_to (Phase 1).
-            // Simple LIKE search for the query string.
+            // WR-09: JOIN users so we can filter inactive players out
+            // (active column lives on users, not the players child
+            // table). Add deterministic ORDER BY so the LIMIT 50 cut-off
+            // returns the same subset across calls. Escape LIKE
+            // meta-chars per the helper above.
             const result = await db.execute<{ id: string; label: string }>(sql`
-              SELECT user_id AS id,
-                     (first_name || ' ' || last_name) AS label
-                FROM players
-               WHERE (first_name || ' ' || last_name) ILIKE ${likeArg}
+              SELECT p.user_id AS id,
+                     (p.first_name || ' ' || p.last_name) AS label
+                FROM players p
+                JOIN users u ON u.id = p.user_id
+               WHERE u.active = true
+                 AND (p.first_name || ' ' || p.last_name)
+                       ILIKE ${likeArg} ESCAPE '\\'
+               ORDER BY p.last_name, p.first_name
                LIMIT ${MAX_OPTIONS}
             `);
             // postgres-js returns an array directly; some drivers wrap in
@@ -1307,11 +1326,17 @@ export const calendarRouter = router({
                   .rows ?? []);
           }
           case 'trainer': {
+            // WR-09: same JOIN-users-for-active + ORDER BY + LIKE-escape
+            // pattern as the player branch.
             const result = await db.execute<{ id: string; label: string }>(sql`
-              SELECT user_id AS id,
-                     (first_name || ' ' || last_name) AS label
-                FROM trainers
-               WHERE (first_name || ' ' || last_name) ILIKE ${likeArg}
+              SELECT t.user_id AS id,
+                     (t.first_name || ' ' || t.last_name) AS label
+                FROM trainers t
+                JOIN users u ON u.id = t.user_id
+               WHERE u.active = true
+                 AND (t.first_name || ' ' || t.last_name)
+                       ILIKE ${likeArg} ESCAPE '\\'
+               ORDER BY t.last_name, t.first_name
                LIMIT ${MAX_OPTIONS}
             `);
             return Array.isArray(result)
@@ -1323,11 +1348,13 @@ export const calendarRouter = router({
             // Phase 3 NO-OP per D-50. Phase 4 adds sparring_partners table.
             return [];
           case 'academy': {
+            // WR-09: academy branch already had active+ORDER BY; only
+            // the LIKE-escape was missing. Same ESCAPE '\\' clause.
             const result = await db.execute<{ id: string; label: string }>(sql`
               SELECT code AS id, canonical_name AS label
                 FROM academy
                WHERE active = true
-                 AND canonical_name ILIKE ${likeArg}
+                 AND canonical_name ILIKE ${likeArg} ESCAPE '\\'
                ORDER BY sort_order
                LIMIT ${MAX_OPTIONS}
             `);
