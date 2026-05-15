@@ -538,8 +538,18 @@ export const calendarRouter = router({
           );
         }
 
-        // D-57: conflict probe before write (unless force:true).
-        if (!input.force && input.participants.length > 0) {
+        // D-57: conflict probe before write. We always run the probe when
+        // there are participants — even with force:true — so the override
+        // audit can record the conflicts being overridden (WR-06: the old
+        // code wrote calendar_event_conflict_override on every force:true
+        // call, even when there were no conflicts to override; this
+        // polluted the audit feed with phantom overrides from bulk imports
+        // or buggy retries).
+        //
+        // overriddenConflicts is captured here and consumed by the
+        // override-audit block after the tx commits.
+        let overriddenConflicts: RedactedConflict[] = [];
+        if (input.participants.length > 0) {
           const conflicts = await detectConflictsForParticipants(
             db,
             ctx.scope,
@@ -549,7 +559,7 @@ export const calendarRouter = router({
             // excludeEventId: this is a new event — nothing to exclude.
             undefined,
           );
-          if (conflicts.length > 0) {
+          if (conflicts.length > 0 && !input.force) {
             // Return the conflicts as a soft error — the UI surfaces
             // ConflictWarning and resubmits with force:true if the user
             // clicks "Toch opslaan".
@@ -559,6 +569,7 @@ export const calendarRouter = router({
               cause: { conflicts, blocked: false },
             });
           }
+          overriddenConflicts = conflicts;
         }
 
         let eventId: string;
@@ -637,10 +648,13 @@ export const calendarRouter = router({
           throw err;
         }
 
-        // If we created with force:true, audit the override BEFORE the
-        // success audit so the audit trail shows the explicit
-        // decision-and-mutation.
-        if (input.force && input.participants.length > 0) {
+        // If we created with force:true AND there were actual conflicts,
+        // audit the override BEFORE the success audit so the audit trail
+        // shows the explicit decision-and-mutation. WR-06: only emit when
+        // conflicts existed — a force:true call with an empty
+        // overriddenConflicts has nothing to override and is silently a
+        // normal create, not a policy decision worth logging.
+        if (input.force && overriddenConflicts.length > 0) {
           await writeAudit(ctx, {
             action: 'calendar_event_conflict_override',
             resourceType: 'calendar_event',
@@ -648,6 +662,23 @@ export const calendarRouter = router({
             newValues: {
               force: true,
               participants: input.participants.map((p) => p.userId),
+              // WR-06: capture the actual conflicts the caller is
+              // overriding so a TD reviewing the audit feed can answer
+              // "which conflicts did the team choose to override".
+              conflicts: overriddenConflicts.map((c) => ({
+                eventId: c.eventId,
+                typeCode: c.typeCode,
+                participant: c.participant,
+                startsAt:
+                  c.startsAt instanceof Date
+                    ? c.startsAt.toISOString()
+                    : c.startsAt,
+                endsAt:
+                  c.endsAt instanceof Date
+                    ? c.endsAt.toISOString()
+                    : c.endsAt,
+                detailMode: c.detailMode,
+              })),
             },
           });
         }
@@ -737,8 +768,11 @@ export const calendarRouter = router({
           );
         }
 
-        // D-57: conflict probe (excludeEventId = this event).
-        if (!input.force && input.participants.length > 0) {
+        // D-57: conflict probe (excludeEventId = this event). Mirrors the
+        // create path — always probe when there are participants so the
+        // override audit (below, WR-06) records actual conflicts only.
+        let overriddenConflicts: RedactedConflict[] = [];
+        if (input.participants.length > 0) {
           const conflicts = await detectConflictsForParticipants(
             db,
             ctx.scope,
@@ -747,13 +781,14 @@ export const calendarRouter = router({
             input.participants.map((p) => p.userId),
             input.eventId,
           );
-          if (conflicts.length > 0) {
+          if (conflicts.length > 0 && !input.force) {
             throw new TRPCError({
               code: 'CONFLICT',
               message: 'errors.calendar.conflictDetected',
               cause: { conflicts, blocked: false },
             });
           }
+          overriddenConflicts = conflicts;
         }
 
         // WR-05: assemble a richer audit snapshot. Capture the pre-state
@@ -956,12 +991,33 @@ export const calendarRouter = router({
           };
         });
 
-        if (input.force && input.participants.length > 0) {
+        // WR-06: only emit the override audit when there were actual
+        // conflicts to override (mirrors event.create). A force:true call
+        // with empty overriddenConflicts is functionally a normal update;
+        // logging it as an override pollutes the audit feed.
+        if (input.force && overriddenConflicts.length > 0) {
           await writeAudit(ctx, {
             action: 'calendar_event_conflict_override',
             resourceType: 'calendar_event',
             resourceId: input.eventId,
-            newValues: { force: true },
+            newValues: {
+              force: true,
+              participants: input.participants.map((p) => p.userId),
+              conflicts: overriddenConflicts.map((c) => ({
+                eventId: c.eventId,
+                typeCode: c.typeCode,
+                participant: c.participant,
+                startsAt:
+                  c.startsAt instanceof Date
+                    ? c.startsAt.toISOString()
+                    : c.startsAt,
+                endsAt:
+                  c.endsAt instanceof Date
+                    ? c.endsAt.toISOString()
+                    : c.endsAt,
+                detailMode: c.detailMode,
+              })),
+            },
           });
         }
         await writeAudit(ctx, {
