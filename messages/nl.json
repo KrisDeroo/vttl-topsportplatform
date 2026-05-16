@@ -246,6 +246,140 @@
       "event_type_stage": "Stage",
       "event_type_eval_conversation": "Evaluatiegesprek",
       "event_type_medical": "Medische afspraak"
+    },
+    "outcomeLevel": {
+      "outcome_winner": "Winnaar",
+      "outcome_finalist": "Finalist",
+      "outcome_last_4": "Halve finale (laatste 4)",
+      "outcome_last_8": "Kwartfinale (laatste 8)",
+      "outcome_last_16": "Laatste 16",
+      "outcome_last_32": "Laatste 32",
+      "outcome_last_64": "Laatste 64",
+      "outcome_last_128": "Laatste 128",
+      "outcome_group_stage": "Groepsfase"
+    },
+    "belgiumClassification": {
+      "A1": "A1",
+      "A2": "A2",
+      "A3": "A3",
+      "A4": "A4",
+      "A5": "A5",
+      "A6": "A6",
+      "A7": "A7",
+      "A8": "A8",
+      "A9": "A9",
+      "A10": "A10",
+      "A11": "A11",
+      "A12": "A12",
+      "A13": "A13",
+      "A14": "A14",
+      "A15": "A15",
+      "A16": "A16",
+      "A17": "A17",
+      "A18": "A18",
+      "A19": "A19",
+      "A20": "A20",
+      "A21": "A21",
+      "A22": "A22",
+      "A23": "A23",
+      "A24": "A24",
+      "A25": "A25",
+      "A26": "A26",
+      "A27": "A27",
+      "A28": "A28",
+      "A29": "A29",
+      "A30": "A30",
+      "A31": "A31",
+      "A32": "A32",
+      "A33": "A33",
+      "A34": "A34",
+      "A35": "A35",
+      "A36": "A36",
+      "A37": "A37",
+      "A38": "A38",
+      "A39": "A39",
+      "A40": "A40",
+      "A41": "A41",
+      "A42": "A42",
+      "A43": "A43",
+      "A44": "A44",
+      "A45": "A45",
+      "A46": "A46",
+      "A47": "A47",
+      "A48": "A48",
+      "A49": "A49",
+      "A50": "A50",
+      "B0": "B0",
+      "B2": "B2",
+      "B4": "B4",
+      "B6": "B6",
+      "C0": "C0",
+      "C2": "C2",
+      "C4": "C4",
+      "C6": "C6",
+      "D0": "D0",
+      "D2": "D2",
+      "D4": "D4",
+      "D6": "D6",
+      "E0": "E0",
+      "E2": "E2",
+      "E4": "E4",
+      "E6": "E6",
+      "NC": "NC"
+    },
+    "rankingType": {
+      "ranking_senior_world": "Senior Wereld (ITTF)",
+      "ranking_youth_world": "Jeugd Wereld (ITTF)",
+      "ranking_senior_european": "Senior Europees (ETTU)",
+      "ranking_youth_european": "Jeugd Europees (ETTU)",
+      "ranking_belgium": "België (KBTTB)"
+    },
+    "trainingType": {
+      "training_type_group": "Groep",
+      "training_type_individual": "Individueel",
+      "training_type_physical": "Fysiek",
+      "training_type_mental": "Mentaal"
+    },
+    "organisation": {
+      "org_private": "Privé",
+      "org_kbttb": "KBTTB",
+      "org_topsportschool": "Topsportschool",
+      "org_academie": "Academie",
+      "org_provinciaal": "Provinciaal",
+      "org_club": "Club"
+    },
+    "tournamentType": {
+      "tournament_wtt": "WTT",
+      "tournament_wtt_star": "WTT Star",
+      "tournament_ettu": "ETTU",
+      "tournament_ejk": "EJK",
+      "tournament_wk": "WK",
+      "tournament_international": "Internationaal",
+      "tournament_belgium": "België"
+    },
+    "tournamentRound": {
+      "round_final": "Finale",
+      "round_semi": "Halve finale",
+      "round_quarter": "Kwartfinale",
+      "round_eighth": "1/8 finale",
+      "round_sixteenth": "1/16 finale",
+      "round_thirty_second": "1/32 finale",
+      "round_sixty_fourth": "1/64 finale",
+      "round_one_twenty_eighth": "1/128 finale",
+      "round_group_stage": "Groepsfase",
+      "round_other": "Andere"
+    },
+    "rrule": {
+      "bydayPreview": "Bv. {days}",
+      "days": {
+        "mo": "Ma",
+        "tu": "Di",
+        "we": "Wo",
+        "th": "Do",
+        "fr": "Vr",
+        "sa": "Za",
+        "su": "Zo"
+      }
     }
   },
   "common": {
@@ -303,7 +437,31 @@
       "typeImmutable": "Het type van een afspraak kan na het aanmaken niet meer worden gewijzigd",
       "medicalPastStart": "Medische afspraken kunnen niet in het verleden worden aangemaakt",
       "participantNotInScope": "Eén of meer geselecteerde deelnemers vallen buiten je bereik",
-      "conflictDetected": "Er bestaat al een afspraak met overlap"
+      "conflictDetected": "Er bestaat al een afspraak met overlap",
+      "rruleBydayRequired": "Kies minstens één weekdag voor de wekelijkse herhaling."
+    },
+    "training": {
+      "scoreWindowExpired": "Het scoren-venster voor deze training is verstreken (14 dagen).",
+      "scoreRange": "De score moet tussen 1 en 10 liggen.",
+      "qualityScoreOutOfRange": "De score valt buiten het toegestane bereik."
+    },
+    "tournament": {
+      "entryWindowExpired": "Het invoer-venster voor dit toernooi is verstreken (14 dagen). Vraag je trainer of TD om het resultaat in te voeren.",
+      "atLeastOneMatchRequired": "Voeg minstens één wedstrijd toe.",
+      "outcomeRequired": "Kies een eindrangschikking.",
+      "setRange": "Sets gewonnen + verloren moet tussen 1 en 7 liggen.",
+      "videoLink": "Videolink moet een geldige URL zijn (max 500 tekens).",
+      "duplicateMatch": "Deze wedstrijd is al ingevoerd."
+    },
+    "ranking": {
+      "unknownType": "Onbekend ranking-type.",
+      "expectedNumeric": "Voor dit ranking-type wordt een numerieke waarde verwacht.",
+      "expectedClassification": "Voor dit ranking-type wordt een classificatiecode verwacht.",
+      "bothValuesPopulated": "Geef ofwel een numerieke waarde, ofwel een classificatie — niet beide.",
+      "valueRequired": "Ranking-waarde is verplicht.",
+      "classificationRequired": "Klassement is verplicht.",
+      "dateRequired": "Datum is verplicht.",
+      "mustBePositive": "Waarde moet positief zijn."
     }
   },
   "admin": {
@@ -437,6 +595,197 @@
         "wrongType": "Alleen JPEG of PNG toegestaan.",
         "multiFile": "Eén foto tegelijk"
       }
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "training": {
+    "score": {
+      "title": "Aanwezigheid en score invoeren",
+      "metadataDate": "Datum: {date}",
+      "metadataTrainer": "Trainer: {name}",
+      "metadataType": "Type: {type}",
+      "metadataOrg": "Organisatie: {org}",
+      "column": {
+        "player": "Speler",
+        "attendance": "Aanwezig",
+        "score": "Score",
+        "feedback": "Feedback"
+      },
+      "attendance": {
+        "present": "Aanwezig",
+        "absent": "Afwezig",
+        "absentMedical": "Afwezig (medische reden)",
+        "pending": "—"
+      },
+      "stars": {
+        "aria": "{n} van 5 sterren",
+        "clear": "Score wissen"
+      },
+      "feedback": {
+        "placeholder": "Optionele feedback voor deze speler...",
+        "charCount": "{n} / 2000"
+      },
+      "save": "Opslaan",
+      "saveSuccess": "Aanwezigheid en scores opgeslagen",
+      "saveError": "Opslaan mislukt — controleer de gegevens en probeer opnieuw"
+    },
+    "teScoren": {
+      "heading": "Te scoren",
+      "column": {
+        "date": "Datum",
+        "trainer": "Trainer",
+        "type": "Type",
+        "progress": "Voortgang"
+      },
+      "progressLabel": "{scored} / {total} spelers gescoord",
+      "scoreNow": "Score nu",
+      "empty": "Alle scores zijn ingevoerd. Goed gedaan."
+    },
+    "chip": {
+      "needsScoringTooltip": "Score nog niet ingevuld"
+    },
+    "eventSheet": {
+      "openScoring": "Open scoring"
+    }
+  },
+  "tournament": {
+    "list": {
+      "title": "Toernooien"
+    },
+    "detail": {
+      "title": "Toernooidetail"
+    },
+    "create": {
+      "title": "Nieuw toernooi aanmaken"
+    },
+    "participants": {
+      "heading": "Deelnemers"
+    },
+    "result": {
+      "title": "Toernooiresultaat invoeren",
+      "section": {
+        "outcome": "Eindrangschikking",
+        "matches": "Wedstrijdresultaten"
+      },
+      "field": {
+        "outcome": "Behaald niveau",
+        "ageCategory": "Leeftijdscategorie (op tornooidatum)"
+      },
+      "addMatch": "+ Wedstrijd toevoegen",
+      "save": "Resultaat opslaan",
+      "overwriteBadge": "Overschrijven (TD)",
+      "backfillBadge": "Achteraf invullen (trainer)"
+    },
+    "matchResults": {
+      "column": {
+        "round": "Ronde",
+        "opponent": "Tegenstander",
+        "opponentRanking": "Ranking opp.",
+        "date": "Datum",
+        "setsWon": "Sets gewonnen",
+        "setsLost": "Sets verloren",
+        "result": "Resultaat",
+        "video": "Videolink"
+      },
+      "won": "Gewonnen",
+      "lost": "Verloren",
+      "draw": "Gelijkspel",
+      "removeRow": {
+        "aria": "Wedstrijd verwijderen"
+      }
+    },
+    "leaderboard": {
+      "heading": "Resultaten van dit toernooi"
+    },
+    "chip": {
+      "needsResultTooltip": "Resultaat nog niet ingevuld"
+    },
+    "eventSheet": {
+      "enterResult": "Voer resultaat in",
+      "viewResult": "Resultaat bekijken"
+    },
+    "pendingWidget": {
+      "heading": "Openstaande toernooiresultaten",
+      "empty": "Geen openstaande toernooiresultaten."
+    }
+  },
+  "ranking": {
+    "title": "Rankings",
+    "types": {
+      "international": {
+        "senior_world": "Senior Wereld",
+        "youth_world": "Jeugd Wereld",
+        "senior_european": "Senior Europees",
+        "youth_european": "Jeugd Europees"
+      },
+      "belgium": "België"
+    },
+    "range": {
+      "1m": "1m",
+      "6m": "6m",
+      "1y": "1j",
+      "2y": "2j",
+      "all": "Alles"
+    },
+    "chart": {
+      "yAxisLabel": "Ranking (lager = beter)",
+      "tooltip": {
+        "source": {
+          "manual": "Manueel",
+          "federationOfficial": "Officieel (federatie)"
+        }
+      }
+    },
+    "empty": {
+      "heading": "Nog geen rankings ingevoerd",
+      "body": "Voeg je eerste ranking toe om je evolutie te volgen.",
+      "cta": "+ Ranking toevoegen"
+    },
+    "belgium": {
+      "empty": {
+        "heading": "Nog geen Belgische classificatie ingevoerd",
+        "body": "Voeg je actuele klassement toe (zoals A12, B4 of NC).",
+        "cta": "+ Klassement toevoegen"
+      }
+    },
+    "entry": {
+      "title": "Ranking toevoegen",
+      "field": {
+        "type": "Type ranking",
+        "date": "Datum",
+        "value": {
+          "international": "Ranking-waarde",
+          "belgium": "Klassement"
+        }
+      },
+      "disclaimer": "Manueel ingevoerd — controleer tegen officiële bron.",
+      "save": "Toevoegen"
+    },
+    "entries": {
+      "heading": "Ingevoerde rankings"
+    }
+  },
+  "nudge": {
+    "trainerScore": {
+      "day0to6": "Je hebt {n} trainingen waarvoor scores ontbreken.",
+      "day7to9": "**Let op:** {n} trainingen wachten al meer dan een week op je scores.",
+      "day10to12": "⚠ **{n} trainingen** — nog **{daysLeft} dagen** om te scoren voordat de deadline verstrijkt."
+    },
+    "playerResult": {
+      "day0to6": "Je hebt {n} toernooien waarvan het resultaat nog niet is ingevoerd.",
+      "day7to9": "**Let op:** {n} toernooien wachten al meer dan een week op resultaat-invoer.",
+      "day10to12": "⚠ Nog **{daysLeft} dagen** om je toernooiresultaten in te voeren — daarna kan alleen de TD of trainer dit nog doen."
+    },
+    "cta": {
+      "scoreNow": "Score nu",
+      "enterResult": "Voer resultaat in",
+      "viewPending": "Bekijken"
+    },
+    "inbox": {
+      "trainerScoreBody": "Je hebt {n} trainingen waarvoor scores ontbreken. Open de scoring nu.",
+      "playerResultBody": "Je hebt {n} toernooien waarvan het resultaat nog niet is ingevoerd. Voer het resultaat in."
     }
   }
 }

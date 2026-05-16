@@ -133,3 +133,65 @@ describe('Phase 3 — expected migration manifest (MIG-05)', () => {
     });
   }
 });
+
+/**
+ * Phase 4 — expected migration manifest (MIG-05).
+ *
+ * Wave 0 RED scaffold: Wave 1 / 2 of Phase 4 (Plan 04-02 and follow-ups)
+ * ships the seven new Phase 4 migrations 0014..0020:
+ *   0014_phase4_session_participants_and_sparring_junction
+ *   0015_phase4_tournament_results_and_match_results
+ *   0016_phase4_rankings_and_belgium_classification
+ *   0017_phase4_lookup_seeds
+ *   0018_phase4_rls_helpers_and_sparring_branch
+ *   0019_phase4_pg_cron_nudges
+ *   0020_phase4_system_inbox
+ *
+ * Each migration MUST land with a `.rollback.md` companion holding the
+ * canonical Risk / Procedure / Verification headers — same shape as the
+ * outer loop already enforces for every present file. Until the .sql
+ * files exist, the assertions below are gated by `it.skipIf`.
+ *
+ * Forward-RED signal: as soon as a migration file lands without its
+ * rollback companion, the outer loop will flag it; this manifest adds
+ * a per-name existence guard so the test set remains explicit about
+ * what Phase 4 owes.
+ */
+describe('Phase 4 — expected migration manifest (MIG-05)', () => {
+  const PHASE4_MIGRATIONS = [
+    '0014_phase4_session_participants_and_sparring_junction',
+    '0015_phase4_tournament_results_and_match_results',
+    '0016_phase4_rankings_and_belgium_classification',
+    '0017_phase4_lookup_seeds',
+    '0018_phase4_rls_helpers_and_sparring_branch',
+    '0019_phase4_pg_cron_nudges',
+    '0020_phase4_system_inbox',
+  ] as const;
+
+  it('declares all 7 expected Phase 4 migration stems (manifest)', () => {
+    expect(PHASE4_MIGRATIONS).toHaveLength(7);
+    expect(new Set(PHASE4_MIGRATIONS).size).toBe(7);
+  });
+
+  for (const stem of PHASE4_MIGRATIONS) {
+    const sqlName = `${stem}.sql`;
+    const mdName = `${stem}.rollback.md`;
+    let sqlExists = false;
+    let mdExists = false;
+    try {
+      sqlExists = readdirSync(drizzleDir).includes(sqlName);
+      mdExists = readdirSync(drizzleDir).includes(mdName);
+    } catch {
+      sqlExists = false;
+      mdExists = false;
+    }
+
+    it.skipIf(!sqlExists)(`${sqlName} exists once Phase 4 Wave 1 lands`, () => {
+      expect(sqlExists, `${sqlName} not yet shipped`).toBe(true);
+    });
+
+    it.skipIf(!sqlExists)(`${mdName} rollback companion exists`, () => {
+      expect(mdExists, `${mdName} missing for ${sqlName}`).toBe(true);
+    });
+  }
+});

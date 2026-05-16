@@ -97,7 +97,7 @@
 - [ ] **TOURN-01**: Tournament record: naam, startdatum, stad, land, leeftijdscategorie, tornooitype (WTT/WTT Star/ETTU/EJK/WK/Internationaal/Belgium)
 - [ ] **TOURN-02**: Only technical director can create and edit tournaments
 - [ ] **TOURN-03**: Tournament final ranking per player (level 1 result): winnaar/finalist/laatste 4/laatste 8/laatste 16/laatste 32/laatste 64/laatste 128/groepsfase
-- [ ] **TOURN-04**: Per-match result (level 2): ronde (finale/.../groepsfase), tegenstander (vrij tekst), ranking (numeriek), datum, score, gewonnen/verloren (toggle), optionele video link
+- [ ] **TOURN-04**: Per-match result (level 2): ronde (finale/.../groepsfase), tegenstander (vrij tekst), ranking (numeriek), datum, score, gewonnen/verloren (toggle), optionele video link **[PARTIALLY-SUPERSEDED-BY D-81 — see .planning/phases/04-kerndomein/04-CONTEXT.md §B. Set tally schema: sets_won/sets_lost smallint 0..4; gewonnen/verloren derived at query time from sets_won > sets_lost; no boolean column.]**
 - [ ] **TOURN-05**: Tournament results (both levels) entered by the player, by trainers in the player's academy, or by TD — `entered_by` field tracks attribution; ownership enforced at API layer (see DOM-RESULT-02)
 - [ ] **TOURN-06**: Historical results browsable without pagination forcing export; both levels separately queryable
 
@@ -264,10 +264,10 @@
 
 ### DOM — Domain-Specific Workflows (Refinements)
 
-- [ ] **DOM-RESULT-01**: Player can edit own tournament results within 48h of entry; later edits require TD approval
+- [ ] **DOM-RESULT-01**: Player can edit own tournament results within 48h of entry; later edits require TD approval **[SUPERSEDED-BY D-74 — see .planning/phases/04-kerndomein/04-CONTEXT.md §B. No 48h sub-clock; single 14d player window per D-71. Coverage carried by D-71+D-73+D-74.]**
 - [ ] **DOM-RESULT-02**: Trainers in player's academy and TD can also enter results on player's behalf (`entered_by` field tracks attribution) — relaxes TOURN-05
-- [ ] **DOM-RESULT-03**: Edit history table records every change to a result: `(result_id, edited_by, old_values, new_values, edit_reason, timestamp)`
-- [ ] **DOM-RESULT-04**: Result lifecycle states: `draft → confirmed → published`; only `confirmed` and `published` results count in ambition vs. actuals comparison
+- [ ] **DOM-RESULT-03**: Edit history table records every change to a result: `(result_id, edited_by, old_values, new_values, edit_reason, timestamp)` **[SUPERSEDED-BY D-76 — see .planning/phases/04-kerndomein/04-CONTEXT.md §B. No dedicated edit-history table; GDPR-04 audit_log JSONB snapshot is the forensic recovery path.]**
+- [ ] **DOM-RESULT-04**: Result lifecycle states: `draft → confirmed → published`; only `confirmed` and `published` results count in ambition vs. actuals comparison **[SUPERSEDED-BY D-77 — see .planning/phases/04-kerndomein/04-CONTEXT.md §B. No status lifecycle; every saved row counts in Phase 5 ambition comparison.]**
 - [ ] **DOM-RANK-01**: `ranking_entries` table includes `source` column: `'manual'` | `'federation_official'` (v1 = manual only; federation sync deferred to v2)
 - [ ] **DOM-CAT-01**: `age_category_history` table tracks category changes per player with `effective_from` and `effective_to` dates
 - [ ] **DOM-CAT-02**: Tournament category validation uses player's category as of the tournament's start date, not current category
