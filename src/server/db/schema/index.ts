@@ -35,4 +35,4 @@ export * from './calendar';
 export * from './training';   // Phase 4 — Plan 04-02
 export * from './tournament'; // Phase 4 — Plan 04-02
 export * from './ranking';    // Phase 4 — Plan 04-02
-// inbox re-export added by Plan 04-02 Task 2 (alongside the 0020 migration + inbox.ts barrel).
+export * from './inbox';      // Phase 4 — Plan 04-02 (minimal stub; Phase 6 absorbs)
