@@ -99,6 +99,55 @@
       "when": 1778849600000,
       "tag": "0013_phase3_calendar_function_fixes",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1778933000000,
+      "tag": "0014_phase4_session_participants_and_sparring_junction",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1778933100000,
+      "tag": "0015_phase4_tournament_results_and_match_results",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1778933200000,
+      "tag": "0016_phase4_rankings_and_belgium_classification",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1778933300000,
+      "tag": "0017_phase4_lookup_seeds",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1778933400000,
+      "tag": "0018_phase4_rls_helpers_and_sparring_branch",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1778933500000,
+      "tag": "0019_phase4_pg_cron_nudges",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1778933600000,
+      "tag": "0020_phase4_system_inbox",
+      "breakpoints": true
     }
   ]
 }
