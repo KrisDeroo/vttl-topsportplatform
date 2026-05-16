@@ -246,6 +246,140 @@
       "event_type_stage": "Stage",
       "event_type_eval_conversation": "Entretien d'évaluation",
       "event_type_medical": "Rendez-vous médical"
+    },
+    "outcomeLevel": {
+      "outcome_winner": "Vainqueur",
+      "outcome_finalist": "Finaliste",
+      "outcome_last_4": "Demi-finale (4 derniers)",
+      "outcome_last_8": "Quart de finale (8 derniers)",
+      "outcome_last_16": "16es de finale",
+      "outcome_last_32": "32es de finale",
+      "outcome_last_64": "64es de finale",
+      "outcome_last_128": "128es de finale",
+      "outcome_group_stage": "Phase de groupes"
+    },
+    "belgiumClassification": {
+      "A1": "A1",
+      "A2": "A2",
+      "A3": "A3",
+      "A4": "A4",
+      "A5": "A5",
+      "A6": "A6",
+      "A7": "A7",
+      "A8": "A8",
+      "A9": "A9",
+      "A10": "A10",
+      "A11": "A11",
+      "A12": "A12",
+      "A13": "A13",
+      "A14": "A14",
+      "A15": "A15",
+      "A16": "A16",
+      "A17": "A17",
+      "A18": "A18",
+      "A19": "A19",
+      "A20": "A20",
+      "A21": "A21",
+      "A22": "A22",
+      "A23": "A23",
+      "A24": "A24",
+      "A25": "A25",
+      "A26": "A26",
+      "A27": "A27",
+      "A28": "A28",
+      "A29": "A29",
+      "A30": "A30",
+      "A31": "A31",
+      "A32": "A32",
+      "A33": "A33",
+      "A34": "A34",
+      "A35": "A35",
+      "A36": "A36",
+      "A37": "A37",
+      "A38": "A38",
+      "A39": "A39",
+      "A40": "A40",
+      "A41": "A41",
+      "A42": "A42",
+      "A43": "A43",
+      "A44": "A44",
+      "A45": "A45",
+      "A46": "A46",
+      "A47": "A47",
+      "A48": "A48",
+      "A49": "A49",
+      "A50": "A50",
+      "B0": "B0",
+      "B2": "B2",
+      "B4": "B4",
+      "B6": "B6",
+      "C0": "C0",
+      "C2": "C2",
+      "C4": "C4",
+      "C6": "C6",
+      "D0": "D0",
+      "D2": "D2",
+      "D4": "D4",
+      "D6": "D6",
+      "E0": "E0",
+      "E2": "E2",
+      "E4": "E4",
+      "E6": "E6",
+      "NC": "NC"
+    },
+    "rankingType": {
+      "ranking_senior_world": "Senior Monde (ITTF)",
+      "ranking_youth_world": "Jeunes Monde (ITTF)",
+      "ranking_senior_european": "Senior Europe (ETTU)",
+      "ranking_youth_european": "Jeunes Europe (ETTU)",
+      "ranking_belgium": "Belgique (KBTTB)"
+    },
+    "trainingType": {
+      "training_type_group": "Groupe",
+      "training_type_individual": "Individuel",
+      "training_type_physical": "Physique",
+      "training_type_mental": "Mental"
+    },
+    "organisation": {
+      "org_private": "Privé",
+      "org_kbttb": "KBTTB",
+      "org_topsportschool": "Topsportschool",
+      "org_academie": "Académie",
+      "org_provinciaal": "Provincial",
+      "org_club": "Club"
+    },
+    "tournamentType": {
+      "tournament_wtt": "WTT",
+      "tournament_wtt_star": "WTT Star",
+      "tournament_ettu": "ETTU",
+      "tournament_ejk": "EJK",
+      "tournament_wk": "WK",
+      "tournament_international": "International",
+      "tournament_belgium": "Belgique"
+    },
+    "tournamentRound": {
+      "round_final": "Finale",
+      "round_semi": "Demi-finale",
+      "round_quarter": "Quart de finale",
+      "round_eighth": "8es de finale",
+      "round_sixteenth": "16es de finale",
+      "round_thirty_second": "32es de finale",
+      "round_sixty_fourth": "64es de finale",
+      "round_one_twenty_eighth": "128es de finale",
+      "round_group_stage": "Phase de groupes",
+      "round_other": "Autre"
+    },
+    "rrule": {
+      "bydayPreview": "Ex. {days}",
+      "days": {
+        "mo": "Lu",
+        "tu": "Ma",
+        "we": "Me",
+        "th": "Je",
+        "fr": "Ve",
+        "sa": "Sa",
+        "su": "Di"
+      }
     }
   },
   "common": {
@@ -303,7 +437,31 @@
       "typeImmutable": "Le type d'un rendez-vous ne peut pas être modifié après la création",
       "medicalPastStart": "Les rendez-vous médicaux ne peuvent pas être créés dans le passé",
       "participantNotInScope": "Un ou plusieurs participants sélectionnés sont hors de votre périmètre",
-      "conflictDetected": "Un rendez-vous se chevauche déjà"
+      "conflictDetected": "Un rendez-vous se chevauche déjà",
+      "rruleBydayRequired": "Sélectionnez au moins un jour de la semaine pour la récurrence hebdomadaire."
+    },
+    "training": {
+      "scoreWindowExpired": "La fenêtre de saisie pour cet entraînement est expirée (14 jours).",
+      "scoreRange": "Le score doit être compris entre 1 et 10.",
+      "qualityScoreOutOfRange": "Le score est en dehors de la plage autorisée."
+    },
+    "tournament": {
+      "entryWindowExpired": "La fenêtre de saisie pour ce tournoi est expirée (14 jours). Demandez à votre entraîneur ou au DT de saisir le résultat.",
+      "atLeastOneMatchRequired": "Ajoutez au moins un match.",
+      "outcomeRequired": "Sélectionnez un classement final.",
+      "setRange": "La somme des sets gagnés et perdus doit être entre 1 et 7.",
+      "videoLink": "Le lien vidéo doit être une URL valide (max 500 caractères).",
+      "duplicateMatch": "Ce match est déjà saisi."
+    },
+    "ranking": {
+      "unknownType": "Type de classement inconnu.",
+      "expectedNumeric": "Une valeur numérique est attendue pour ce type de classement.",
+      "expectedClassification": "Un code de classification est attendu pour ce type de classement.",
+      "bothValuesPopulated": "Indiquez soit une valeur numérique, soit une classification — pas les deux.",
+      "valueRequired": "La valeur de classement est obligatoire.",
+      "classificationRequired": "La classification est obligatoire.",
+      "dateRequired": "La date est obligatoire.",
+      "mustBePositive": "La valeur doit être positive."
     }
   },
   "admin": {
@@ -437,6 +595,197 @@
         "wrongType": "Seuls les fichiers JPEG ou PNG sont autorisés.",
         "multiFile": "Une seule photo à la fois"
       }
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord"
+  },
+  "training": {
+    "score": {
+      "title": "Saisir présence et score",
+      "metadataDate": "Date : {date}",
+      "metadataTrainer": "Entraîneur : {name}",
+      "metadataType": "Type : {type}",
+      "metadataOrg": "Organisation : {org}",
+      "column": {
+        "player": "Joueur",
+        "attendance": "Présent",
+        "score": "Score",
+        "feedback": "Retour"
+      },
+      "attendance": {
+        "present": "Présent",
+        "absent": "Absent",
+        "absentMedical": "Absent (raison médicale)",
+        "pending": "—"
+      },
+      "stars": {
+        "aria": "{n} sur 5 étoiles",
+        "clear": "Effacer le score"
+      },
+      "feedback": {
+        "placeholder": "Retour facultatif pour ce joueur...",
+        "charCount": "{n} / 2000"
+      },
+      "save": "Enregistrer",
+      "saveSuccess": "Présence et scores enregistrés",
+      "saveError": "Échec de l'enregistrement — vérifiez les données et réessayez"
+    },
+    "teScoren": {
+      "heading": "À saisir",
+      "column": {
+        "date": "Date",
+        "trainer": "Entraîneur",
+        "type": "Type",
+        "progress": "Progression"
+      },
+      "progressLabel": "{scored} / {total} joueurs notés",
+      "scoreNow": "Saisir",
+      "empty": "Tous les scores sont saisis. Bien joué."
+    },
+    "chip": {
+      "needsScoringTooltip": "Score non encore saisi"
+    },
+    "eventSheet": {
+      "openScoring": "Ouvrir la saisie"
+    }
+  },
+  "tournament": {
+    "list": {
+      "title": "Tournois"
+    },
+    "detail": {
+      "title": "Détail du tournoi"
+    },
+    "create": {
+      "title": "Créer un nouveau tournoi"
+    },
+    "participants": {
+      "heading": "Participants"
+    },
+    "result": {
+      "title": "Saisir le résultat du tournoi",
+      "section": {
+        "outcome": "Classement final",
+        "matches": "Résultats des matchs"
+      },
+      "field": {
+        "outcome": "Niveau atteint",
+        "ageCategory": "Catégorie d'âge (à la date du tournoi)"
+      },
+      "addMatch": "+ Ajouter un match",
+      "save": "Enregistrer le résultat",
+      "overwriteBadge": "Écraser (DT)",
+      "backfillBadge": "Saisie a posteriori (entraîneur)"
+    },
+    "matchResults": {
+      "column": {
+        "round": "Tour",
+        "opponent": "Adversaire",
+        "opponentRanking": "Classement adv.",
+        "date": "Date",
+        "setsWon": "Sets gagnés",
+        "setsLost": "Sets perdus",
+        "result": "Résultat",
+        "video": "Lien vidéo"
+      },
+      "won": "Gagné",
+      "lost": "Perdu",
+      "draw": "Égalité",
+      "removeRow": {
+        "aria": "Supprimer le match"
+      }
+    },
+    "leaderboard": {
+      "heading": "Résultats de ce tournoi"
+    },
+    "chip": {
+      "needsResultTooltip": "Résultat non encore saisi"
+    },
+    "eventSheet": {
+      "enterResult": "Saisir le résultat",
+      "viewResult": "Voir le résultat"
+    },
+    "pendingWidget": {
+      "heading": "Résultats de tournoi en attente",
+      "empty": "Aucun résultat de tournoi en attente."
+    }
+  },
+  "ranking": {
+    "title": "Classements",
+    "types": {
+      "international": {
+        "senior_world": "Senior Monde",
+        "youth_world": "Jeunes Monde",
+        "senior_european": "Senior Europe",
+        "youth_european": "Jeunes Europe"
+      },
+      "belgium": "Belgique"
+    },
+    "range": {
+      "1m": "1m",
+      "6m": "6m",
+      "1y": "1a",
+      "2y": "2a",
+      "all": "Tout"
+    },
+    "chart": {
+      "yAxisLabel": "Classement (plus bas = meilleur)",
+      "tooltip": {
+        "source": {
+          "manual": "Manuel",
+          "federationOfficial": "Officiel (fédération)"
+        }
+      }
+    },
+    "empty": {
+      "heading": "Aucun classement saisi",
+      "body": "Ajoutez votre premier classement pour suivre votre évolution.",
+      "cta": "+ Ajouter un classement"
+    },
+    "belgium": {
+      "empty": {
+        "heading": "Aucune classification belge saisie",
+        "body": "Ajoutez votre classification actuelle (comme A12, B4 ou NC).",
+        "cta": "+ Ajouter une classification"
+      }
+    },
+    "entry": {
+      "title": "Ajouter un classement",
+      "field": {
+        "type": "Type de classement",
+        "date": "Date",
+        "value": {
+          "international": "Valeur de classement",
+          "belgium": "Classification"
+        }
+      },
+      "disclaimer": "Saisi manuellement — à vérifier auprès de la source officielle.",
+      "save": "Ajouter"
+    },
+    "entries": {
+      "heading": "Classements saisis"
+    }
+  },
+  "nudge": {
+    "trainerScore": {
+      "day0to6": "Vous avez {n} entraînements sans scores.",
+      "day7to9": "**Attention :** {n} entraînements attendent vos scores depuis plus d'une semaine.",
+      "day10to12": "⚠ **{n} entraînements** — plus que **{daysLeft} jours** pour saisir les scores avant l'expiration."
+    },
+    "playerResult": {
+      "day0to6": "Vous avez {n} tournois dont les résultats n'ont pas été saisis.",
+      "day7to9": "**Attention :** {n} tournois attendent la saisie des résultats depuis plus d'une semaine.",
+      "day10to12": "⚠ Plus que **{daysLeft} jours** pour saisir vos résultats — ensuite, seul le DT ou l'entraîneur pourra le faire."
+    },
+    "cta": {
+      "scoreNow": "Saisir les scores",
+      "enterResult": "Saisir le résultat",
+      "viewPending": "Voir"
+    },
+    "inbox": {
+      "trainerScoreBody": "Vous avez {n} entraînements sans scores. Ouvrez la saisie dès maintenant.",
+      "playerResultBody": "Vous avez {n} tournois dont les résultats ne sont pas saisis. Saisissez le résultat."
     }
   }
 }
