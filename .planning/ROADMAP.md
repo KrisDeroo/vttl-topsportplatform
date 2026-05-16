@@ -384,7 +384,7 @@ Ja — drie aparte formulieren + lijst-UI's + één lijndiagram.
 
 Plans:
 **Wave 0**
-- [ ] 04-01-PLAN.md — Wave 0 infrastructure: REQUIREMENTS.md supersedes (D-74/D-76/D-77/D-81); ~30 RED test skeletons from 04-VALIDATION.md; i18n keyspaces placeholder-seeded across nl/en/fr; tests/unit/i18n-catalog-completeness.test.ts + migration-format extended for 0014..0020; tests/fixtures/phase4-seed.ts thin stub
+- [x] 04-01-PLAN.md — Wave 0 infrastructure: REQUIREMENTS.md supersedes (D-74/D-76/D-77/D-81); ~30 RED test skeletons from 04-VALIDATION.md; i18n keyspaces placeholder-seeded across nl/en/fr; tests/unit/i18n-catalog-completeness.test.ts + migration-format extended for 0014..0020; tests/fixtures/phase4-seed.ts thin stub
 
 **Wave 1** *(blocked on Wave 0)*
 - [ ] 04-02-PLAN.md — Schema layer: 7 hand-authored migrations (0014 session_participants with D-82 PK + session_sparring_partners / 0015 tournament_results + match_results with VALID-07 unique + D-81 set-tally CHECK / 0016 ranking_entries split-column XOR + belgium_classification lookup + ALTER ranking_type ADD value_shape / 0017 lookup seeds (9+5+4+6+7+10+67 rows) / 0018 4 SECURITY DEFINER fns + extends Phase 3 calendar_events_visible_to with Branch 6 sparring + per-action policies / 0019 pg_cron DST-safe dual schedule + 2 nudge fns / 0020 system_inbox minimal stub) + 5 Drizzle barrels + [BLOCKING] `pnpm db:push`
