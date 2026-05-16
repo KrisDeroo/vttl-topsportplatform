@@ -378,6 +378,30 @@ Ja — trainingen, toernooien en rankings kunnen parallel door drie taakverdelin
 ### UI?
 Ja — drie aparte formulieren + lijst-UI's + één lijndiagram.
 
+### Plans
+
+**Plans:** 9 plans in 5 waves (Wave 0: REQUIREMENTS supersedes + 30 RED tests + i18n keys; Wave 1: 7 hand-authored migrations 0014..0020 + Drizzle barrels + [BLOCKING] `pnpm db:push`; Wave 2: 4 parallel router plans — training / tournament / ranking / rrule-polish + sparring; Wave 3: minimal `system_inbox` tRPC + frontend UI surface — 30+ components + 5 routes + recharts + globals.css tokens; Wave 4: 23 integration tests flip RED→GREEN + RBAC matrix + audit coverage + e2e + human UAT).
+
+Plans:
+**Wave 0**
+- [ ] 04-01-PLAN.md — Wave 0 infrastructure: REQUIREMENTS.md supersedes (D-74/D-76/D-77/D-81); ~30 RED test skeletons from 04-VALIDATION.md; i18n keyspaces placeholder-seeded across nl/en/fr; tests/unit/i18n-catalog-completeness.test.ts + migration-format extended for 0014..0020; tests/fixtures/phase4-seed.ts thin stub
+
+**Wave 1** *(blocked on Wave 0)*
+- [ ] 04-02-PLAN.md — Schema layer: 7 hand-authored migrations (0014 session_participants with D-82 PK + session_sparring_partners / 0015 tournament_results + match_results with VALID-07 unique + D-81 set-tally CHECK / 0016 ranking_entries split-column XOR + belgium_classification lookup + ALTER ranking_type ADD value_shape / 0017 lookup seeds (9+5+4+6+7+10+67 rows) / 0018 4 SECURITY DEFINER fns + extends Phase 3 calendar_events_visible_to with Branch 6 sparring + per-action policies / 0019 pg_cron DST-safe dual schedule + 2 nudge fns / 0020 system_inbox minimal stub) + 5 Drizzle barrels + [BLOCKING] `pnpm db:push`
+
+**Wave 2** *(blocked on Wave 1 — 4 plans run in parallel; non-overlapping files)*
+- [ ] 04-03-PLAN.md — Trainings module: training router (markAttendanceAndScore atomic upsert with D-64 14d wall + audit-on-denied + DOM-MED-CONFLICT-02 pre-flag / listPending D-66+D-68 / getSession form preload); idempotencyMiddleware (Pitfall 5 fix); trainerOrTdProcedure preset; src/lib/quality-score.ts 5-star↔1..10 mapping
+- [ ] 04-04-PLAN.md — Tournaments module: tournament router 8 procedures (create/list/get/addParticipant/removeParticipant TD-only D-79 + enterResult atomic {outcome, matches[]} D-69+D-80 with 14d asymmetric wall D-71+D-73+D-75 + DOM-CAT-02 snapshot + listResults D-78 + listPendingForPlayer); strict Zod with discriminated union per match row
+- [ ] 04-05-PLAN.md — Rankings module: ranking router 4 procedures (addEntry with discriminated-union value + value_shape cross-check D-86 + idempotency / getHistory / getCurrentByType per RANK-05 / listEntries); player+TD only RBAC D-89
+- [ ] 04-06-PLAN.md — RRULE polish + sparring fill: src/lib/rrule.ts splitRRule helper (D-84 math); calendar.event.editRecurring 3-scope dispatcher; calendar.event.attachSparringPartners with app-layer role check (Phase 3 sparring placeholder fully closed); BYDAY+FREQ=WEEKLY schema D-85
+- [ ] 04-07-PLAN.md — Nudging infrastructure: inbox router 3 procedures (listUnread/listAll/markRead); pg_cron test-mode invocation verifying Brussels-hour guard and system_inbox materialization
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 04-08-PLAN.md — Frontend UI: install shadcn table + progress + recharts 3.8.1; 18 design tokens (Belgium tier + state-overlay light+dark); 5 new routes (/dashboard, /trainings/[eventId]/score, /tournaments, /tournaments/[eventId], /tournaments/[eventId]/result, /players/[playerId]/rankings); 30+ components (BulkAttendanceScoreForm with useFieldArray + StarRatingInput ARIA + AttendanceToggle DOM-MED-CONFLICT-02 default / TournamentResultEntryForm atomic single-Save / RankingLineChart recharts inverted Y + BelgiumTimelineStrip pure CSS / NudgeBannerStack non-dismissible + escalating color / RruleScopePickerDialog + MultiDayPicker D-85); Phase 3 EventChip + EventDetailSheet + RruleEditor extensions; canonical nl/en/fr copy from 04-UI-SPEC
+
+**Wave 4** *(blocked on Wave 3)*
+- [ ] 04-09-PLAN.md — Verification: complete tests/fixtures/phase4-seed.ts; flip ALL 23 RED integration tests to GREEN (rbac-matrix-phase4 7×5×3 / 14d-walls boundaries / tournament-atomic-entry happy + rollback / rrule-edit-scopes 3×2 + D-83 immutable / rls-academy-wide-result-visibility 5 branches / phase4-audit 15 codes / pg-cron-nudge-jobs test-mode / etc.); tests/e2e/rankings-tab.spec.ts Playwright (recharts inverted Y + Belgium tier-band); 04-HUMAN-UAT.md (8 manual verifications + multilingual sanity + e2e walkthrough); 04-VALIDATION.md approved
+
 ---
 
 ## Phase 5: Uitgebreid domein
