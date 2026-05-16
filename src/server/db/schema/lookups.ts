@@ -24,7 +24,8 @@
  *
  * Reference: .planning/phases/01-fundament/01-RESEARCH.md §Lookup table convention (lines 528-580)
  */
-import { pgTable, text, integer, boolean } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, check, index, integer, pgTable, text } from 'drizzle-orm/pg-core';
 
 export const status = pgTable('status', {
   code: text('code').primaryKey(), // 'status_a' | 'status_b' | 'status_c'
@@ -45,11 +46,30 @@ export const tournamentType = pgTable('tournament_type', {
   active: boolean('active').notNull().default(true),
 });
 
+/**
+ * ranking_type — Phase 1 base; Phase 4 ADDs `value_shape` per D-86.
+ *
+ * Phase 4's split-column schema (RANK-01 amended) needs a per-type
+ * declaration of which value column applies on `ranking_entries`:
+ *   - `value_shape = 'numeric'`         → `ranking_entries.value_numeric`
+ *   - `value_shape = 'classification'`  → `ranking_entries.value_classification_code`
+ *
+ * Defense in depth: the DB-level CHECK on `ranking_entries_value_xor`
+ * guarantees exactly one of the two columns is populated. The API layer
+ * (Plan 04-05) reads `value_shape` to decide which Zod branch to apply.
+ *
+ * 0016 migration adds the column with `DEFAULT 'numeric'`; 0017 seed
+ * UPDATEs `ranking_belgium` to `'classification'` and drops the DEFAULT
+ * so future inserts must specify explicitly.
+ */
 export const rankingType = pgTable('ranking_type', {
   code: text('code').primaryKey(), // 'ranking_senior_world' | 'ranking_belgium' | ...
   direction: text('direction').notNull(), // 'asc_is_better' | 'desc_is_better' (DOM-3, RISK-02)
   sortOrder: integer('sort_order').notNull(),
   active: boolean('active').notNull().default(true),
+  // Phase 4 D-86 — DB-level CHECK enforced in 0016:
+  //   value_shape IN ('numeric', 'classification')
+  valueShape: text('value_shape').notNull(),
 });
 
 export const trainingType = pgTable('training_type', {
@@ -122,3 +142,57 @@ export const eventType = pgTable('event_type', {
   sortOrder: integer('sort_order').notNull(),
   active: boolean('active').notNull().default(true),
 });
+
+// ─── Phase 4 additions ──────────────────────────────────────────────────
+
+/**
+ * tournament_round — 10 codes per TOURN-04 (round_final … round_other).
+ *
+ * Seeded by `0017_phase4_lookup_seeds.sql`. Used by `match_results.round_code`
+ * (REFERENCES tournament_round(code) ON DELETE restrict). Labels live in
+ * messages/{nl,en,fr}.json under `lookup.tournamentRound.*` (I18N-05).
+ *
+ * sort_order presents rounds in elimination order (final first, then semi,
+ * etc.) for UI dropdowns; `round_group_stage` (9) and `round_other` (10)
+ * end the list because they're non-elimination edge cases.
+ */
+export const tournamentRound = pgTable('tournament_round', {
+  code: text('code').primaryKey(), // 'round_final' | 'round_semi' | ... | 'round_other'
+  sortOrder: integer('sort_order').notNull(),
+  active: boolean('active').notNull().default(true),
+});
+
+/**
+ * belgium_classification — KBTTB hierarchical tier system (D-86).
+ *
+ * 67 codes seeded by `0017_phase4_lookup_seeds.sql`: A1..A50 (50 A-tier
+ * sub-ranks), B0/B2/B4/B6, C0/C2/C4/C6, D0/D2/D4/D6, E0/E2/E4/E6, NC.
+ *
+ * Global `sort_order` 1..67 — single ordering across tiers (per Pitfall 8):
+ *   A1=1, A2=2, ..., A50=50, B0=51, B2=52, ..., NC=67.
+ * `tier` is a stable text grouping for UI/chart rendering (band colors per
+ * tier in the Belgium timeline strip widget per D-87) — CHECK constraint
+ * limits it to A/B/C/D/E/NC.
+ *
+ * `active=false` retires a code without breaking historical FK rows in
+ * ranking_entries.value_classification_code (FK is ON DELETE restrict).
+ *
+ * Labels rendered as identity in i18n (A12 → "A12" in all 3 locales —
+ * codes are federation proper nouns per I18N-06).
+ */
+export const belgiumClassification = pgTable(
+  'belgium_classification',
+  {
+    code: text('code').primaryKey(), // 'A1' .. 'A50' | 'B0','B2','B4','B6' | ... | 'NC'
+    sortOrder: integer('sort_order').notNull(),
+    tier: text('tier').notNull(), // 'A' | 'B' | 'C' | 'D' | 'E' | 'NC'
+    active: boolean('active').notNull().default(true),
+  },
+  (t) => [
+    check(
+      'belgium_classification_tier_enum',
+      sql`${t.tier} IN ('A','B','C','D','E','NC')`,
+    ),
+    index('idx_belgium_classification_tier_sort').on(t.tier, t.sortOrder),
+  ],
+);

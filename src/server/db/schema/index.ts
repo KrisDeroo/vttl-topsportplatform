@@ -32,3 +32,7 @@ export * from './files';
 export * from './players';
 export * from './trainers';
 export * from './calendar';
+export * from './training';   // Phase 4 — Plan 04-02
+export * from './tournament'; // Phase 4 — Plan 04-02
+export * from './ranking';    // Phase 4 — Plan 04-02
+export * from './inbox';      // Phase 4 — Plan 04-02 (minimal stub; Phase 6 absorbs)
