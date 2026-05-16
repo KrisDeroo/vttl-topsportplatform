@@ -49,8 +49,8 @@
  *            .planning/phases/03-kalender/03-RESEARCH.md §Pattern 3
  */
 import { TRPCError } from '@trpc/server';
-import { addYears } from 'date-fns';
-import { RRule, RRuleSet, rrulestr } from 'rrule';
+import { addYears, subDays } from 'date-fns';
+import { Frequency, RRule, RRuleSet, rrulestr, Weekday } from 'rrule';
 
 const MAX_HORIZON_YEARS = 2; // D-55
 
@@ -437,4 +437,266 @@ export function expandRrule(
       descriptionOverride: ex?.overrideDescription ?? null,
     };
   });
+}
+
+// ─── Phase 4 — Plan 04-06: splitRRule + serializeRrule (D-84 + D-85) ─────
+
+/**
+ * Result of splitting an RRULE at a "Deze en toekomstige" boundary.
+ *
+ * Per D-84: the day OF `splitDate` belongs to the NEW event (because the
+ * user clicked "edit this and future" on that occurrence). The old event's
+ * series effectively ends on the day BEFORE splitDate.
+ *
+ * Fields:
+ *  - oldRruleString: the original RRULE with its UNTIL truncated to
+ *    splitDate - 1 day (Brussels-anchored). DTSTART stays on the old
+ *    calendar_events.starts_at (Anti-Pattern 1: never embed DTSTART:).
+ *  - newRruleString: a continuation RRULE that the caller stores on the
+ *    NEW calendar_events row. UNTIL/COUNT are stripped here; the caller
+ *    is expected to invoke `ensureHorizon(...)` to inject UNTIL = +2y per
+ *    D-55, OR to set its own UNTIL explicitly via serializeRrule.
+ *  - newDtstart: the UTC instant that should be written to the new row's
+ *    `starts_at` column (= the original splitDate value passed in).
+ */
+export interface RruleSplitResult {
+  oldRruleString: string;
+  newRruleString: string;
+  newDtstart: Date;
+}
+
+/**
+ * Split an RRULE at `splitDate` (D-84 "Deze en toekomstige").
+ *
+ * The day OF splitDate BELONGS TO THE NEW EVENT — user clicked "edit this
+ * and future" on the splitDate occurrence. The old event's last occurrence
+ * is the day BEFORE splitDate.
+ *
+ * Edge cases handled:
+ *   - Old RRULE has UNTIL > splitDate: truncated to splitDate - 1 day.
+ *     The new RRULE inherits no UNTIL/COUNT — caller decides (ensureHorizon
+ *     injects UNTIL = +2y if neither is present, defending against D-55).
+ *   - Old RRULE has COUNT: converted to UNTIL = splitDate - 1 day. COUNT is
+ *     discarded (subtracting "occurrences before split" is fragile against
+ *     off-by-one — UNTIL is the safer semantic).
+ *   - Old RRULE has BYDAY (D-85): preserved on BOTH halves (the weekday
+ *     pattern is unchanged unless the caller edits it explicitly via
+ *     serializeRrule when building the new rule).
+ *   - DST boundary: dates are Brussels-anchored via subDays (date-fns is
+ *     wall-clock safe; the result is a UTC instant 24h before splitDate).
+ *
+ * The caller is responsible for asserting that `splitDate` falls on a real
+ * occurrence of the old RRULE (validated in editRecurring handler).
+ *
+ * @param oldRruleString  RRULE string stored on the existing calendar_events row.
+ * @param splitDate       UTC instant of the first occurrence that should
+ *                        live on the new event. Day-precision is enough;
+ *                        time-of-day comes from the new event's DTSTART.
+ * @param oldDtstart      DTSTART of the existing series — supplies the
+ *                        anchor for parseRrule's RFC 5545 resolution.
+ * @returns               { oldRruleString (truncated), newRruleString
+ *                          (continuation, no horizon), newDtstart (= splitDate) }.
+ */
+export function splitRRule(
+  oldRruleString: string,
+  splitDate: Date,
+  oldDtstart: Date,
+): RruleSplitResult {
+  const rule = parseRrule(oldRruleString, oldDtstart);
+  const opts = { ...rule.origOptions };
+
+  // 1. Truncate the old series. UNTIL = splitDate - 1 day. COUNT is
+  //    discarded (semantics swap to UNTIL — see edge-case comment).
+  if (opts.count) {
+    delete opts.count;
+  }
+  const oneDayBefore = subDays(splitDate, 1);
+  opts.until = oneDayBefore;
+
+  // Strip DTSTART from the spread — the source of truth is
+  // calendar_events.starts_at (Anti-Pattern 1: never embed DTSTART: in
+  // the stored rrule string). `exactOptionalPropertyTypes` requires
+  // omission rather than `undefined`.
+  const { dtstart: _stripDtstartOld, ...oldRest } = opts;
+  void _stripDtstartOld;
+  const oldRruleNew = RRule.optionsToString(oldRest);
+
+  // 2. Build the continuation rule. Clone origOptions so BYDAY (D-85),
+  //    FREQ, INTERVAL, BYMONTH, etc. are preserved verbatim. Drop UNTIL
+  //    AND COUNT — the new event starts fresh; caller invokes
+  //    ensureHorizon to inject UNTIL=+2y if absent, or sets its own
+  //    horizon via serializeRrule when the editor rebuilds the rule.
+  const newOpts: typeof rule.origOptions = { ...rule.origOptions };
+  delete newOpts.until;
+  delete newOpts.count;
+  const { dtstart: _stripDtstartNew, ...newRest } = newOpts;
+  void _stripDtstartNew;
+  const newRruleString = RRule.optionsToString(newRest);
+
+  return {
+    oldRruleString: oldRruleNew,
+    newRruleString,
+    newDtstart: splitDate,
+  };
+}
+
+// ─── D-85 BYDAY weekday helpers ────────────────────────────────────────
+
+/** RFC 5545 BYDAY two-letter weekday codes the platform supports. */
+export const RRULE_BYDAY_CODES = [
+  'MO',
+  'TU',
+  'WE',
+  'TH',
+  'FR',
+  'SA',
+  'SU',
+] as const;
+export type RruleBydayCode = (typeof RRULE_BYDAY_CODES)[number];
+
+const BYDAY_CODE_TO_RRULE_WEEKDAY: Record<RruleBydayCode, Weekday> = {
+  MO: RRule.MO,
+  TU: RRule.TU,
+  WE: RRule.WE,
+  TH: RRule.TH,
+  FR: RRule.FR,
+  SA: RRule.SA,
+  SU: RRule.SU,
+};
+
+/** Inverse map for round-trip tests. Indexed by the rrule library's
+ *  numeric weekday (`Weekday.weekday`: 0=MO..6=SU). */
+const RRULE_WEEKDAY_NUM_TO_CODE: Record<number, RruleBydayCode> = {
+  0: 'MO',
+  1: 'TU',
+  2: 'WE',
+  3: 'TH',
+  4: 'FR',
+  5: 'SA',
+  6: 'SU',
+};
+
+/** Frequency presets the editor exposes (D-85 limits BYDAY to FREQ=WEEKLY).
+ *  Daily/Monthly are allowed but reject BYDAY at the Zod refine layer. */
+export type RruleFreq = 'daily' | 'weekly' | 'monthly';
+
+const FREQ_TO_RRULE: Record<RruleFreq, Frequency> = {
+  daily: RRule.DAILY,
+  weekly: RRule.WEEKLY,
+  monthly: RRule.MONTHLY,
+};
+
+/**
+ * Serialize an editor-friendly options object into an RFC 5545 RRULE string.
+ *
+ * Used by:
+ *  - RruleEditor (UI) when the user picks FREQ + BYDAY + UNTIL.
+ *  - editRecurring `all_in_series` and `this_and_future` rebuild paths
+ *    when the caller wants to replace the FREQ/BYDAY of the new rule.
+ *
+ * The function deliberately rejects:
+ *  - BYDAY combined with FREQ ≠ weekly (D-85 — BYMONTHDAY deferred to v2).
+ *  - empty BYDAY array when supplied (UI must pass at least one weekday).
+ *
+ * Never emits DTSTART: in the output (Anti-Pattern 1). Calendar_events.starts_at
+ * is the canonical anchor.
+ *
+ * @returns RFC 5545 RRULE string. Pair with `ensureHorizon` for D-55 defence.
+ */
+export function serializeRrule(opts: {
+  freq: RruleFreq;
+  byday?: ReadonlyArray<RruleBydayCode>;
+  until?: Date;
+  interval?: number;
+}): string {
+  if (opts.byday !== undefined) {
+    if (opts.byday.length === 0) {
+      // Editor invariant — caller must hand at least one weekday.
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'errors.calendar.rruleBydayRequired',
+      });
+    }
+    if (opts.freq !== 'weekly') {
+      // D-85: BYDAY only meaningful with FREQ=WEEKLY in v1. BYMONTHDAY
+      // (FREQ=MONTHLY with weekday) deferred to v2.
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'errors.calendar.bymonthdayNotSupported',
+      });
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rruleOpts: Record<string, any> = {
+    freq: FREQ_TO_RRULE[opts.freq],
+  };
+  if (opts.byday && opts.byday.length > 0) {
+    rruleOpts.byweekday = opts.byday.map((c) => BYDAY_CODE_TO_RRULE_WEEKDAY[c]);
+  }
+  if (opts.until) {
+    rruleOpts.until = opts.until;
+  }
+  if (opts.interval !== undefined) {
+    rruleOpts.interval = opts.interval;
+  }
+  // RRule.optionsToString emits valid RFC 5545 — never string-concat
+  // (Pitfall 8 carry-forward from Phase 3).
+  return RRule.optionsToString(rruleOpts);
+}
+
+/**
+ * Inverse of {@link serializeRrule}: extract the editor-friendly options
+ * back out of an RFC 5545 RRULE string.
+ *
+ * Used by the RruleEditor to rehydrate an existing event for editing, and
+ * by the integration tests to assert round-trip BYDAY preservation.
+ *
+ * Returns null for the BYDAY field when the underlying rule has none;
+ * returns `undefined` (omitted) for UNTIL/INTERVAL when unset.
+ */
+export function parseRruleToEditorOptions(rruleString: string, dtstart: Date): {
+  freq: RruleFreq | null;
+  byday: ReadonlyArray<RruleBydayCode> | null;
+  until: Date | null;
+  interval: number | null;
+} {
+  const rule = parseRrule(rruleString, dtstart);
+  const opts = rule.origOptions;
+  let freq: RruleFreq | null = null;
+  if (opts.freq === RRule.DAILY) freq = 'daily';
+  else if (opts.freq === RRule.WEEKLY) freq = 'weekly';
+  else if (opts.freq === RRule.MONTHLY) freq = 'monthly';
+
+  let byday: ReadonlyArray<RruleBydayCode> | null = null;
+  if (opts.byweekday) {
+    const raw = Array.isArray(opts.byweekday) ? opts.byweekday : [opts.byweekday];
+    const codes: RruleBydayCode[] = [];
+    for (const w of raw) {
+      // The library types `byweekday` as number | Weekday | (number|Weekday)[]
+      // | string. Real stored values are Weekday instances (RRule.MO etc.) or
+      // their numeric weekday. We accept both.
+      let num: number | undefined;
+      if (typeof w === 'number') {
+        num = w;
+      } else if (w instanceof Weekday) {
+        num = w.weekday;
+      } else if (typeof w === 'string') {
+        // RFC 5545 letter codes — rare but legal as constructor input.
+        const upper = w.toUpperCase() as RruleBydayCode;
+        const idx = RRULE_BYDAY_CODES.indexOf(upper);
+        if (idx >= 0) num = idx;
+      }
+      if (num === undefined) continue;
+      const code = RRULE_WEEKDAY_NUM_TO_CODE[num];
+      if (code) codes.push(code);
+    }
+    byday = codes.length > 0 ? codes : null;
+  }
+
+  return {
+    freq,
+    byday,
+    until: opts.until ?? null,
+    interval: opts.interval ?? null,
+  };
 }
