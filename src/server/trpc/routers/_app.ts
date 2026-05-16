@@ -37,6 +37,7 @@ import { consentRouter } from './consent';
 import { fileRouter } from './file';
 import { playerRouter } from './player';
 import { trainerRouter } from './trainer';
+import { trainingRouter } from './training';
 
 export const appRouter = router({
   ping: publicProcedure.query(() => ({ ok: true, ts: Date.now() })),
@@ -46,6 +47,7 @@ export const appRouter = router({
   file: fileRouter, // Phase 2 — Plan 02-09
   player: playerRouter, // Phase 2 — Plan 02-10
   trainer: trainerRouter, // Phase 2 — Plan 02-10
+  training: trainingRouter, // Phase 4 — Plan 04-03 (markAttendanceAndScore, listPending, getSession)
 });
 
 export type AppRouter = typeof appRouter;
