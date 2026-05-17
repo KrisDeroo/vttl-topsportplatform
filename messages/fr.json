@@ -460,13 +460,15 @@
     },
     "ranking": {
       "unknownType": "Type de classement inconnu.",
+      "inactiveType": "Ce type de classement n'est plus actif.",
       "expectedNumeric": "Une valeur numérique est attendue pour ce type de classement.",
       "expectedClassification": "Un code de classification est attendu pour ce type de classement.",
       "bothValuesPopulated": "Indiquez soit une valeur numérique, soit une classification — pas les deux.",
       "valueRequired": "La valeur de classement est obligatoire.",
       "classificationRequired": "La classification est obligatoire.",
       "dateRequired": "La date est obligatoire.",
-      "mustBePositive": "La valeur doit être positive."
+      "mustBePositive": "La valeur doit être positive.",
+      "notOwnPlayer": "Vous ne pouvez saisir que votre propre classement."
     },
     "sparring": {
       "notASparringPartner": "Un ou plusieurs utilisateurs n'ont pas le rôle de partenaire d'entraînement."

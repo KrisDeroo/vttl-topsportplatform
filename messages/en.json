@@ -460,13 +460,15 @@
     },
     "ranking": {
       "unknownType": "Unknown ranking type.",
+      "inactiveType": "This ranking type is no longer active.",
       "expectedNumeric": "A numeric value is expected for this ranking type.",
       "expectedClassification": "A classification code is expected for this ranking type.",
       "bothValuesPopulated": "Provide either a numeric value or a classification — not both.",
       "valueRequired": "Ranking value is required.",
       "classificationRequired": "Classification is required.",
       "dateRequired": "Date is required.",
-      "mustBePositive": "Value must be positive."
+      "mustBePositive": "Value must be positive.",
+      "notOwnPlayer": "You can only enter your own ranking."
     },
     "sparring": {
       "notASparringPartner": "One or more users do not have the sparring-partner role."

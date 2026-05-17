@@ -460,13 +460,15 @@
     },
     "ranking": {
       "unknownType": "Onbekend ranking-type.",
+      "inactiveType": "Dit ranking-type is niet langer actief.",
       "expectedNumeric": "Voor dit ranking-type wordt een numerieke waarde verwacht.",
       "expectedClassification": "Voor dit ranking-type wordt een classificatiecode verwacht.",
       "bothValuesPopulated": "Geef ofwel een numerieke waarde, ofwel een classificatie — niet beide.",
       "valueRequired": "Ranking-waarde is verplicht.",
       "classificationRequired": "Klassement is verplicht.",
       "dateRequired": "Datum is verplicht.",
-      "mustBePositive": "Waarde moet positief zijn."
+      "mustBePositive": "Waarde moet positief zijn.",
+      "notOwnPlayer": "Je kan enkel je eigen ranking invoeren."
     },
     "sparring": {
       "notASparringPartner": "Eén of meer gebruikers hebben geen sparring-partner rol."
