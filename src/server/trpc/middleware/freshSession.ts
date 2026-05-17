@@ -150,3 +150,22 @@ export const sensitiveProcedure = protectedProcedure.use(requireFreshSession);
 export const medicalProcedure = protectedProcedure.use(
   requireRole('technical_director', 'medical_staff', 'player', 'parent'),
 );
+
+/**
+ * trainerOrTdProcedure — Phase 4 preset (Plan 04-03).
+ *
+ * Composes `protectedProcedure` (auth + RLS-bound tx + current-consent)
+ * with a role gate of `trainer` OR `technical_director`. Used by
+ * `training.markAttendanceAndScore` (D-62 combined attendance/score
+ * capture, gated to the trainer who owns the session or the TD) and
+ * by tournament backfill paths (Plan 04-04 inline RBAC).
+ *
+ * Deeper per-row scoping (the trainer must be the session's `trainer_id`)
+ * is enforced inline in the procedure handler — see
+ * `src/server/trpc/routers/training.ts` markAttendanceAndScore body.
+ * This middleware is the cheap first gate; RLS is the defence-in-depth
+ * backstop.
+ */
+export const trainerOrTdProcedure = protectedProcedure.use(
+  requireRole('trainer', 'technical_director'),
+);
