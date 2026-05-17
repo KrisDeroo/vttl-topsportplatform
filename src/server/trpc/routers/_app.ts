@@ -36,6 +36,7 @@ import { calendarRouter } from './calendar';
 import { consentRouter } from './consent';
 import { fileRouter } from './file';
 import { playerRouter } from './player';
+import { tournamentRouter } from './tournament';
 import { trainerRouter } from './trainer';
 import { trainingRouter } from './training';
 
@@ -48,6 +49,7 @@ export const appRouter = router({
   player: playerRouter, // Phase 2 — Plan 02-10
   trainer: trainerRouter, // Phase 2 — Plan 02-10
   training: trainingRouter, // Phase 4 — Plan 04-03 (markAttendanceAndScore, listPending, getSession)
+  tournament: tournamentRouter, // Phase 4 — Plan 04-04 (create / list / get / addParticipant / removeParticipant / enterResult / listResults / listPendingForPlayer)
 });
 
 export type AppRouter = typeof appRouter;
