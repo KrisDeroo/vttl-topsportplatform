@@ -438,7 +438,12 @@
       "medicalPastStart": "Les rendez-vous médicaux ne peuvent pas être créés dans le passé",
       "participantNotInScope": "Un ou plusieurs participants sélectionnés sont hors de votre périmètre",
       "conflictDetected": "Un rendez-vous se chevauche déjà",
-      "rruleBydayRequired": "Sélectionnez au moins un jour de la semaine pour la récurrence hebdomadaire."
+      "rruleBydayRequired": "Sélectionnez au moins un jour de la semaine pour la récurrence hebdomadaire.",
+      "bymonthdayNotSupported": "La sélection de jours de la semaine n'est disponible que pour la récurrence hebdomadaire.",
+      "splitDateRequired": "Une date d'ancrage est requise pour cette modification.",
+      "notRecurring": "Ce rendez-vous n'est pas une série récurrente.",
+      "roleCannotEditType": "Votre rôle ne peut pas modifier ce type de rendez-vous.",
+      "unknownScope": "Portée d'édition inconnue."
     },
     "training": {
       "scoreWindowExpired": "La fenêtre de saisie pour cet entraînement est expirée (14 jours).",
@@ -462,6 +467,9 @@
       "classificationRequired": "La classification est obligatoire.",
       "dateRequired": "La date est obligatoire.",
       "mustBePositive": "La valeur doit être positive."
+    },
+    "sparring": {
+      "notASparringPartner": "Un ou plusieurs utilisateurs n'ont pas le rôle de partenaire d'entraînement."
     }
   },
   "admin": {

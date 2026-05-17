@@ -38,13 +38,15 @@
  *            src/server/trpc/routers/player.ts (canonical Phase 2 analog)
  */
 import { TRPCError } from '@trpc/server';
-import { and, eq, gte, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 
 import {
   ensureHorizon,
   expandRrule,
   formatOccurrenceDate,
+  serializeRrule,
+  splitRRule,
   validateHorizon,
   type ExceptionInput,
 } from '@/lib/rrule';
@@ -53,6 +55,7 @@ import {
   type RedactedConflict,
 } from '@/lib/calendar/conflicts';
 import type { Role } from '@/server/auth/permissions';
+import { users } from '@/server/db/schema/auth';
 import { db as rawDb, type DbClient } from '@/server/db/client';
 import {
   calendarEventExceptions,
@@ -66,21 +69,25 @@ import {
   trainingSessions,
 } from '@/server/db/schema/calendar';
 import { players } from '@/server/db/schema/players';
+import { sessionSparringPartners } from '@/server/db/schema/training';
 import { trainers } from '@/server/db/schema/trainers';
 
 import { writeAudit } from '../middleware/audit';
 import { canCreateEventType } from '../middleware/calendarCreate';
-import { protectedProcedure } from '../middleware/freshSession';
+import { protectedProcedure, tdProcedure } from '../middleware/freshSession';
 import {
+  attachSparringPartnersInput,
   cancelOccurrenceInput,
   declineParticipationInput,
   detectConflictsInput,
+  editRecurringInput,
   eventCreateInput,
   eventDeleteInput,
   eventGetInput,
   eventUpdateInput,
   filterOptionsInput,
   listInput,
+  type EditRecurringEditsInput,
 } from '../schemas/calendar';
 import { router } from '../trpc';
 
@@ -245,6 +252,204 @@ async function insertExtensionRow(
       });
       break;
     }
+  }
+}
+
+// ─── Helper: per-type extension COPY inside a tx (used by editRecurring) ─
+//
+// Phase 4 — Plan 04-06 D-84 "Deze en toekomstige": when a recurring event is
+// split into old + new, the extension row on the old event is cloned onto
+// the new event, then the edits relevant to that extension are applied. The
+// helper switches on the event's typeCode (which is immutable per CR-02),
+// pulls the old row, and INSERTs the new event_id with the edited fields
+// overlaying the originals.
+
+async function copyExtensionRow(
+  tx: AnyTx,
+  typeCode: string,
+  oldEventId: string,
+  newEventId: string,
+  edits: EditRecurringEditsInput,
+): Promise<void> {
+  switch (typeCode) {
+    case 'event_type_training': {
+      const r = await tx
+        .select()
+        .from(trainingSessions)
+        .where(eq(trainingSessions.eventId, oldEventId));
+      const old = r[0];
+      if (!old) return;
+      await tx.insert(trainingSessions).values({
+        eventId: newEventId,
+        durationMinutes: edits.durationMinutes ?? old.durationMinutes,
+        trainingTypeCode: edits.trainingTypeCode ?? old.trainingTypeCode,
+        organisationCode: edits.organisationCode ?? old.organisationCode,
+        trainerId: edits.trainerId ?? old.trainerId,
+      });
+      break;
+    }
+    case 'event_type_tournament': {
+      const r = await tx
+        .select()
+        .from(tournaments)
+        .where(eq(tournaments.eventId, oldEventId));
+      const old = r[0];
+      if (!old) return;
+      await tx.insert(tournaments).values({
+        eventId: newEventId,
+        city: edits.city ?? old.city,
+        country: edits.country ?? old.country,
+        ageCategoryCode: edits.ageCategoryCode ?? old.ageCategoryCode,
+        tournamentTypeCode: edits.tournamentTypeCode ?? old.tournamentTypeCode,
+      });
+      break;
+    }
+    case 'event_type_meeting': {
+      // Meetings have no extension columns; just clone the row marker.
+      await tx.insert(meetings).values({ eventId: newEventId });
+      break;
+    }
+    case 'event_type_stage': {
+      const r = await tx
+        .select()
+        .from(stages)
+        .where(eq(stages.eventId, oldEventId));
+      const old = r[0];
+      if (!old) return;
+      await tx.insert(stages).values({
+        eventId: newEventId,
+        place: edits.place ?? old.place,
+        country: edits.country ?? old.country,
+      });
+      break;
+    }
+    case 'event_type_eval_conversation': {
+      const r = await tx
+        .select()
+        .from(evalConversations)
+        .where(eq(evalConversations.eventId, oldEventId));
+      const old = r[0];
+      if (!old) return;
+      await tx.insert(evalConversations).values({
+        eventId: newEventId,
+        evaluatorUserId: edits.evaluatorUserId ?? old.evaluatorUserId,
+        playerUserId: edits.playerUserId ?? old.playerUserId,
+      });
+      break;
+    }
+    case 'event_type_medical': {
+      const r = await tx
+        .select()
+        .from(medicalAppointments)
+        .where(eq(medicalAppointments.eventId, oldEventId));
+      const old = r[0];
+      if (!old) return;
+      await tx.insert(medicalAppointments).values({
+        eventId: newEventId,
+        isInjury: edits.isInjury ?? old.isInjury,
+        // `edits.doctor` is `string | null | undefined`. undefined => preserve
+        // old value; explicit null => clear; string => override. Mirrors the
+        // optional/nullable pattern used elsewhere in this file.
+        doctor:
+          edits.doctor === undefined ? (old.doctor ?? null) : edits.doctor,
+      });
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+// ─── Helper: per-type extension UPDATE in place (used by editRecurring) ─
+//
+// Phase 4 — Plan 04-06 D-84 "Alle in de reeks": when the user updates the
+// entire series in place, the extension row is UPDATED with the relevant
+// edits. Past session_participants are untouched — the UPDATE never cascades
+// to those (D-83). Drizzle UPDATEs only change the listed columns.
+
+async function updateExtensionRow(
+  tx: AnyTx,
+  typeCode: string,
+  eventId: string,
+  edits: EditRecurringEditsInput,
+): Promise<void> {
+  switch (typeCode) {
+    case 'event_type_training': {
+      const patch: Record<string, unknown> = {};
+      if (edits.durationMinutes !== undefined)
+        patch.durationMinutes = edits.durationMinutes;
+      if (edits.trainingTypeCode !== undefined)
+        patch.trainingTypeCode = edits.trainingTypeCode;
+      if (edits.organisationCode !== undefined)
+        patch.organisationCode = edits.organisationCode;
+      if (edits.trainerId !== undefined) patch.trainerId = edits.trainerId;
+      if (Object.keys(patch).length === 0) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await tx
+        .update(trainingSessions)
+        .set(patch as any)
+        .where(eq(trainingSessions.eventId, eventId));
+      break;
+    }
+    case 'event_type_tournament': {
+      const patch: Record<string, unknown> = {};
+      if (edits.city !== undefined) patch.city = edits.city;
+      if (edits.country !== undefined) patch.country = edits.country;
+      if (edits.ageCategoryCode !== undefined)
+        patch.ageCategoryCode = edits.ageCategoryCode;
+      if (edits.tournamentTypeCode !== undefined)
+        patch.tournamentTypeCode = edits.tournamentTypeCode;
+      if (Object.keys(patch).length === 0) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await tx
+        .update(tournaments)
+        .set(patch as any)
+        .where(eq(tournaments.eventId, eventId));
+      break;
+    }
+    case 'event_type_meeting':
+      // No extension columns to update.
+      return;
+    case 'event_type_stage': {
+      const patch: Record<string, unknown> = {};
+      if (edits.place !== undefined) patch.place = edits.place;
+      if (edits.country !== undefined) patch.country = edits.country;
+      if (Object.keys(patch).length === 0) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await tx
+        .update(stages)
+        .set(patch as any)
+        .where(eq(stages.eventId, eventId));
+      break;
+    }
+    case 'event_type_eval_conversation': {
+      const patch: Record<string, unknown> = {};
+      if (edits.evaluatorUserId !== undefined)
+        patch.evaluatorUserId = edits.evaluatorUserId;
+      if (edits.playerUserId !== undefined)
+        patch.playerUserId = edits.playerUserId;
+      if (Object.keys(patch).length === 0) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await tx
+        .update(evalConversations)
+        .set(patch as any)
+        .where(eq(evalConversations.eventId, eventId));
+      break;
+    }
+    case 'event_type_medical': {
+      const patch: Record<string, unknown> = {};
+      if (edits.isInjury !== undefined) patch.isInjury = edits.isInjury;
+      if (edits.doctor !== undefined) patch.doctor = edits.doctor;
+      if (Object.keys(patch).length === 0) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await tx
+        .update(medicalAppointments)
+        .set(patch as any)
+        .where(eq(medicalAppointments.eventId, eventId));
+      break;
+    }
+    default:
+      break;
   }
 }
 
@@ -1269,6 +1474,577 @@ export const calendarRouter = router({
 
         // D-57: never block; UI decides how to surface.
         return { conflicts, blocked: false };
+      }),
+
+    // ----------------------------------------------
+    // event.editRecurring — D-84 three-scope dispatcher
+    // ----------------------------------------------
+    // Phase 4 Plan 04-06: closes the Phase 3 deferred RRULE-edit-scope work.
+    // Three branches:
+    //
+    //   scope='single'           — delegates to the calendar_event_exceptions
+    //                              write path (Phase 3 D-54). For overrides,
+    //                              writes a row with override_* fields. For
+    //                              cancel-only edits, sets cancelled=true.
+    //
+    //   scope='this_and_future'  — split-and-rewrite (D-84). Old event's
+    //                              RRULE UNTIL is truncated to splitDate - 1d;
+    //                              a NEW calendar_events row is INSERTed with
+    //                              the edited fields applied. Extension row
+    //                              copied with edits overlayed. Series-level
+    //                              calendar_event_participants COPIED (RSVPs
+    //                              reset to 'pending'). session_sparring_partners
+    //                              COPIED for training events (TRAIN-06).
+    //                              session_participants STAY on the old event
+    //                              (D-83 immutable past — past data is bound
+    //                              to the historical day, never migrates).
+    //
+    //   scope='all_in_series'    — UPDATE the base + extension in place.
+    //                              session_participants UNTOUCHED (D-83 —
+    //                              the UPDATE on calendar_events does NOT
+    //                              cascade to per-occurrence attendance rows;
+    //                              they were written for specific past dates).
+    //                              calendar_event_exceptions whose
+    //                              occurrence_date no longer matches the new
+    //                              expansion are kept as inert rows (UI4-D20,
+    //                              defensive against rrule-revert).
+    //
+    // Audit codes (per phase4-audit.test.ts manifest):
+    //   calendar_event_recurring_split      — emitted on 'this_and_future'
+    //   calendar_event_recurring_updated_all — emitted on 'all_in_series'
+    //   (calendar_event_exception_created   — already emitted on 'single' by
+    //    the underlying exception-INSERT path).
+    editRecurring: protectedProcedure
+      .input(editRecurringInput)
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.scope) throw new TRPCError({ code: 'UNAUTHORIZED' });
+        const db = (ctx.db as DbClient | undefined) ?? rawDb;
+        const callerId = ctx.scope.userId;
+
+        // 1. Load the base event. RLS filters non-visible rows → NOT_FOUND
+        //    (D-36 carry-forward; never FORBIDDEN, never leaks existence).
+        const baseRows = await db
+          .select()
+          .from(calendarEvents)
+          .where(eq(calendarEvents.id, input.eventId));
+        const oldEvent = baseRows[0];
+        if (!oldEvent) throw new TRPCError({ code: 'NOT_FOUND' });
+
+        // 2. The event must be a recurring series.
+        if (!oldEvent.rrule) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'errors.calendar.notRecurring',
+          });
+        }
+
+        // 3. Per-event-type RBAC gate (D-48 defense in depth — mirrors
+        //    event.create / event.update). Anonymous → handled by
+        //    protectedProcedure; wrong role → FORBIDDEN. Past data immutable
+        //    check applies separately per scope below.
+        if (!canCreateEventType(ctx.scope.role, oldEvent.typeCode)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'errors.calendar.roleCannotEditType',
+          });
+        }
+
+        // ─── scope: single ─────────────────────────────────────────────
+        if (input.scope === 'single') {
+          // Thin wrapper around the Phase 3 exception-INSERT path.
+          // Requires splitDate as the occurrence anchor (Zod refinement
+          // guarantees presence; type-narrow here).
+          if (!input.splitDate) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'errors.calendar.splitDateRequired',
+            });
+          }
+          // D-83: past occurrences cannot be edited. Use Brussels-anchored
+          // date to compute the comparison so a Belgian-evening edit doesn't
+          // trip on a UTC midnight boundary.
+          const splitIso = formatOccurrenceDate(input.splitDate);
+          const todayIso = formatOccurrenceDate(new Date());
+          if (splitIso < todayIso) {
+            // Past-data immutability — server rejects edits on past
+            // occurrences. The exception schema permits it, but D-83
+            // makes it a policy-level rejection.
+            await writeAudit(ctx, {
+              action: 'calendar_event_exception_created',
+              resourceType: 'calendar_event',
+              resourceId: oldEvent.id,
+              outcome: 'denied',
+              newValues: { reason: 'past_immutable', splitDate: splitIso },
+            });
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'errors.calendar.splitDateRequired',
+            });
+          }
+          // Write the exception row. UPSERT so a follow-up edit on the
+          // same occurrence supersedes the previous override.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const exceptionValues: any = {
+            eventId: oldEvent.id,
+            occurrenceDate: splitIso,
+            cancelled: input.edits.cancelled ?? false,
+            overrideStartsAt: input.edits.startsAt ?? null,
+            overrideEndsAt: input.edits.endsAt ?? null,
+            overrideTitle: input.edits.title ?? null,
+            overrideLocation:
+              input.edits.location === undefined
+                ? null
+                : input.edits.location,
+            overrideDescription:
+              input.edits.description === undefined
+                ? null
+                : input.edits.description,
+            createdBy: callerId,
+          };
+          const inserted = await db
+            .insert(calendarEventExceptions)
+            .values(exceptionValues)
+            .onConflictDoUpdate({
+              target: [
+                calendarEventExceptions.eventId,
+                calendarEventExceptions.occurrenceDate,
+              ],
+              set: {
+                cancelled: exceptionValues.cancelled,
+                overrideStartsAt: exceptionValues.overrideStartsAt,
+                overrideEndsAt: exceptionValues.overrideEndsAt,
+                overrideTitle: exceptionValues.overrideTitle,
+                overrideLocation: exceptionValues.overrideLocation,
+                overrideDescription: exceptionValues.overrideDescription,
+              },
+            })
+            .returning({ id: calendarEventExceptions.id });
+          const exceptionId = inserted[0]?.id;
+          await writeAudit(ctx, {
+            action: 'calendar_event_exception_created',
+            resourceType: 'calendar_event_exception',
+            resourceId: exceptionId ?? oldEvent.id,
+            newValues: {
+              eventId: oldEvent.id,
+              occurrenceDate: splitIso,
+              cancelled: exceptionValues.cancelled,
+              edits: input.edits,
+            },
+          });
+          return {
+            ok: true as const,
+            scope: 'single' as const,
+            occurrenceDate: splitIso,
+          };
+        }
+
+        // ─── scope: this_and_future ────────────────────────────────────
+        if (input.scope === 'this_and_future') {
+          if (!input.splitDate) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'errors.calendar.splitDateRequired',
+            });
+          }
+          // D-83: split anchor cannot be in the past. The whole point of
+          // "this and future" is to fork the series at a not-yet-occurred
+          // boundary; planting the split in the past would mutate
+          // already-realised attendance assumptions.
+          const splitIso = formatOccurrenceDate(input.splitDate);
+          const todayIso = formatOccurrenceDate(new Date());
+          if (splitIso < todayIso) {
+            await writeAudit(ctx, {
+              action: 'calendar_event_recurring_split',
+              resourceType: 'calendar_event',
+              resourceId: oldEvent.id,
+              outcome: 'denied',
+              newValues: { reason: 'past_immutable', splitDate: splitIso },
+            });
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'errors.calendar.splitDateRequired',
+            });
+          }
+
+          // Run splitRRule outside the tx so any rrule-parse failure
+          // surfaces cleanly as BAD_REQUEST before we open a write tx.
+          const split = splitRRule(
+            oldEvent.rrule,
+            input.splitDate,
+            oldEvent.startsAt,
+          );
+
+          // Decide the new event's RRULE. If the caller is changing FREQ
+          // or BYDAY, REBUILD the rule via serializeRrule (D-85). Otherwise
+          // keep the continuation rule returned by splitRRule.
+          let newRruleString = split.newRruleString;
+          if (input.edits.frequency || input.edits.byday) {
+            newRruleString = serializeRrule({
+              freq:
+                input.edits.frequency ??
+                // If only BYDAY changed but FREQ was unspecified, default to
+                // weekly — BYDAY only makes sense there (D-85 enforcement
+                // already in the schema).
+                'weekly',
+              ...(input.edits.byday ? { byday: input.edits.byday } : {}),
+              ...(input.edits.until ? { until: input.edits.until } : {}),
+              ...(input.edits.interval !== undefined
+                ? { interval: input.edits.interval }
+                : {}),
+            });
+          }
+
+          // Compute new starts_at / ends_at. The newDtstart is the split
+          // boundary instant; the caller may further override via
+          // edits.startsAt (rare — used to change the time-of-day on
+          // the new series).
+          const oldDurationMs =
+            oldEvent.endsAt.getTime() - oldEvent.startsAt.getTime();
+          const newStartsAt = input.edits.startsAt ?? split.newDtstart;
+          const newEndsAt =
+            input.edits.endsAt ??
+            new Date(newStartsAt.getTime() + oldDurationMs);
+
+          // D-55: inject UNTIL=+2y if absent.
+          const newRruleWithHorizon = ensureHorizon(newRruleString, newStartsAt);
+          validateHorizon(newRruleWithHorizon, newStartsAt);
+
+          let newEventId = '';
+          try {
+            newEventId = await db.transaction(async (tx) => {
+              // 1. Truncate the old event's RRULE.
+              await tx
+                .update(calendarEvents)
+                .set({
+                  rrule: split.oldRruleString,
+                  updatedAt: new Date(),
+                })
+                .where(eq(calendarEvents.id, oldEvent.id));
+
+              // 2. INSERT the new event with the edited base fields.
+              const inserted = await tx
+                .insert(calendarEvents)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .values({
+                  typeCode: oldEvent.typeCode,
+                  title: input.edits.title ?? oldEvent.title,
+                  startsAt: newStartsAt,
+                  endsAt: newEndsAt,
+                  allDay: oldEvent.allDay,
+                  location:
+                    input.edits.location === undefined
+                      ? oldEvent.location
+                      : input.edits.location,
+                  description:
+                    input.edits.description === undefined
+                      ? oldEvent.description
+                      : input.edits.description,
+                  rrule: newRruleWithHorizon,
+                  createdBy: callerId,
+                } as any)
+                .returning({ id: calendarEvents.id });
+              const newId = inserted[0]?.id;
+              if (!newId) {
+                throw new TRPCError({
+                  code: 'INTERNAL_SERVER_ERROR',
+                  message: 'calendar_event_insert_returned_no_row',
+                });
+              }
+
+              // 3. COPY the extension row with edits overlayed.
+              await copyExtensionRow(
+                tx,
+                oldEvent.typeCode,
+                oldEvent.id,
+                newId,
+                input.edits,
+              );
+
+              // 4. COPY series-level calendar_event_participants. RSVPs
+              //    reset to 'pending' (UX decision documented in RESEARCH
+              //    §Pattern 1; users on the new series should consciously
+              //    re-accept after the rule change).
+              const oldParts = await tx
+                .select()
+                .from(calendarEventParticipants)
+                .where(eq(calendarEventParticipants.eventId, oldEvent.id));
+              if (oldParts.length > 0) {
+                await tx.insert(calendarEventParticipants).values(
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  oldParts.map((p) => ({
+                    eventId: newId,
+                    userId: p.userId,
+                    roleInEvent: p.roleInEvent,
+                    rsvpStatus: 'pending',
+                  })) as any,
+                );
+              }
+
+              // 5. COPY session_sparring_partners for training events
+              //    (TRAIN-06). Sparring continuity across the split is
+              //    expected — same partners follow the new series.
+              if (oldEvent.typeCode === 'event_type_training') {
+                const oldSparring = await tx
+                  .select()
+                  .from(sessionSparringPartners)
+                  .where(eq(sessionSparringPartners.eventId, oldEvent.id));
+                if (oldSparring.length > 0) {
+                  await tx.insert(sessionSparringPartners).values(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    oldSparring.map((s) => ({
+                      eventId: newId,
+                      sparringPartnerId: s.sparringPartnerId,
+                      createdBy: callerId,
+                    })) as any,
+                  );
+                }
+              }
+
+              // 6. D-83 EXPLICIT: session_participants rows STAY on the old
+              //    event (past data immutable). DO NOT touch them. This
+              //    comment is the policy anchor — the absence of any
+              //    INSERT/UPDATE/DELETE on session_participants here is
+              //    intentional.
+
+              return newId;
+            });
+          } catch (err: unknown) {
+            const e = err as { code?: string; constraint?: string };
+            if (
+              e.code === '23514' &&
+              (e.constraint?.includes('ends_after_starts') ?? false)
+            ) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'errors.calendar.endBeforeStart',
+              });
+            }
+            throw err;
+          }
+
+          await writeAudit(ctx, {
+            action: 'calendar_event_recurring_split',
+            resourceType: 'calendar_event',
+            resourceId: oldEvent.id,
+            oldValues: {
+              base: {
+                id: oldEvent.id,
+                title: oldEvent.title,
+                rrule: oldEvent.rrule,
+                startsAt: oldEvent.startsAt.toISOString(),
+                endsAt: oldEvent.endsAt.toISOString(),
+              },
+            },
+            newValues: {
+              newEventId,
+              splitDate: input.splitDate.toISOString(),
+              newRrule: newRruleWithHorizon,
+              edits: input.edits,
+            },
+          });
+
+          return {
+            ok: true as const,
+            scope: 'this_and_future' as const,
+            newEventId,
+          };
+        }
+
+        // ─── scope: all_in_series ──────────────────────────────────────
+        if (input.scope === 'all_in_series') {
+          // UPDATE the base + extension in place. Past session_participants
+          // UNTOUCHED — Drizzle UPDATEs only the listed columns; nothing
+          // here writes to session_participants (D-83).
+          //
+          // If the user changes FREQ/BYDAY, REBUILD the RRULE via
+          // serializeRrule (D-85). Preserve UNTIL/COUNT if neither edit
+          // mentions them.
+
+          // Decide new RRULE.
+          let newRruleString = oldEvent.rrule;
+          if (input.edits.frequency || input.edits.byday) {
+            newRruleString = serializeRrule({
+              freq: input.edits.frequency ?? 'weekly',
+              ...(input.edits.byday ? { byday: input.edits.byday } : {}),
+              ...(input.edits.until ? { until: input.edits.until } : {}),
+              ...(input.edits.interval !== undefined
+                ? { interval: input.edits.interval }
+                : {}),
+            });
+            newRruleString = ensureHorizon(newRruleString, oldEvent.createdAt);
+            validateHorizon(newRruleString, oldEvent.createdAt);
+          }
+
+          try {
+            await db.transaction(async (tx) => {
+              const baseUpdate: Record<string, unknown> = {
+                updatedAt: new Date(),
+              };
+              if (input.edits.title !== undefined)
+                baseUpdate.title = input.edits.title;
+              if (input.edits.startsAt !== undefined)
+                baseUpdate.startsAt = input.edits.startsAt;
+              if (input.edits.endsAt !== undefined)
+                baseUpdate.endsAt = input.edits.endsAt;
+              if (input.edits.location !== undefined)
+                baseUpdate.location = input.edits.location;
+              if (input.edits.description !== undefined)
+                baseUpdate.description = input.edits.description;
+              if (newRruleString !== oldEvent.rrule)
+                baseUpdate.rrule = newRruleString;
+
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await tx
+                .update(calendarEvents)
+                .set(baseUpdate as any)
+                .where(eq(calendarEvents.id, oldEvent.id));
+
+              await updateExtensionRow(
+                tx,
+                oldEvent.typeCode,
+                oldEvent.id,
+                input.edits,
+              );
+
+              // D-83 EXPLICIT: session_participants UNTOUCHED. Inert
+              // calendar_event_exceptions on dates no longer matching the
+              // new expansion are KEPT (UI4-D20 zombie policy — defensive
+              // against rrule-revert).
+            });
+          } catch (err: unknown) {
+            const e = err as { code?: string; constraint?: string };
+            if (
+              e.code === '23514' &&
+              (e.constraint?.includes('ends_after_starts') ?? false)
+            ) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'errors.calendar.endBeforeStart',
+              });
+            }
+            throw err;
+          }
+
+          await writeAudit(ctx, {
+            action: 'calendar_event_recurring_updated_all',
+            resourceType: 'calendar_event',
+            resourceId: oldEvent.id,
+            oldValues: {
+              base: {
+                id: oldEvent.id,
+                title: oldEvent.title,
+                rrule: oldEvent.rrule,
+                startsAt: oldEvent.startsAt.toISOString(),
+                endsAt: oldEvent.endsAt.toISOString(),
+              },
+            },
+            newValues: {
+              rrule: newRruleString,
+              edits: input.edits,
+            },
+          });
+
+          return { ok: true as const, scope: 'all_in_series' as const };
+        }
+
+        // Defensive — should be unreachable due to Zod enum.
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'errors.calendar.unknownScope',
+        });
+      }),
+
+    // ----------------------------------------------
+    // event.attachSparringPartners — D-79 + D-63 + Assumption A5
+    // ----------------------------------------------
+    // Phase 4 Plan 04-06: TD-only mutation that attaches sparring partners
+    // to a training session via the session_sparring_partners junction.
+    //
+    // App-layer FK row-filter (Assumption A5): PostgreSQL FKs cannot
+    // natively constrain the referenced row by a predicate on a NON-PK
+    // column. The junction's `sparring_partner_id` references users.id
+    // (PK), but the role-must-be-sparring_partner predicate is a row-
+    // filter on a non-PK column. This is enforced at the application
+    // layer here AND defense-in-depth via the Plan 04-02 0018 RLS
+    // policy (which checks calendar_events_visible_to includes the
+    // sparring branch).
+    //
+    // Audit code: sparring_partner_attached (per phase4-audit.test.ts).
+    attachSparringPartners: tdProcedure
+      .input(attachSparringPartnersInput)
+      .mutation(async ({ ctx, input }) => {
+        if (!ctx.scope) throw new TRPCError({ code: 'UNAUTHORIZED' });
+        const db = (ctx.db as DbClient | undefined) ?? rawDb;
+        const callerId = ctx.scope.userId;
+
+        // 1. Verify the event exists, is visible to TD (RLS), and is a
+        //    training session (sparring partners are training-specific
+        //    per D-63).
+        const baseRows = await db
+          .select({
+            id: calendarEvents.id,
+            typeCode: calendarEvents.typeCode,
+          })
+          .from(calendarEvents)
+          .where(eq(calendarEvents.id, input.eventId));
+        const event = baseRows[0];
+        if (!event) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (event.typeCode !== 'event_type_training') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'errors.calendar.roleCannotEditType',
+          });
+        }
+
+        // 2. APP-LAYER FK row-filter (Assumption A5). SELECT each candidate
+        //    user and verify role === 'sparring_partner'. One round trip.
+        const ids = Array.from(new Set(input.sparringPartnerIds));
+        const userRows = await db
+          .select({ id: users.id, role: users.role })
+          .from(users)
+          .where(inArray(users.id, ids));
+        const seen = new Set(userRows.map((r) => r.id));
+        const missing = ids.filter((id) => !seen.has(id));
+        const wrongRole = userRows
+          .filter((r) => r.role !== 'sparring_partner')
+          .map((r) => r.id);
+        if (missing.length > 0 || wrongRole.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'errors.sparring.notASparringPartner',
+          });
+        }
+
+        // 3. INSERT junction rows. ON CONFLICT DO NOTHING for idempotency
+        //    on re-attach attempts (the composite PK guards against dupes
+        //    at the DB layer anyway).
+        await db
+          .insert(sessionSparringPartners)
+          .values(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ids.map((spId) => ({
+              eventId: input.eventId,
+              sparringPartnerId: spId,
+              createdBy: callerId,
+            })) as any,
+          )
+          .onConflictDoNothing();
+
+        // 4. Audit — one row per attachment so the trail enumerates each
+        //    junction insert (forensic recovery + GDPR Article 30).
+        for (const spId of ids) {
+          await writeAudit(ctx, {
+            action: 'sparring_partner_attached',
+            resourceType: 'session_sparring_partner',
+            resourceId: `${input.eventId}:${spId}`,
+            newValues: {
+              eventId: input.eventId,
+              sparringPartnerId: spId,
+            },
+          });
+        }
+
+        return { ok: true as const, attached: ids.length };
       }),
   }),
 

@@ -438,7 +438,12 @@
       "medicalPastStart": "Medical events cannot be created in the past",
       "participantNotInScope": "One or more selected participants are outside your scope",
       "conflictDetected": "An overlapping event already exists",
-      "rruleBydayRequired": "Select at least one weekday for the weekly recurrence."
+      "rruleBydayRequired": "Select at least one weekday for the weekly recurrence.",
+      "bymonthdayNotSupported": "Weekday selection is only available for weekly recurrence.",
+      "splitDateRequired": "An anchor date is required for this edit.",
+      "notRecurring": "This event is not a recurring series.",
+      "roleCannotEditType": "Your role cannot edit this event type.",
+      "unknownScope": "Unknown edit scope."
     },
     "training": {
       "scoreWindowExpired": "The scoring window for this training has expired (14 days).",
@@ -462,6 +467,9 @@
       "classificationRequired": "Classification is required.",
       "dateRequired": "Date is required.",
       "mustBePositive": "Value must be positive."
+    },
+    "sparring": {
+      "notASparringPartner": "One or more users do not have the sparring-partner role."
     }
   },
   "admin": {
