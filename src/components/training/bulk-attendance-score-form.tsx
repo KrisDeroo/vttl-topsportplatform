@@ -26,6 +26,7 @@
  */
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -90,7 +91,7 @@ export function BulkAttendanceScoreForm({
   const t = useTranslations('training.score');
   const tCommon = useTranslations('common');
   const utils = trpc.useUtils();
-  const router = require('next/navigation').useRouter();
+  const router = useRouter();
 
   // Fresh idempotency key per mount — regenerated on save attempt below
   // so cache-replay only catches accidental network-retry doubles.
@@ -131,6 +132,7 @@ export function BulkAttendanceScoreForm({
     });
   }
 
+  const tErrorsTraining = useTranslations('errors.training');
   if (readOnly) {
     return (
       <Card>
@@ -141,7 +143,7 @@ export function BulkAttendanceScoreForm({
           <Alert>
             <AlertTitle>{t('saveError')}</AlertTitle>
             <AlertDescription>
-              {useTranslations('errors.training')('scoreWindowExpired')}
+              {tErrorsTraining('scoreWindowExpired')}
             </AlertDescription>
           </Alert>
         </CardContent>

@@ -178,7 +178,14 @@
         "endAfter": "After {n} times",
         "scopeThis": "This event",
         "scopeFuture": "This and future events (Phase 4)",
-        "scopeAll": "All events in the series (Phase 4)"
+        "scopeAll": "All events in the series (Phase 4)",
+        "scopeTitle": "How to apply to the series?",
+        "scopeBody": "You are editing an appointment that belongs to a series. Choose how to apply the changes:",
+        "scopeThisPreview": "Only the appointment on **{date}** is changed. The rest of the series remains unchanged.",
+        "scopeFuturePreview": "Changes apply to **{date}** and all future appointments in this series. Earlier appointments remain unchanged.",
+        "scopeAllPreview": "Changes apply to all appointments in this series — past, present and future — but **already-entered attendance and scores remain unchanged**.",
+        "apply": "Apply",
+        "cancel": "Cancel"
       },
       "fields": {
         "title": "Title",
@@ -608,7 +615,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "welcome": "Welcome",
+    "inbox": {
+      "heading": "Messages",
+      "empty": "No messages.",
+      "markRead": "Mark as read"
+    }
   },
   "training": {
     "score": {
@@ -662,16 +675,42 @@
   },
   "tournament": {
     "list": {
-      "title": "Tournaments"
+      "title": "Tournaments",
+      "empty": "No tournaments registered yet.",
+      "column": {
+        "name": "Name",
+        "startsAt": "Start date",
+        "city": "City",
+        "country": "Country",
+        "ageCategory": "Age category"
+      },
+      "filterBy": "Filter by"
     },
     "detail": {
       "title": "Tournament detail"
     },
     "create": {
-      "title": "Create new tournament"
+      "title": "Create new tournament",
+      "name": "Name",
+      "startsAt": "Start date",
+      "endsAt": "End date",
+      "city": "City",
+      "country": "Country (2 letters)",
+      "ageCategory": "Age category",
+      "tournamentType": "Tournament type",
+      "description": "Description",
+      "submit": "Create tournament",
+      "cancel": "Cancel",
+      "successToast": "Tournament created",
+      "errorToast": "Creation failed."
     },
     "participants": {
-      "heading": "Participants"
+      "heading": "Participants",
+      "add": "Add participant",
+      "remove": "Remove",
+      "searchPlaceholder": "Search player...",
+      "empty": "No participants registered.",
+      "tdReadOnlyHint": "Only the TD can register participants."
     },
     "result": {
       "title": "Enter tournament result",
@@ -707,7 +746,14 @@
       }
     },
     "leaderboard": {
-      "heading": "Results for this tournament"
+      "heading": "Results for this tournament",
+      "column": {
+        "player": "Player",
+        "outcome": "Final ranking",
+        "matches": "# matches",
+        "won": "# won"
+      },
+      "empty": "No results entered for this tournament yet."
     },
     "chip": {
       "needsResultTooltip": "Result not yet entered"
@@ -718,7 +764,17 @@
     },
     "pendingWidget": {
       "heading": "Pending tournament results",
-      "empty": "No pending tournament results."
+      "empty": "No pending tournament results.",
+      "daysLeft": "{n} days left",
+      "cta": "Enter result"
+    },
+    "filter": {
+      "type": "Type",
+      "ageCategory": "Age category",
+      "period": "Period",
+      "thisYear": "This year",
+      "lastYear": "Last year",
+      "all": "All"
     }
   },
   "ranking": {
@@ -730,14 +786,19 @@
         "senior_european": "Senior European",
         "youth_european": "Youth European"
       },
-      "belgium": "Belgium"
+      "belgium": "Belgium",
+      "label": {
+        "international": "International",
+        "belgium": "Belgium"
+      }
     },
     "range": {
       "1m": "1m",
       "6m": "6m",
       "1y": "1y",
       "2y": "2y",
-      "all": "All"
+      "all": "All",
+      "label": "Range"
     },
     "chart": {
       "yAxisLabel": "Ranking (lower is better)",
@@ -758,7 +819,8 @@
         "heading": "No Belgian classification entered yet",
         "body": "Add your current classification (such as A12, B4, or NC).",
         "cta": "+ Add classification"
-      }
+      },
+      "timelineHint": "Click a year for details"
     },
     "entry": {
       "title": "Add ranking",
@@ -771,10 +833,20 @@
         }
       },
       "disclaimer": "Manually entered — verify against the official source.",
-      "save": "Add"
+      "save": "Add",
+      "success": "Ranking added",
+      "cancel": "Cancel"
     },
     "entries": {
-      "heading": "Entered rankings"
+      "heading": "Entered rankings",
+      "column": {
+        "date": "Date",
+        "type": "Type",
+        "value": "Value",
+        "source": "Source",
+        "enteredBy": "Entered by"
+      },
+      "empty": "No entries for this type."
     }
   },
   "nudge": {
@@ -796,6 +868,9 @@
     "inbox": {
       "trainerScoreBody": "You have {n} trainings missing scores. Open scoring now.",
       "playerResultBody": "You have {n} tournaments with results not yet entered. Enter the result."
+    },
+    "banner": {
+      "viewLink": "View"
     }
   }
 }
