@@ -73,3 +73,77 @@ describe('Phase 3 design tokens — UI-SPEC §Color', () => {
     expect(block).toMatch(/--fc-event-min-height:\s*2\.75rem/);
   });
 });
+
+describe('Phase 4 design tokens — UI4-D02 + UI4-D03 (Belgium tier + state-overlay)', () => {
+  const CLS_TIERS = ['a', 'b', 'c', 'd', 'e', 'nc'] as const;
+  const STATE_FLAVORS = ['needs-action', 'nudge-warning', 'nudge-critical'] as const;
+  const SLOTS = ['bg', 'fg', 'border'] as const;
+
+  it.each(CLS_TIERS)(
+    'declares --cls-tier-%s-{bg,fg,border} in :root (light mode)',
+    (tier) => {
+      for (const slot of SLOTS) {
+        expect(
+          css,
+          `missing --cls-tier-${tier}-${slot} in globals.css`,
+        ).toContain(`--cls-tier-${tier}-${slot}:`);
+      }
+    },
+  );
+
+  it.each(CLS_TIERS)(
+    'declares --cls-tier-%s-{bg,fg,border} in .dark block (dark mode)',
+    (tier) => {
+      const darkBlocks = css.split('.dark {').slice(1);
+      const containsAll = darkBlocks.some((after) => {
+        const block = after.split('}')[0] ?? '';
+        return SLOTS.every((slot) =>
+          block.includes(`--cls-tier-${tier}-${slot}:`),
+        );
+      });
+      expect(
+        containsAll,
+        `--cls-tier-${tier}-{bg,fg,border} not all found inside any .dark block`,
+      ).toBe(true);
+    },
+  );
+
+  it.each(STATE_FLAVORS)(
+    'declares --state-%s-{bg,fg,border} in :root (light mode)',
+    (flavor) => {
+      for (const slot of SLOTS) {
+        expect(
+          css,
+          `missing --state-${flavor}-${slot} in globals.css`,
+        ).toContain(`--state-${flavor}-${slot}:`);
+      }
+    },
+  );
+
+  it.each(STATE_FLAVORS)(
+    'declares --state-%s-{bg,fg,border} in .dark block (dark mode)',
+    (flavor) => {
+      const darkBlocks = css.split('.dark {').slice(1);
+      const containsAll = darkBlocks.some((after) => {
+        const block = after.split('}')[0] ?? '';
+        return SLOTS.every((slot) =>
+          block.includes(`--state-${flavor}-${slot}:`),
+        );
+      });
+      expect(
+        containsAll,
+        `--state-${flavor}-{bg,fg,border} not all found inside any .dark block`,
+      ).toBe(true);
+    },
+  );
+
+  it('exposes new Phase 4 tokens via @theme inline (Tailwind utility surface)', () => {
+    // Per UI-SPEC §Color: tokens consumed as `bg-cls-tier-a-bg`,
+    // `text-state-nudge-critical-fg`, etc. requires `--color-*` aliases
+    // inside `@theme inline { ... }`.
+    expect(css).toContain('--color-cls-tier-a-bg:');
+    expect(css).toContain('--color-cls-tier-nc-border:');
+    expect(css).toContain('--color-state-needs-action-bg:');
+    expect(css).toContain('--color-state-nudge-critical-border:');
+  });
+});
