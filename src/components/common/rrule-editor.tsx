@@ -37,6 +37,11 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { Frequency, RRule } from 'rrule';
 
+import {
+  BYDAY_CODES,
+  MultiDayPicker,
+  type BydayCode,
+} from '@/components/common/multi-day-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -82,6 +87,8 @@ export function RruleEditor({ value, onChange, dtstart }: Props) {
     format(addYears(dtstart, 1), 'yyyy-MM-dd'),
   );
   const [endCount, setEndCount] = useState(10);
+  /** Phase 4 D-85 / UI4-D19 BYDAY selector — only used when FREQ=WEEKLY. */
+  const [byday, setByday] = useState<BydayCode[]>([]);
 
   // Avoid emitting on first mount until the parent has wired the handler.
   const ref = useRef(onChange);
@@ -101,13 +108,27 @@ export function RruleEditor({ value, onChange, dtstart }: Props) {
       if (!Number.isNaN(parsed.getTime())) options.until = parsed;
     }
     if (endMode === 'after_n') options.count = endCount;
+    // Phase 4 D-85: serialize selected weekdays into the BYDAY option.
+    // rrule@2.8.1 byweekday accepts arrays of RRule.MO/TU/.. constants.
+    if (freq === 'WEEKLY' && byday.length > 0) {
+      const RRULE_WEEKDAYS: Record<BydayCode, unknown> = {
+        MO: RRule.MO,
+        TU: RRule.TU,
+        WE: RRule.WE,
+        TH: RRule.TH,
+        FR: RRule.FR,
+        SA: RRule.SA,
+        SU: RRule.SU,
+      };
+      options.byweekday = byday.map((c) => RRULE_WEEKDAYS[c]) as never;
+    }
     try {
       const str = RRule.optionsToString(options);
       ref.current(str);
     } catch {
       ref.current(undefined);
     }
-  }, [freq, interval, endMode, endDate, endCount]);
+  }, [freq, interval, endMode, endDate, endCount, byday]);
 
   return (
     <div className="space-y-3 rounded-md border border-border p-3">
@@ -140,6 +161,13 @@ export function RruleEditor({ value, onChange, dtstart }: Props) {
           />
         </div>
       </div>
+      {/* Phase 4 D-85 / UI4-D19: BYDAY picker — visible only when FREQ=WEEKLY. */}
+      {freq === 'WEEKLY' && (
+        <MultiDayPicker
+          value={byday}
+          onChange={setByday}
+        />
+      )}
       <div className="space-y-1">
         <Label>{t('endLabel')}</Label>
         <Select value={endMode} onValueChange={(v) => setEndMode(v as EndMode)}>
