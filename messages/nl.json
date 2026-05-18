@@ -178,7 +178,14 @@
         "endAfter": "Na {n} keer",
         "scopeThis": "Deze afspraak",
         "scopeFuture": "Deze en toekomstige (Fase 4)",
-        "scopeAll": "Alle afspraken in de reeks (Fase 4)"
+        "scopeAll": "Alle afspraken in de reeks (Fase 4)",
+        "scopeTitle": "Hoe toepassen op de reeks?",
+        "scopeBody": "Je wijzigt een afspraak die deel uitmaakt van een reeks. Kies hoe je wijzigingen wilt toepassen:",
+        "scopeThisPreview": "Alleen de afspraak op **{date}** wordt aangepast. De rest van de reeks blijft ongewijzigd.",
+        "scopeFuturePreview": "Wijzigingen worden toegepast op de afspraak van **{date}** én alle toekomstige afspraken in deze reeks. Eerdere afspraken blijven ongewijzigd.",
+        "scopeAllPreview": "Wijzigingen worden toegepast op alle afspraken in deze reeks — verleden, heden en toekomst — maar **reeds ingevulde aanwezigheid en scores blijven onaangetast**.",
+        "apply": "Toepassen",
+        "cancel": "Annuleren"
       },
       "fields": {
         "title": "Titel",
@@ -608,7 +615,13 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "welcome": "Welkom",
+    "inbox": {
+      "heading": "Berichten",
+      "empty": "Geen berichten.",
+      "markRead": "Markeer als gelezen"
+    }
   },
   "training": {
     "score": {
@@ -662,16 +675,42 @@
   },
   "tournament": {
     "list": {
-      "title": "Toernooien"
+      "title": "Toernooien",
+      "empty": "Er zijn nog geen toernooien geregistreerd.",
+      "column": {
+        "name": "Naam",
+        "startsAt": "Startdatum",
+        "city": "Stad",
+        "country": "Land",
+        "ageCategory": "Leeftijdscategorie"
+      },
+      "filterBy": "Filter op"
     },
     "detail": {
       "title": "Toernooidetail"
     },
     "create": {
-      "title": "Nieuw toernooi aanmaken"
+      "title": "Nieuw toernooi aanmaken",
+      "name": "Naam",
+      "startsAt": "Startdatum",
+      "endsAt": "Einddatum",
+      "city": "Stad",
+      "country": "Land (2 letters)",
+      "ageCategory": "Leeftijdscategorie",
+      "tournamentType": "Tornooitype",
+      "description": "Beschrijving",
+      "submit": "Toernooi aanmaken",
+      "cancel": "Annuleren",
+      "successToast": "Toernooi aangemaakt",
+      "errorToast": "Aanmaken mislukt."
     },
     "participants": {
-      "heading": "Deelnemers"
+      "heading": "Deelnemers",
+      "add": "Deelnemer toevoegen",
+      "remove": "Verwijderen",
+      "searchPlaceholder": "Zoek speler...",
+      "empty": "Geen deelnemers geregistreerd.",
+      "tdReadOnlyHint": "Alleen de TD kan deelnemers registreren."
     },
     "result": {
       "title": "Toernooiresultaat invoeren",
@@ -707,7 +746,14 @@
       }
     },
     "leaderboard": {
-      "heading": "Resultaten van dit toernooi"
+      "heading": "Resultaten van dit toernooi",
+      "column": {
+        "player": "Speler",
+        "outcome": "Eindrangschikking",
+        "matches": "# wedstrijden",
+        "won": "# gewonnen"
+      },
+      "empty": "Nog geen resultaten ingevoerd voor dit toernooi."
     },
     "chip": {
       "needsResultTooltip": "Resultaat nog niet ingevuld"
@@ -718,7 +764,17 @@
     },
     "pendingWidget": {
       "heading": "Openstaande toernooiresultaten",
-      "empty": "Geen openstaande toernooiresultaten."
+      "empty": "Geen openstaande toernooiresultaten.",
+      "daysLeft": "Nog {n} dagen",
+      "cta": "Voer resultaat in"
+    },
+    "filter": {
+      "type": "Type",
+      "ageCategory": "Leeftijdscategorie",
+      "period": "Periode",
+      "thisYear": "Dit jaar",
+      "lastYear": "Vorig jaar",
+      "all": "Alles"
     }
   },
   "ranking": {
@@ -730,14 +786,19 @@
         "senior_european": "Senior Europees",
         "youth_european": "Jeugd Europees"
       },
-      "belgium": "België"
+      "belgium": "België",
+      "label": {
+        "international": "Internationaal",
+        "belgium": "België"
+      }
     },
     "range": {
       "1m": "1m",
       "6m": "6m",
       "1y": "1j",
       "2y": "2j",
-      "all": "Alles"
+      "all": "Alles",
+      "label": "Bereik"
     },
     "chart": {
       "yAxisLabel": "Ranking (lager = beter)",
@@ -758,7 +819,8 @@
         "heading": "Nog geen Belgische classificatie ingevoerd",
         "body": "Voeg je actuele klassement toe (zoals A12, B4 of NC).",
         "cta": "+ Klassement toevoegen"
-      }
+      },
+      "timelineHint": "Klik op een jaar voor details"
     },
     "entry": {
       "title": "Ranking toevoegen",
@@ -771,10 +833,20 @@
         }
       },
       "disclaimer": "Manueel ingevoerd — controleer tegen officiële bron.",
-      "save": "Toevoegen"
+      "save": "Toevoegen",
+      "success": "Ranking toegevoegd",
+      "cancel": "Annuleren"
     },
     "entries": {
-      "heading": "Ingevoerde rankings"
+      "heading": "Ingevoerde rankings",
+      "column": {
+        "date": "Datum",
+        "type": "Type",
+        "value": "Waarde",
+        "source": "Bron",
+        "enteredBy": "Ingevoerd door"
+      },
+      "empty": "Geen entries voor dit type."
     }
   },
   "nudge": {
@@ -796,6 +868,9 @@
     "inbox": {
       "trainerScoreBody": "Je hebt {n} trainingen waarvoor scores ontbreken. Open de scoring nu.",
       "playerResultBody": "Je hebt {n} toernooien waarvan het resultaat nog niet is ingevoerd. Voer het resultaat in."
+    },
+    "banner": {
+      "viewLink": "Bekijken"
     }
   }
 }

@@ -28,6 +28,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -43,10 +44,17 @@ import {
 } from '@/components/ui/sheet';
 import { trpc } from '@/lib/trpc-client';
 
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
 export function EventDetailSheet() {
   const t = useTranslations('calendar.event');
   const tToast = useTranslations('calendar.event.toast');
   const tLookup = useTranslations('lookup.eventType');
+  const tTrainingCta = useTranslations('training.eventSheet');
+  const tTournamentCta = useTranslations('tournament.eventSheet');
+  const router = useRouter();
+  const params = useParams<{ locale: string }>();
+  const locale = (params?.locale as string | undefined) ?? 'nl';
   const [eventId, setEventId] = useState<string | null>(null);
   const open = eventId !== null;
 
@@ -171,6 +179,69 @@ export function EventDetailSheet() {
             </div>
             <Separator />
             <SheetFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+              {/* Phase 4 UI4-D11: conditional CTAs.
+               *
+               * Visibility is determined by event.extendedProps flags
+               * (needsScoring / needsResult) — server-set in calendar.list.
+               * Hidden entirely (NOT disabled) when not applicable.
+               */}
+              {(() => {
+                const endsAt = new Date(event.event.endsAt);
+                const wallExpired = Date.now() - endsAt.getTime() > FOURTEEN_DAYS_MS;
+                const showOpenScoring =
+                  event.event.typeCode === 'event_type_training' &&
+                  !wallExpired &&
+                  Boolean((event.event as unknown as { needsScoring?: boolean }).needsScoring);
+                const showEnterResult =
+                  event.event.typeCode === 'event_type_tournament' &&
+                  !wallExpired &&
+                  Boolean((event.event as unknown as { needsResult?: boolean }).needsResult);
+                const showViewResult =
+                  event.event.typeCode === 'event_type_tournament' &&
+                  !showEnterResult;
+                const occurrenceDate = new Date(event.event.startsAt)
+                  .toISOString()
+                  .slice(0, 10);
+                return (
+                  <>
+                    {showOpenScoring && (
+                      <Button
+                        onClick={() => {
+                          router.push(
+                            `/${locale}/trainings/${event.event.id}/score?occurrenceDate=${occurrenceDate}`,
+                          );
+                          close();
+                        }}
+                      >
+                        {tTrainingCta('openScoring')}
+                      </Button>
+                    )}
+                    {showEnterResult && (
+                      <Button
+                        onClick={() => {
+                          router.push(`/${locale}/tournaments/${event.event.id}/result`);
+                          close();
+                        }}
+                      >
+                        {tTournamentCta('enterResult')}
+                      </Button>
+                    )}
+                    {showViewResult && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          router.push(
+                            `/${locale}/tournaments/${event.event.id}/result?mode=read`,
+                          );
+                          close();
+                        }}
+                      >
+                        {tTournamentCta('viewResult')}
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
               <Button
                 variant="outline"
                 onClick={handleDecline}

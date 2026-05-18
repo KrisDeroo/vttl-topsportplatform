@@ -39,6 +39,37 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Phase 4 — Belgium classification tier-band colors (UI4-D03). */
+  --color-cls-tier-a-bg: var(--cls-tier-a-bg);
+  --color-cls-tier-a-fg: var(--cls-tier-a-fg);
+  --color-cls-tier-a-border: var(--cls-tier-a-border);
+  --color-cls-tier-b-bg: var(--cls-tier-b-bg);
+  --color-cls-tier-b-fg: var(--cls-tier-b-fg);
+  --color-cls-tier-b-border: var(--cls-tier-b-border);
+  --color-cls-tier-c-bg: var(--cls-tier-c-bg);
+  --color-cls-tier-c-fg: var(--cls-tier-c-fg);
+  --color-cls-tier-c-border: var(--cls-tier-c-border);
+  --color-cls-tier-d-bg: var(--cls-tier-d-bg);
+  --color-cls-tier-d-fg: var(--cls-tier-d-fg);
+  --color-cls-tier-d-border: var(--cls-tier-d-border);
+  --color-cls-tier-e-bg: var(--cls-tier-e-bg);
+  --color-cls-tier-e-fg: var(--cls-tier-e-fg);
+  --color-cls-tier-e-border: var(--cls-tier-e-border);
+  --color-cls-tier-nc-bg: var(--cls-tier-nc-bg);
+  --color-cls-tier-nc-fg: var(--cls-tier-nc-fg);
+  --color-cls-tier-nc-border: var(--cls-tier-nc-border);
+
+  /* Phase 4 — State-overlay colors (UI4-D02). */
+  --color-state-needs-action-bg: var(--state-needs-action-bg);
+  --color-state-needs-action-fg: var(--state-needs-action-fg);
+  --color-state-needs-action-border: var(--state-needs-action-border);
+  --color-state-nudge-warning-bg: var(--state-nudge-warning-bg);
+  --color-state-nudge-warning-fg: var(--state-nudge-warning-fg);
+  --color-state-nudge-warning-border: var(--state-nudge-warning-border);
+  --color-state-nudge-critical-bg: var(--state-nudge-critical-bg);
+  --color-state-nudge-critical-fg: var(--state-nudge-critical-fg);
+  --color-state-nudge-critical-border: var(--state-nudge-critical-border);
 }
 
 :root {
@@ -87,6 +118,46 @@
   --cal-event-medical-bg: oklch(0.96 0.05 25); /* red tint */
   --cal-event-medical-fg: oklch(0.38 0.16 25); /* deep red */
   --cal-event-medical-border: oklch(0.55 0.2 25); /* mid red */
+
+  /* Phase 4 — Belgium classification tier-band tokens (UI4-D03).
+   * 6 tiers × 3 slots (bg/fg/border). NC carries a mandatory 1px outline
+   * because its background equals --background. WCAG AA contrast >= 4.5:1
+   * at 14px / 500 weight (UI-SPEC §Accessibility Contract). */
+  --cls-tier-a-bg: oklch(0.86 0.1 90); /* gold tint */
+  --cls-tier-a-fg: oklch(0.32 0.08 80); /* deep gold-brown */
+  --cls-tier-a-border: oklch(0.75 0.12 85);
+  --cls-tier-b-bg: oklch(0.86 0.01 250); /* silver */
+  --cls-tier-b-fg: oklch(0.32 0.01 250); /* deep slate */
+  --cls-tier-b-border: oklch(0.78 0.02 250);
+  --cls-tier-c-bg: oklch(0.78 0.08 40); /* bronze tint */
+  --cls-tier-c-fg: oklch(0.3 0.1 40); /* deep bronze-brown */
+  --cls-tier-c-border: oklch(0.7 0.07 40);
+  --cls-tier-d-bg: oklch(0.78 0.01 285); /* mid grey */
+  --cls-tier-d-fg: oklch(0.25 0.01 285); /* near-black */
+  --cls-tier-d-border: oklch(0.72 0 0);
+  --cls-tier-e-bg: oklch(0.93 0.005 285); /* light grey */
+  --cls-tier-e-fg: oklch(0.3 0.005 285); /* deep grey */
+  --cls-tier-e-border: oklch(0.8 0 0);
+  --cls-tier-nc-bg: oklch(1 0 0); /* white (uses --background) */
+  --cls-tier-nc-fg: oklch(0.3 0.005 285); /* deep grey on white */
+  --cls-tier-nc-border: oklch(0.4 0 0); /* mandatory 1px outline per UI-SPEC */
+
+  /* Phase 4 — State-overlay tokens (UI4-D02).
+   * Three tokens for the "user has pending action" semantic axis.
+   * yellow=days 0..6, orange=days 7..9, red=days 10..12 (D-67 channel 4).
+   * `--state-nudge-critical-*` is DISTINCT from `--destructive` per
+   * UI-SPEC §Color rule (destructive = delete intent; critical = deadline). */
+  --state-needs-action-bg: oklch(0.96 0.05 85); /* warm yellow tint */
+  --state-needs-action-fg: oklch(0.4 0.12 80); /* deep amber */
+  --state-needs-action-border: oklch(0.7 0.17 85); /* mid yellow */
+
+  --state-nudge-warning-bg: oklch(0.94 0.08 50); /* orange tint */
+  --state-nudge-warning-fg: oklch(0.4 0.16 45); /* deep orange */
+  --state-nudge-warning-border: oklch(0.68 0.18 50);
+
+  --state-nudge-critical-bg: oklch(0.93 0.1 25); /* red tint — NOT --destructive */
+  --state-nudge-critical-fg: oklch(0.38 0.18 25); /* deep red */
+  --state-nudge-critical-border: oklch(0.6 0.2 25);
 }
 
 .dark {
@@ -134,6 +205,37 @@
   --cal-event-medical-bg: oklch(0.25 0.05 25);
   --cal-event-medical-fg: oklch(0.85 0.1 25);
   --cal-event-medical-border: oklch(0.65 0.18 25);
+
+  /* Phase 4 — Belgium classification tier-band tokens (UI4-D03) — dark mode. */
+  --cls-tier-a-bg: oklch(0.42 0.1 90);
+  --cls-tier-a-fg: oklch(0.92 0.08 90);
+  --cls-tier-a-border: oklch(0.75 0.12 85);
+  --cls-tier-b-bg: oklch(0.42 0.02 250);
+  --cls-tier-b-fg: oklch(0.92 0.02 250);
+  --cls-tier-b-border: oklch(0.78 0.02 250);
+  --cls-tier-c-bg: oklch(0.42 0.08 40);
+  --cls-tier-c-fg: oklch(0.92 0.08 40);
+  --cls-tier-c-border: oklch(0.7 0.07 40);
+  --cls-tier-d-bg: oklch(0.38 0.005 285);
+  --cls-tier-d-fg: oklch(0.92 0.005 285);
+  --cls-tier-d-border: oklch(0.72 0 0);
+  --cls-tier-e-bg: oklch(0.3 0.005 285);
+  --cls-tier-e-fg: oklch(0.92 0.005 285);
+  --cls-tier-e-border: oklch(0.8 0 0);
+  --cls-tier-nc-bg: oklch(0.21 0.006 285.885); /* uses --card in dark */
+  --cls-tier-nc-fg: oklch(0.92 0.005 285);
+  --cls-tier-nc-border: oklch(0.4 0.005 285);
+
+  /* Phase 4 — State-overlay tokens (UI4-D02) — dark mode. */
+  --state-needs-action-bg: oklch(0.28 0.05 85);
+  --state-needs-action-fg: oklch(0.88 0.1 85);
+  --state-needs-action-border: oklch(0.7 0.16 85);
+  --state-nudge-warning-bg: oklch(0.28 0.08 45);
+  --state-nudge-warning-fg: oklch(0.88 0.12 50);
+  --state-nudge-warning-border: oklch(0.68 0.18 50);
+  --state-nudge-critical-bg: oklch(0.28 0.1 25);
+  --state-nudge-critical-fg: oklch(0.88 0.14 25);
+  --state-nudge-critical-border: oklch(0.65 0.2 25);
 }
 
 /* Phase 3 — FullCalendar v6 CSS-variable overrides (UI-SPEC §FullCalendar built-in CSS-variable overrides) */

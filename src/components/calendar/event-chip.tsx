@@ -65,6 +65,19 @@ export interface ChipExtendedProps {
   conflicting: boolean;
   cancelled: boolean;
   locationLine?: string | null;
+  /** Phase 4 — UI4-D07 needs-action overlay flags.
+   *
+   * Set server-side by `calendar.list` (Plan 04-08 extension):
+   *   - `needsScoring`: training event, ended in last 14d, trainer/TD
+   *     scope, at least one session_participants row has NULL quality_score.
+   *   - `needsResult`: tournament event, ended in last 14d, caller is a
+   *     calendar_event_participants row, no tournament_results row exists.
+   *
+   * Both default false; the chip renders the yellow ⚠ corner overlay
+   * when either is true. Tooltip key disambiguates which.
+   */
+  needsScoring?: boolean;
+  needsResult?: boolean;
 }
 
 function pad2(n: number): string {
@@ -108,8 +121,23 @@ export function renderEventChip(arg: EventContentArg) {
       ? `${pad2(start.getHours())}:${pad2(start.getMinutes())}–${pad2(end.getHours())}:${pad2(end.getMinutes())}`
       : '';
 
+  // Phase 4 UI4-D07: needs-action corner overlay (yellow ⚠ badge).
+  // The badge sits absolute top-right; pulses on critical priority but
+  // motion-safe so reduced-motion disables. Color is paired with the
+  // AlertTriangle icon so deuteranopia-safe (T-04-52 / T-04-53 a11y).
+  const showActionBadge = Boolean(props.needsScoring || props.needsResult);
+
   return (
-    <div className={containerClasses} style={chipStyle}>
+    <div className={`${containerClasses} relative`} style={chipStyle}>
+      {showActionBadge && (
+        <span
+          className="absolute right-0.5 top-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full border bg-state-needs-action-bg text-state-needs-action-fg border-state-needs-action-border motion-safe:animate-pulse"
+          aria-label="actie vereist"
+          data-testid="event-chip-needs-action-overlay"
+        >
+          <AlertTriangle className="h-3 w-3" aria-hidden />
+        </span>
+      )}
       <div className="flex items-center gap-1 text-xs leading-tight">
         <Icon className="h-3 w-3 shrink-0" aria-hidden />
         <span className="font-medium tabular-nums">{timeLabel}</span>

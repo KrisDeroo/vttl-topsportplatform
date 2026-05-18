@@ -116,6 +116,36 @@ interface EventInstance {
   /** Computed: creator OR TD. */
   canEdit: boolean;
   canDelete: boolean;
+  /** Phase 4 UI4-D07 — needs-scoring corner overlay on the chip.
+   *
+   * True when:
+   *   - event.type = 'event_type_training'
+   *   - event has ended (endsAt < now)
+   *   - now - endsAt <= 14d
+   *   - caller is trainer-of-session OR technical_director
+   *   - at least one session_participants row has NULL quality_score for
+   *     the same (event_id, occurrence_date) — but we compute per-event,
+   *     so we use a per-event LEFT JOIN check that defaults to TRUE when
+   *     no rows yet exist (i.e., no one has been scored yet).
+   *
+   * False for non-training events or for callers without the score-write
+   * scope; never set true for player / parent / academy_manager — the chip
+   * overlay only fires for the action-owner role (T-04-53 mitigation).
+   */
+  needsScoring: boolean;
+  /** Phase 4 UI4-D07 — needs-result corner overlay on the chip.
+   *
+   * True when:
+   *   - event.type = 'event_type_tournament'
+   *   - event has ended (endsAt < now)
+   *   - now - endsAt <= 14d
+   *   - caller is a calendar_event_participants row on this event
+   *   - no tournament_results row exists for (caller, event)
+   *
+   * Player-only chip overlay; trainer/TD see the equivalent on
+   * TournamentResultsLeaderboard (T-04-53 mitigation).
+   */
+  needsResult: boolean;
 }
 
 // ─── Helper: fetch per-type extension row ───────────────────────────────
@@ -587,6 +617,8 @@ export const calendarRouter = router({
             conflicting: false,
             canEdit,
             canDelete,
+            needsScoring: false,
+            needsResult: false,
           });
           continue;
         }
@@ -635,6 +667,8 @@ export const calendarRouter = router({
             conflicting: false,
             canEdit,
             canDelete,
+            needsScoring: false,
+            needsResult: false,
           });
         }
       }
@@ -656,6 +690,138 @@ export const calendarRouter = router({
             b.conflicting = true;
           }
         }
+      }
+
+      // ============================================================
+      // Phase 4 UI4-D07 — needsScoring / needsResult corner-badge flags.
+      // ============================================================
+      //
+      // Compute per-event flags driving the EventChip yellow ⚠ overlay.
+      //
+      // T-04-53 invariant: only the role with WRITE scope sees the flag —
+      // never leak "pending action" status to roles that can't act on it.
+      // Defensive: any DB query failure leaves the defaults (false, false)
+      // — silent degradation rather than 500-ing the whole calendar.
+      const FOURTEEN_DAYS_MS_CAL = 14 * 24 * 60 * 60 * 1000;
+      const nowTs = Date.now();
+      try {
+        // Collect candidate event ids by type, within the 14d ended-window.
+        const candidateTrainingIds: string[] = [];
+        const candidateTournamentIds: string[] = [];
+        for (const inst of instances) {
+          const elapsed = nowTs - inst.endsAt.getTime();
+          if (elapsed <= 0 || elapsed > FOURTEEN_DAYS_MS_CAL) continue;
+          if (inst.typeCode === 'event_type_training') {
+            candidateTrainingIds.push(inst.id);
+          } else if (inst.typeCode === 'event_type_tournament') {
+            candidateTournamentIds.push(inst.id);
+          }
+        }
+
+        // needsScoring — trainer/TD only.
+        if (
+          candidateTrainingIds.length > 0 &&
+          (callerRole === 'trainer' || callerRole === 'technical_director')
+        ) {
+          // A training "needs scoring" if it has ended in last 14d AND
+          // either (a) there are session_participants rows with NULL
+          // quality_score, OR (b) NO session_participants rows exist yet
+          // (the trainer hasn't started scoring). Use SQL EXISTS via a
+          // simple aggregate: events whose calendar_event_participants
+          // count exceeds the count of scored session_participants.
+          const sessionStats = await db.execute<{
+            event_id: string;
+            participant_count: number;
+            scored_count: number;
+          }>(sql`
+            SELECT
+              ce.id AS event_id,
+              (
+                SELECT COUNT(*)::int FROM calendar_event_participants cep
+                JOIN users u ON u.id = cep.user_id
+                WHERE cep.event_id = ce.id AND u.role = 'player'
+              ) AS participant_count,
+              (
+                SELECT COUNT(*)::int FROM session_participants sp
+                WHERE sp.event_id = ce.id
+                  AND sp.quality_score IS NOT NULL
+              ) AS scored_count
+            FROM calendar_events ce
+            WHERE ce.id = ANY(${candidateTrainingIds}::uuid[])
+          `);
+          const statsRows: Array<{
+            event_id: string;
+            participant_count: number;
+            scored_count: number;
+          }> = Array.isArray(sessionStats)
+            ? (sessionStats as Array<{
+                event_id: string;
+                participant_count: number;
+                scored_count: number;
+              }>)
+            : ((sessionStats as unknown as {
+                rows?: Array<{
+                  event_id: string;
+                  participant_count: number;
+                  scored_count: number;
+                }>;
+              }).rows ?? []);
+          const trainingNeedsScoring = new Set<string>();
+          for (const r of statsRows) {
+            if (Number(r.participant_count) > Number(r.scored_count)) {
+              trainingNeedsScoring.add(r.event_id);
+            }
+          }
+          // For trainer scope: only mark events where this trainer is the
+          // session trainer. TD always sees the flag.
+          let trainerSessionIds = new Set<string>();
+          if (callerRole === 'trainer') {
+            const trainerRows = await db.execute<{ event_id: string }>(sql`
+              SELECT event_id FROM training_sessions
+              WHERE trainer_id = ${callerId}
+                AND event_id = ANY(${candidateTrainingIds}::uuid[])
+            `);
+            const rows: Array<{ event_id: string }> = Array.isArray(trainerRows)
+              ? (trainerRows as Array<{ event_id: string }>)
+              : ((trainerRows as unknown as { rows?: Array<{ event_id: string }> }).rows ?? []);
+            trainerSessionIds = new Set(rows.map((r) => r.event_id));
+          }
+          for (const inst of instances) {
+            if (inst.typeCode !== 'event_type_training') continue;
+            if (!trainingNeedsScoring.has(inst.id)) continue;
+            if (callerRole === 'trainer' && !trainerSessionIds.has(inst.id)) continue;
+            inst.needsScoring = true;
+          }
+        }
+
+        // needsResult — player only, and only for tournaments they participate in.
+        if (
+          candidateTournamentIds.length > 0 &&
+          callerRole === 'player'
+        ) {
+          // Tournament rows where caller is participant AND no
+          // tournament_results row exists.
+          const pendingRows = await db.execute<{ event_id: string }>(sql`
+            SELECT cep.event_id
+            FROM calendar_event_participants cep
+            LEFT JOIN tournament_results tr
+              ON tr.tournament_event_id = cep.event_id
+              AND tr.player_user_id = cep.user_id
+            WHERE cep.user_id = ${callerId}
+              AND cep.event_id = ANY(${candidateTournamentIds}::uuid[])
+              AND tr.tournament_event_id IS NULL
+          `);
+          const rows: Array<{ event_id: string }> = Array.isArray(pendingRows)
+            ? (pendingRows as Array<{ event_id: string }>)
+            : ((pendingRows as unknown as { rows?: Array<{ event_id: string }> }).rows ?? []);
+          const pendingSet = new Set(rows.map((r) => r.event_id));
+          for (const inst of instances) {
+            if (inst.typeCode !== 'event_type_tournament') continue;
+            if (pendingSet.has(inst.id)) inst.needsResult = true;
+          }
+        }
+      } catch {
+        // Silent degradation — chip overlay is decorative, never block list.
       }
 
       // Apply Zod-decoded filters (cosmetic — RLS already scoped).
