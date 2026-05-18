@@ -134,7 +134,7 @@ describe('TD unconditional overwrite (D-75)', () => {
       SELECT old_values FROM audit_log
        WHERE action = 'tournament_result_overwritten'
          AND resource_id = ${`${tournamentId}:${seeded.users.player}`}
-       ORDER BY created_at DESC LIMIT 1
+       ORDER BY occurred_at DESC LIMIT 1
     `)) as unknown as Array<{ old_values: unknown }>;
     expect(Array.isArray(auditRows) ? auditRows.length : 0).toBeGreaterThanOrEqual(1);
     const oldValues = (Array.isArray(auditRows) ? auditRows[0]?.old_values : undefined) as
