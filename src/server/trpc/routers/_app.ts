@@ -35,6 +35,7 @@ import { adminRouter } from './admin';
 import { calendarRouter } from './calendar';
 import { consentRouter } from './consent';
 import { fileRouter } from './file';
+import { inboxRouter } from './inbox';
 import { playerRouter } from './player';
 import { rankingRouter } from './ranking';
 import { tournamentRouter } from './tournament';
@@ -52,6 +53,7 @@ export const appRouter = router({
   training: trainingRouter, // Phase 4 — Plan 04-03 (markAttendanceAndScore, listPending, getSession)
   tournament: tournamentRouter, // Phase 4 — Plan 04-04 (create / list / get / addParticipant / removeParticipant / enterResult / listResults / listPendingForPlayer)
   ranking: rankingRouter, // Phase 4 — Plan 04-05 (addEntry / getHistory / getCurrentByType / listEntries)
+  inbox: inboxRouter, // Phase 4 — Plan 04-07 (listUnread / listAll / markRead — minimal stub; Phase 6 absorbs)
 });
 
 export type AppRouter = typeof appRouter;
