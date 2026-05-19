@@ -77,6 +77,7 @@ import { TRPCError } from '@trpc/server';
 import { and, asc, desc, eq, gte, isNull, lt, lte, sql } from 'drizzle-orm';
 
 import { getAgeCategoryAt } from '@/lib/players';
+import { formatOccurrenceDate } from '@/lib/rrule';
 import { deriveEnteredBy } from '@/lib/tournament-result';
 import { db as rawDb, type DbClient } from '@/server/db/client';
 import {
@@ -117,13 +118,18 @@ const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 // same truth table.
 
 /**
- * Format a Date as YYYY-MM-DD (UTC) for the `match_date` PG `date` column.
- * Mirrors the helper in `routers/training.ts` — same DST-correctness
- * rationale (UTC slice prevents the one-day drift local-time slicing would
- * introduce around DST boundaries).
+ * Format a Date as YYYY-MM-DD in the platform timezone (Europe/Brussels)
+ * for the `match_date` PG `date` column. Mirrors the helper in
+ * `routers/training.ts`.
+ *
+ * WR-02 fix (CR-09 family): previously used `.toISOString().slice(0, 10)`,
+ * which drifted by one calendar day for Brussels evening events
+ * (e.g. a 23:00 UTC end-time = 00:00 next-day Brussels in winter / 01:00
+ * next-day in summer). The Brussels-anchored helper in `src/lib/rrule.ts`
+ * is the canonical implementation.
  */
 function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return formatOccurrenceDate(d);
 }
 
 // ─── Router definition ─────────────────────────────────────────────────
