@@ -79,6 +79,7 @@ import { and, asc, desc, eq, gte, isNull, lt, lte, sql } from 'drizzle-orm';
 import { getAgeCategoryAt } from '@/lib/players';
 import { formatOccurrenceDate } from '@/lib/rrule';
 import { deriveEnteredBy } from '@/lib/tournament-result';
+import { users } from '@/server/db/schema/auth';
 import { db as rawDb, type DbClient } from '@/server/db/client';
 import {
   calendarEventParticipants,
@@ -346,9 +347,34 @@ export const tournamentRouter = router({
         .from(calendarEventParticipants)
         .where(eq(calendarEventParticipants.eventId, input.tournamentEventId));
 
+      // CR-03 + WARNING-3 (Plan 04-12 Task 1): participants list backs the
+      // Pick-Player UI on result/page.tsx. RLS on
+      // calendar_event_participants already scopes event visibility — no
+      // per-row gating needed here. Restricting `role_in_event = 'participant'`
+      // excludes organisers/invitees that aren't tournament entrants. ORDER
+      // BY users.name gives a deterministic picker ordering.
+      const participants = await db
+        .select({
+          userId: calendarEventParticipants.userId,
+          userName: users.name,
+        })
+        .from(calendarEventParticipants)
+        .innerJoin(users, eq(users.id, calendarEventParticipants.userId))
+        .where(
+          and(
+            eq(
+              calendarEventParticipants.eventId,
+              input.tournamentEventId,
+            ),
+            eq(calendarEventParticipants.roleInEvent, 'participant'),
+          ),
+        )
+        .orderBy(users.name);
+
       return {
         ...row,
         participantCount: participantCount[0]?.count ?? 0,
+        participants,
       };
     }),
 
