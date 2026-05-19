@@ -2028,6 +2028,34 @@ export const calendarRouter = router({
           // serializeRrule (D-85). Preserve UNTIL/COUNT if neither edit
           // mentions them.
 
+          // CR-05: D-83 invariant — past data is immutable across ALL three
+          // scopes. The all_in_series branch UPDATEs calendar_events.starts_at
+          // / .ends_at / .rrule; mutating the base anchor into the past breaks
+          // the conceptual link to historical session_participants rows.
+          // Reject when the caller proposes a startsAt in the Brussels-anchored
+          // past. Audit the denial OUTSIDE the failing tx (Plan 04-10 helper)
+          // so the forensic record survives rollback.
+          if (input.edits.startsAt) {
+            const newStartsIso = formatOccurrenceDate(input.edits.startsAt);
+            const todayIso = formatOccurrenceDate(new Date());
+            if (newStartsIso < todayIso) {
+              await writeAuditOutsideTx(ctx, {
+                action: 'calendar_event_recurring_updated_all',
+                resourceType: 'calendar_event',
+                resourceId: oldEvent.id,
+                outcome: 'denied',
+                newValues: {
+                  reason: 'past_immutable',
+                  newStartsAt: newStartsIso,
+                },
+              });
+              throw new TRPCError({
+                code: 'FORBIDDEN',
+                message: 'errors.calendar.cannotMoveSeriesToPast',
+              });
+            }
+          }
+
           // Decide new RRULE.
           let newRruleString = oldEvent.rrule;
           if (input.edits.frequency || input.edits.byday) {
