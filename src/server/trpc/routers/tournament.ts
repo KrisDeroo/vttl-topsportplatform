@@ -886,8 +886,15 @@ export const tournamentRouter = router({
   // populate `system_inbox` rows. Returning the data via the router is the
   // interactive path; the pg_cron path is the passive notification surface.
   //
-  // RBAC: role=player can only query own pending. trainer/TD/parent can
-  // pass an explicit playerUserId override. Other roles → FORBIDDEN.
+  // RBAC (CR-04 fix — Plan 04-12 Task 3): role=player can only query own
+  // pending. trainer/TD can pass any playerUserId override (RLS scopes the
+  // rows). parent can pass a playerUserId only when a `parent_child_links`
+  // row exists between caller and target (SQL probe enforced below).
+  // Other roles → FORBIDDEN with `role_not_allowed`. Restoring the
+  // procedure-boundary contract closes the listPendingForPlayer
+  // enumeration surface (medical_staff / sparring_partner / academy_manager
+  // can no longer probe via this procedure even though RLS would scope to
+  // zero rows; rejecting upfront is the cleaner invariant).
   listPendingForPlayer: protectedProcedure
     .input(listPendingForPlayerInput)
     .query(async ({ ctx, input }) => {
@@ -897,10 +904,55 @@ export const tournamentRouter = router({
       const callerRole = ctx.scope.role;
 
       const targetPlayerId = input.playerUserId ?? callerId;
-      if (callerRole === 'player' && targetPlayerId !== callerId) {
+
+      // CR-04 (Plan 04-12 Task 3): full allowlist + parent-child probe.
+      // The docstring above documents the contract; implement it here so
+      // the procedure boundary rejects non-allowlisted roles upfront.
+      if (callerRole === 'player') {
+        if (targetPlayerId !== callerId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'errors.tournament.notOwnPlayer',
+          });
+        }
+      } else if (
+        callerRole === 'trainer' ||
+        callerRole === 'technical_director'
+      ) {
+        // No additional probe — trainer + TD may query any player's pending
+        // list. RLS on tournament_results + calendar_event_participants
+        // further scopes rows returned.
+      } else if (callerRole === 'parent') {
+        // Parent may query a child's pending list only when a
+        // parent_child_links row exists between caller and target.
+        // Mirrors the trainer-academy probe pattern used elsewhere in this
+        // router. parent_child_links has no `status` column (per
+        // src/server/db/schema/memberships.ts:58-76) — the row's presence
+        // is the trust signal (created by TD per Phase 2 D-31).
+        const linked = await db.execute<{ ok: number }>(sql`
+          SELECT 1 AS ok
+          FROM parent_child_links
+          WHERE parent_user_id = ${callerId}::uuid
+            AND child_user_id = ${targetPlayerId}::uuid
+          LIMIT 1
+        `);
+        const linkedRows: Array<{ ok: number }> = Array.isArray(linked)
+          ? (linked as Array<{ ok: number }>)
+          : ((linked as unknown as { rows?: Array<{ ok: number }> })
+              .rows ?? []);
+        if (linkedRows.length === 0) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'errors.tournament.notChildOfParent',
+          });
+        }
+      } else {
+        // sparring_partner, medical_staff, academy_manager, etc. → not in
+        // the listPendingForPlayer contract. RLS would scope to zero rows
+        // anyway, but explicit FORBIDDEN closes the enumeration surface.
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'errors.tournament.notOwnPlayer',
+          message: 'role_not_allowed',
         });
       }
 
