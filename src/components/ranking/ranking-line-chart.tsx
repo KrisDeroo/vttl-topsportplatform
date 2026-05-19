@@ -15,7 +15,7 @@
  *            chart, 04-CONTEXT.md D-87 + D-88 + D-90.
  */
 import { LineChart as LineChartIcon, Plus } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import * as React from 'react';
 import {
   CartesianGrid,
@@ -52,10 +52,12 @@ function CustomTooltip(props: {
   payload?: Array<{ payload?: ChartDatum }>;
 }) {
   const t = useTranslations('ranking.chart.tooltip.source');
+  const locale = useLocale();
+  const localeTag = locale === 'en' ? 'en-GB' : `${locale}-BE`;
   if (!props.active || !props.payload || props.payload.length === 0) return null;
   const d = props.payload[0]?.payload;
   if (!d) return null;
-  const dateStr = new Date(d.recordedAt).toLocaleDateString('nl-BE', {
+  const dateStr = new Date(d.recordedAt).toLocaleDateString(localeTag, {
     day: '2-digit',
     month: '2-digit',
     year: '2-digit',
@@ -85,6 +87,8 @@ export function RankingLineChart({
   const t = useTranslations('ranking');
   const tChart = useTranslations('ranking.chart');
   const tEmpty = useTranslations('ranking.empty');
+  const locale = useLocale();
+  const localeTag = locale === 'en' ? 'en-GB' : `${locale}-BE`;
 
   const query = trpc.ranking.getHistory.useQuery({
     playerUserId,
@@ -137,7 +141,7 @@ export function RankingLineChart({
             type="number"
             domain={['dataMin', 'dataMax']}
             tickFormatter={(ts) =>
-              new Date(ts).toLocaleDateString('nl-BE', {
+              new Date(ts).toLocaleDateString(localeTag, {
                 day: '2-digit',
                 month: '2-digit',
                 year: '2-digit',
