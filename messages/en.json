@@ -479,6 +479,9 @@
     },
     "sparring": {
       "notASparringPartner": "One or more users do not have the sparring-partner role."
+    },
+    "idempotency": {
+      "inputMismatch": "Idempotency key reused with different input. Generate a new key or correct the payload."
     }
   },
   "admin": {

@@ -147,6 +147,10 @@ describe('Phase 3 — expected migration manifest (MIG-05)', () => {
  *   0019_phase4_pg_cron_nudges
  *   0020_phase4_system_inbox
  *
+ * Phase 4 gap closure (Wave 5+) ships additional additive migrations,
+ * landing 0021 here. Each is additive only; the existing 7 are unchanged.
+ *   0021_phase4_idempotency_request_hash  (CR-02 / VALID-08 fix — Plan 04-11)
+ *
  * Each migration MUST land with a `.rollback.md` companion holding the
  * canonical Risk / Procedure / Verification headers — same shape as the
  * outer loop already enforces for every present file. Until the .sql
@@ -166,11 +170,12 @@ describe('Phase 4 — expected migration manifest (MIG-05)', () => {
     '0018_phase4_rls_helpers_and_sparring_branch',
     '0019_phase4_pg_cron_nudges',
     '0020_phase4_system_inbox',
+    '0021_phase4_idempotency_request_hash',
   ] as const;
 
-  it('declares all 7 expected Phase 4 migration stems (manifest)', () => {
-    expect(PHASE4_MIGRATIONS).toHaveLength(7);
-    expect(new Set(PHASE4_MIGRATIONS).size).toBe(7);
+  it('declares all 8 expected Phase 4 migration stems (manifest)', () => {
+    expect(PHASE4_MIGRATIONS).toHaveLength(8);
+    expect(new Set(PHASE4_MIGRATIONS).size).toBe(8);
   });
 
   for (const stem of PHASE4_MIGRATIONS) {

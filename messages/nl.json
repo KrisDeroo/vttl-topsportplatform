@@ -479,6 +479,9 @@
     },
     "sparring": {
       "notASparringPartner": "Eén of meer gebruikers hebben geen sparring-partner rol."
+    },
+    "idempotency": {
+      "inputMismatch": "Idempotentiesleutel hergebruikt met andere invoer. Genereer een nieuwe sleutel of corrigeer de invoer."
     }
   },
   "admin": {

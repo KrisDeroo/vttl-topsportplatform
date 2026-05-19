@@ -479,6 +479,9 @@
     },
     "sparring": {
       "notASparringPartner": "Un ou plusieurs utilisateurs n'ont pas le rôle de partenaire d'entraînement."
+    },
+    "idempotency": {
+      "inputMismatch": "Clé d'idempotence réutilisée avec des entrées différentes. Générez une nouvelle clé ou corrigez la charge utile."
     }
   },
   "admin": {
