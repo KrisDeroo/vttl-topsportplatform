@@ -1,11 +1,11 @@
 # Rollback: 0023_phase4_inbox_cron_dedup.sql
 
-## Risk
-LOW (in isolation) / MEDIUM (combined with 0022). Reverting restores
+**Risk:** LOW (in isolation) / MEDIUM (combined with 0022). Reverting restores
 pre-CR-07 stacking. If 0022 also rolled back, the ON CONFLICT clause
 dangles — they MUST roll back together.
 
-## Procedure
+**Procedure:**
+
 Re-apply 0019's original function bodies (CREATE OR REPLACE without
 ON CONFLICT). The cleanest path is to copy the exact function bodies
 from drizzle/0019_phase4_pg_cron_nudges.sql lines 26-102 (skip the
@@ -38,14 +38,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public;
 -- Same shape for run_daily_player_tournament_result_nudge (see 0019).
 ```
 
-## Verification
+**Verification:**
+
 - `pg_get_functiondef('run_daily_trainer_score_nudge'::regproc)` does NOT
   contain `ON CONFLICT`.
 - Running the function twice in the same Brussels day deposits 2 rows.
 - `pnpm test tests/integration/system-inbox-daily-dedup.test.ts --run`
   assertion fails (expected post-rollback).
 
-## Reference
+**Reference:**
+
 - .planning/phases/04-kerndomein/04-VERIFICATION.md §gaps[6]
 - .planning/phases/04-kerndomein/04-REVIEW.md §CR-07
 - drizzle/0019_phase4_pg_cron_nudges.sql (original function bodies)
