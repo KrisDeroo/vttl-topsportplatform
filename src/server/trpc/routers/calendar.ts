@@ -72,7 +72,7 @@ import { players } from '@/server/db/schema/players';
 import { sessionSparringPartners } from '@/server/db/schema/training';
 import { trainers } from '@/server/db/schema/trainers';
 
-import { writeAudit } from '../middleware/audit';
+import { writeAudit, writeAuditOutsideTx } from '../middleware/audit';
 import { canCreateEventType } from '../middleware/calendarCreate';
 import { protectedProcedure, tdProcedure } from '../middleware/freshSession';
 import {
@@ -1735,7 +1735,8 @@ export const calendarRouter = router({
             // Past-data immutability — server rejects edits on past
             // occurrences. The exception schema permits it, but D-83
             // makes it a policy-level rejection.
-            await writeAudit(ctx, {
+            // writeAuditOutsideTx — survives the failing-tx rollback (CR-01 fix).
+            await writeAuditOutsideTx(ctx, {
               action: 'calendar_event_exception_created',
               resourceType: 'calendar_event',
               resourceId: oldEvent.id,
@@ -1819,7 +1820,8 @@ export const calendarRouter = router({
           const splitIso = formatOccurrenceDate(input.splitDate);
           const todayIso = formatOccurrenceDate(new Date());
           if (splitIso < todayIso) {
-            await writeAudit(ctx, {
+            // writeAuditOutsideTx — survives the failing-tx rollback (CR-01 fix).
+            await writeAuditOutsideTx(ctx, {
               action: 'calendar_event_recurring_split',
               resourceType: 'calendar_event',
               resourceId: oldEvent.id,

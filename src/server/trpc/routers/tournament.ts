@@ -86,7 +86,7 @@ import {
 } from '@/server/db/schema/calendar';
 import { matchResults, tournamentResults } from '@/server/db/schema/tournament';
 
-import { writeAudit } from '../middleware/audit';
+import { writeAudit, writeAuditOutsideTx } from '../middleware/audit';
 import { protectedProcedure, tdProcedure } from '../middleware/freshSession';
 import { idempotencyMiddleware } from '../middleware/idempotency';
 import {
@@ -599,7 +599,8 @@ export const tournamentRouter = router({
           Date.now() - ev.endsAt.getTime() > FOURTEEN_DAYS_MS;
         if (wallExpired) {
           // Denied-outcome audit BEFORE the throw (T-04-19 forensic visibility).
-          await writeAudit(ctx, {
+          // writeAuditOutsideTx — survives the failing-tx rollback (CR-01 fix).
+          await writeAuditOutsideTx(ctx, {
             action: 'tournament_entry_window_expired_attempt',
             resourceType: 'tournament',
             resourceId: input.tournamentEventId,
