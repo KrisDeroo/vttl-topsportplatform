@@ -719,20 +719,26 @@ export const calendarRouter = router({
         }
 
         // needsScoring — trainer/TD only.
+        // WR-09: aggregation is per (event_id, occurrence_date), NOT per
+        // event_id. The previous shape summed session_participants rows
+        // across ALL past occurrences, producing false negatives for
+        // established recurring trainings (12-week series with one
+        // unscored week showed no chip because the 11 scored weeks made
+        // scored_count >= participant_count) and false positives for
+        // brand-new recurring trainings (the elapsed-window filter mostly
+        // caught these but the chip-overlay decision still needs to be
+        // per-chip, not per-series). The new pipeline drives the yellow
+        // ⚠ chip overlay one chip at a time.
         if (
           candidateTrainingIds.length > 0 &&
           (callerRole === 'trainer' || callerRole === 'technical_director')
         ) {
-          // A training "needs scoring" if it has ended in last 14d AND
-          // either (a) there are session_participants rows with NULL
-          // quality_score, OR (b) NO session_participants rows exist yet
-          // (the trainer hasn't started scoring). Use SQL EXISTS via a
-          // simple aggregate: events whose calendar_event_participants
-          // count exceeds the count of scored session_participants.
-          const sessionStats = await db.execute<{
+          // (a) participant_count per event_id — constant across occurrences
+          //     of a recurring event because calendar_event_participants is
+          //     series-level (no occurrence_date column).
+          const participantStats = await db.execute<{
             event_id: string;
             participant_count: number;
-            scored_count: number;
           }>(sql`
             SELECT
               ce.id AS event_id,
@@ -740,38 +746,73 @@ export const calendarRouter = router({
                 SELECT COUNT(*)::int FROM calendar_event_participants cep
                 JOIN users u ON u.id = cep.user_id
                 WHERE cep.event_id = ce.id AND u.role = 'player'
-              ) AS participant_count,
-              (
-                SELECT COUNT(*)::int FROM session_participants sp
-                WHERE sp.event_id = ce.id
-                  AND sp.quality_score IS NOT NULL
-              ) AS scored_count
+              ) AS participant_count
             FROM calendar_events ce
             WHERE ce.id = ANY(${candidateTrainingIds}::uuid[])
           `);
-          const statsRows: Array<{
+          const participantRows: Array<{
             event_id: string;
             participant_count: number;
-            scored_count: number;
-          }> = Array.isArray(sessionStats)
-            ? (sessionStats as Array<{
+          }> = Array.isArray(participantStats)
+            ? (participantStats as Array<{
                 event_id: string;
                 participant_count: number;
-                scored_count: number;
               }>)
-            : ((sessionStats as unknown as {
+            : ((participantStats as unknown as {
                 rows?: Array<{
                   event_id: string;
                   participant_count: number;
+                }>;
+              }).rows ?? []);
+          const participantsByEvent = new Map<string, number>();
+          for (const r of participantRows) {
+            participantsByEvent.set(r.event_id, Number(r.participant_count));
+          }
+
+          // (b) scored_count per (event_id, occurrence_date) — session_participants
+          //     has composite PK (event_id, occurrence_date, user_id) per D-82.
+          //     Cast occurrence_date to text so we can string-compare against
+          //     the Brussels-anchored YYYY-MM-DD strings the rrule expansion
+          //     produces.
+          const scoredStats = await db.execute<{
+            event_id: string;
+            occurrence_date: string;
+            scored_count: number;
+          }>(sql`
+            SELECT
+              sp.event_id,
+              sp.occurrence_date::text AS occurrence_date,
+              COUNT(*)::int AS scored_count
+            FROM session_participants sp
+            WHERE sp.event_id = ANY(${candidateTrainingIds}::uuid[])
+              AND sp.quality_score IS NOT NULL
+            GROUP BY sp.event_id, sp.occurrence_date
+          `);
+          const scoredRows: Array<{
+            event_id: string;
+            occurrence_date: string;
+            scored_count: number;
+          }> = Array.isArray(scoredStats)
+            ? (scoredStats as Array<{
+                event_id: string;
+                occurrence_date: string;
+                scored_count: number;
+              }>)
+            : ((scoredStats as unknown as {
+                rows?: Array<{
+                  event_id: string;
+                  occurrence_date: string;
                   scored_count: number;
                 }>;
               }).rows ?? []);
-          const trainingNeedsScoring = new Set<string>();
-          for (const r of statsRows) {
-            if (Number(r.participant_count) > Number(r.scored_count)) {
-              trainingNeedsScoring.add(r.event_id);
-            }
+          const scoredByEventDate = new Map<string, number>();
+          for (const r of scoredRows) {
+            scoredByEventDate.set(
+              `${r.event_id}|${r.occurrence_date}`,
+              Number(r.scored_count),
+            );
           }
+
           // For trainer scope: only mark events where this trainer is the
           // session trainer. TD always sees the flag.
           let trainerSessionIds = new Set<string>();
@@ -786,11 +827,25 @@ export const calendarRouter = router({
               : ((trainerRows as unknown as { rows?: Array<{ event_id: string }> }).rows ?? []);
             trainerSessionIds = new Set(rows.map((r) => r.event_id));
           }
+
           for (const inst of instances) {
             if (inst.typeCode !== 'event_type_training') continue;
-            if (!trainingNeedsScoring.has(inst.id)) continue;
-            if (callerRole === 'trainer' && !trainerSessionIds.has(inst.id)) continue;
-            inst.needsScoring = true;
+            if (callerRole === 'trainer' && !trainerSessionIds.has(inst.id))
+              continue;
+            const participantCount = participantsByEvent.get(inst.id) ?? 0;
+            if (participantCount === 0) continue;
+            // For a non-recurring (one-shot) training, inst.occurrenceDate
+            // is null. Fall back to the Brussels-anchored startsAt date,
+            // which matches the shape session_participants.occurrence_date
+            // stores for one-shot trainings.
+            const occIso = inst.occurrenceDate
+              ? formatOccurrenceDate(inst.occurrenceDate)
+              : formatOccurrenceDate(inst.startsAt);
+            const key = `${inst.id}|${occIso}`;
+            const scored = scoredByEventDate.get(key) ?? 0;
+            if (scored < participantCount) {
+              inst.needsScoring = true;
+            }
           }
         }
 
