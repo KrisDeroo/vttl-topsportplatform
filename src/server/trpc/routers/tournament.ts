@@ -77,6 +77,7 @@ import { TRPCError } from '@trpc/server';
 import { and, asc, desc, eq, gte, isNull, lt, lte, sql } from 'drizzle-orm';
 
 import { getAgeCategoryAt } from '@/lib/players';
+import { deriveEnteredBy } from '@/lib/tournament-result';
 import { db as rawDb, type DbClient } from '@/server/db/client';
 import {
   calendarEventParticipants,
@@ -109,24 +110,11 @@ import { router } from '../trpc';
  */
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
-/**
- * Derive `entered_by` from the caller's role (DOM-RESULT-02). Three buckets:
- *   - 'player'  — caller is the player whose result is being entered
- *   - 'td'      — caller is the technical director
- *   - 'trainer' — caller is a trainer (and necessarily shares an academy
- *                 with the player; the SQL guard in enterResult enforces this)
- *
- * Other roles (sparring_partner, parent, medical_staff, academy_manager)
- * cannot reach this code path — they're rejected by the per-role gate inside
- * `enterResult` BEFORE this helper is called.
- */
-function deriveEnteredBy(
-  role: 'player' | 'trainer' | 'technical_director',
-): 'player' | 'trainer' | 'td' {
-  if (role === 'player') return 'player';
-  if (role === 'technical_director') return 'td';
-  return 'trainer';
-}
+// `deriveEnteredBy` lives in `@/lib/tournament-result` (top-level import below).
+// The helper was extracted in Plan 04-09 so the derivation is testable in
+// isolation (`tests/unit/entered-by-derivation.test.ts`) and so other Phase 4
+// surfaces (Phase 5 dashboard, future v2 explicit-update endpoint) reuse the
+// same truth table.
 
 /**
  * Format a Date as YYYY-MM-DD (UTC) for the `match_date` PG `date` column.
