@@ -47,7 +47,7 @@ import {
 } from '@/server/db/schema/calendar';
 import { sessionParticipants } from '@/server/db/schema/training';
 
-import { writeAudit } from '../middleware/audit';
+import { writeAudit, writeAuditOutsideTx } from '../middleware/audit';
 import {
   protectedProcedure,
   trainerOrTdProcedure,
@@ -167,7 +167,7 @@ export const trainingRouter = router({
       const wallExpired =
         Date.now() - event[0].endsAt.getTime() > FOURTEEN_DAYS_MS;
       if (wallExpired) {
-        await writeAudit(ctx, {
+        await writeAuditOutsideTx(ctx, {
           action: 'training_score_window_expired_attempt',
           resourceType: 'calendar_event',
           resourceId: input.eventId,

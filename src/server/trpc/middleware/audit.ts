@@ -107,6 +107,49 @@ export async function writeAudit(
 }
 
 /**
+ * Variant of `writeAudit` that deliberately strips `ctx.db` so the insert
+ * runs on the raw pool, not on the surrounding withRlsContext transaction.
+ *
+ * Why: explicit `writeAudit(ctx, { outcome: 'denied' })` calls in router
+ * handlers (training.markAttendanceAndScore wall-rejection,
+ * tournament.enterResult wall-rejection, calendar.editRecurring
+ * past-immutable rejection) are followed by `throw new TRPCError(...)`,
+ * which rolls the open tx back — including the audit row. The
+ * forensic-visibility property documented in T-04-19 / T-04-23 / D-83
+ * threat-mitigation comments is broken unless the audit insert commits
+ * outside the failing tx.
+ *
+ * `auditMiddleware` (below) already applies this pattern on its rejection
+ * path. This helper formalises the same shim so explicit denied-audit
+ * call sites can compose it without duplicating the strip-context
+ * boilerplate.
+ *
+ * Caveat: actor attribution comes from `ctx.scope.userId` (passed through
+ * in the row payload), NOT from the `app.user_id` Postgres GUC — the
+ * rawDb pool connection does not have the GUC set. This matches the
+ * auditMiddleware error path behaviour. The audit_log INSERT policy is
+ * `WITH CHECK (true)` (drizzle/0002 line 343) so the insert succeeds.
+ *
+ * Reference: .planning/phases/04-kerndomein/04-REVIEW.md §CR-01
+ *            .planning/phases/04-kerndomein/04-VERIFICATION.md §gaps[0]
+ */
+export async function writeAuditOutsideTx(
+  ctx: AuditContext,
+  entry: AuditEntry,
+): Promise<void> {
+  // Conditional spreads keep the helper compatible with `exactOptionalPropertyTypes:
+  // true` — we MUST NOT assign `undefined` to optional ipAddress / userAgent.
+  const strippedCtx: AuditContext = {
+    scope: ctx.scope ? { userId: ctx.scope.userId } : null,
+    ...(ctx.ipAddress !== undefined && { ipAddress: ctx.ipAddress }),
+    ...(ctx.userAgent !== undefined && { userAgent: ctx.userAgent }),
+    requestId: ctx.requestId,
+    // db deliberately omitted — writeAudit falls back to rawDb.
+  };
+  await writeAudit(strippedCtx, entry);
+}
+
+/**
  * Generic mutation auditor. Wrap a procedure to write an audit row on every
  * successful call (and an `error` row on rejection, then re-throw):
  *
