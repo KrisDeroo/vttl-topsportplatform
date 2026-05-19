@@ -380,7 +380,7 @@ Ja — drie aparte formulieren + lijst-UI's + één lijndiagram.
 
 ### Plans
 
-**Plans:** 9 plans in 5 waves (Wave 0: REQUIREMENTS supersedes + 30 RED tests + i18n keys; Wave 1: 7 hand-authored migrations 0014..0020 + Drizzle barrels + [BLOCKING] `pnpm db:push`; Wave 2: 4 parallel router plans — training / tournament / ranking / rrule-polish + sparring; Wave 3: minimal `system_inbox` tRPC + frontend UI surface — 30+ components + 5 routes + recharts + globals.css tokens; Wave 4: 23 integration tests flip RED→GREEN + RBAC matrix + audit coverage + e2e + human UAT).
+**Plans:** 16 plans in 7 waves (Waves 0–4 shipped initial implementation; Wave 5 + Wave 6 close 9 BLOCKERs + 5 WARNINGs from 04-VERIFICATION.md / 04-REVIEW.md — concerns A–G grouped per Gaps Summary).
 
 Plans:
 **Wave 0**
@@ -401,6 +401,17 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3)*
 - [x] 04-09-PLAN.md — Verification: complete tests/fixtures/phase4-seed.ts; flip ALL 23 RED integration tests to GREEN (rbac-matrix-phase4 7×5×3 / 14d-walls boundaries / tournament-atomic-entry happy + rollback / rrule-edit-scopes 3×2 + D-83 immutable / rls-academy-wide-result-visibility 5 branches / phase4-audit 15 codes / pg-cron-nudge-jobs test-mode / etc.); tests/e2e/rankings-tab.spec.ts Playwright (recharts inverted Y + Belgium tier-band); 04-HUMAN-UAT.md (8 manual verifications + multilingual sanity + e2e walkthrough); 04-VALIDATION.md approved
+
+**Wave 5 — Gap closure (parallel; independent file sets)** *(closing CR-01/02/06/07/09 + WR-02)*
+- [ ] 04-10-PLAN.md — Concern A (audit forensics — CR-01): writeAuditOutsideTx helper in audit.ts + apply to 4 denied-audit call sites (training:170 / tournament:602 / calendar:1738 + 1822) + integration probe verifying denied audit rows survive rollback (T-04-19 / T-04-23 forensic visibility property delivered)
+- [ ] 04-11-PLAN.md — Concern B (idempotency input binding — CR-02): drizzle/0021 additive ALTER adding request_hash column; idempotencyMiddleware computes sha256(canonicalised JSON input) on every call, persists on cache MISS, compares on cache HIT, raises CONFLICT errors.idempotency.inputMismatch on mismatch; integration test covers replay / CONFLICT / MISS / key-order canonicalisation
+- [ ] 04-14-PLAN.md — Concern E (inbox INSERT policy + dedup — CR-06 + CR-07): drizzle/0022 INSERT policy system_inbox_insert_security_definer + REVOKE INSERT,DELETE FROM app_user + partial UNIQUE INDEX uq_system_inbox_daily on (user_id, kind, Brussels-day) + drizzle/0023 CREATE OR REPLACE cron functions with ON CONFLICT DO NOTHING; [BLOCKING] `pnpm db:push --yes` + 2 integration tests (policy enforcement + daily dedup)
+- [ ] 04-16-PLAN.md — Concern G (Brussels-anchored dates — CR-09 + WR-02): replace 6 .toISOString().slice(0,10) call sites (players.ts:102 / event-detail-sheet:202 / te-scoren-overview:43 / score/page:32 / training.ts:80 / tournament.ts:126) with formatOccurrenceDate; structural unit test forbidding future regressions on Phase 4 surfaces; integration test verifying DOM-CAT-02 Brussels-anchored snapshot for evening tournaments
+
+**Wave 6 — Gap closure (sequenced — depend on Wave 5 file ownership)** *(closing CR-03/04/05/08 + WR-05/06/07/09/10)*
+- [ ] 04-12-PLAN.md — Concern C (tournament result-route + RBAC — CR-03 + CR-04, depends on 04-10): tournaments/[eventId]/result/page.tsx accepts ?playerId for non-player callers (Pick-Player selector if absent); leaderboard + participants panel emit ?playerId-bearing navigation links; listPendingForPlayer enforces explicit role allowlist (player/trainer/TD/parent) + parent_child_links active-link probe; integration RBAC matrix 9 cells + Playwright e2e for TD-without-playerId picker fallback
+- [ ] 04-13-PLAN.md — Concern D (recurring edit past-immutability + needsScoring per-occurrence — CR-05 + WR-09, depends on 04-10): all_in_series branch adds Brussels-anchored past-startsAt guard with writeAuditOutsideTx denial; new errors.calendar.cannotMoveSeriesToPast i18n key in nl/en/fr; calendar.list needsScoring SQL refactored from per-event aggregate to per (event_id, occurrence_date) aggregate; 2 integration tests covering D-83 parity across all 3 scopes + per-occurrence chip-overlay correctness
+- [ ] 04-15-PLAN.md — Concern F (i18n XSS sinks + hardcoded labels + chart locale — CR-08 + WR-05/06/07/10, depends on 04-12 + 04-13): replace dangerouslySetInnerHTML with t.rich + `<b>` chunks in nudge-banner.tsx + rrule-scope-picker-dialog.tsx (catalogs rewritten from `**bold**` to `<b>bold</b>`); fix WR-10 daysLeft off-by-one via Math.ceil(msLeft/86400000); add 5 i18n labels for tournament-detail page (Startdatum / Einddatum / Type / Leeftijdscategorie / Deelnemers) + translate lookup codes via tLookupType/tLookupAge; ranking-line-chart uses useLocale for date formatting; structural unit test forbidding dangerouslySetInnerHTML in src/components/
 
 ---
 
