@@ -15,6 +15,10 @@
  *  - Replay (same key + same user + same endpoint): middleware short-
  *    circuits, returns the cached response WITHOUT re-running the
  *    handler. Side-effect-free even if user mashes the button.
+ *  - Phase 4 CR-02: cache-HIT lookup also compares the new request's
+ *    sha256(sorted-keys-JSON(input)) against the stored `request_hash`.
+ *    Mismatch → CONFLICT (`errors.idempotency.inputMismatch`) — prevents
+ *    same-key-different-input replay (T-04-25 mitigation).
  *  - `expiresAt` = createdAt + 24h. Expired rows are reclaimed by a
  *    nightly pg_cron job (Plan 13).
  *
@@ -36,7 +40,8 @@ export const idempotencyKeys = pgTable('idempotency_keys', {
     .notNull()
     .references(() => users.id),
   endpoint: text('endpoint').notNull(), // tRPC procedure name
-  responseHash: text('response_hash'), // sha256 of stored body for replay verification
+  requestHash: text('request_hash'), // Phase 4 CR-02 — sha256 of canonicalised input; null on legacy rows
+  responseHash: text('response_hash'), // v2-reserved for response-tamper detection (WR-08)
   responseBody: jsonb('response_body'),
   createdAt: tstz('created_at', { defaultNow: true }).notNull(),
   expiresAt: tstz('expires_at').notNull(), // createdAt + 24h, reclaimed by pg_cron
