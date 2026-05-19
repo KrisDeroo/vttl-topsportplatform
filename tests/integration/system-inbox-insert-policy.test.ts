@@ -65,35 +65,41 @@ d('system_inbox INSERT policy + REVOKE (CR-06)', () => {
   it('app_user-bound connection canNOT INSERT into system_inbox', async () => {
     if (!dbReady || !fixtures) return;
     // Use rawPgAsAppUser's long-lived session form so we can attempt the
-    // INSERT via raw client.query and catch the rejection.
-    await using cx = await rawPgAsAppUser({
+    // INSERT via raw client.query and catch the rejection. The helper has
+    // a discriminated union return (rows | disposable); narrow before use.
+    const cxOrRows = await rawPgAsAppUser({
       userId: fixtures.users.trainer,
       role: 'trainer',
     });
-    if (Array.isArray(cx)) {
+    if (Array.isArray(cxOrRows)) {
       throw new Error('expected long-lived session, got rows array');
     }
-    let rejected = false;
+    const cx = cxOrRows;
     try {
-      await cx.query(
-        `INSERT INTO system_inbox (user_id, kind, payload)
-         VALUES ($1, 'trainer_score_nudge', '{"test": true}'::jsonb)`,
-        [fixtures.users.trainer],
-      );
-    } catch (err) {
-      rejected = true;
-      // The error MAY surface as "permission denied" OR
-      // "new row violates row-level security policy" depending on whether
-      // REVOKE or the policy fires first. Accept either.
-      const msg = (err as Error).message?.toLowerCase() ?? '';
-      expect(
-        msg.includes('permission denied') ||
-          msg.includes('row-level security') ||
-          msg.includes('row level security') ||
-          msg.includes('insert privilege'),
-      ).toBe(true);
+      let rejected = false;
+      try {
+        await cx.query(
+          `INSERT INTO system_inbox (user_id, kind, payload)
+           VALUES ($1, 'trainer_score_nudge', '{"test": true}'::jsonb)`,
+          [fixtures.users.trainer],
+        );
+      } catch (err) {
+        rejected = true;
+        // The error MAY surface as "permission denied" OR
+        // "new row violates row-level security policy" depending on whether
+        // REVOKE or the policy fires first. Accept either.
+        const msg = (err as Error).message?.toLowerCase() ?? '';
+        expect(
+          msg.includes('permission denied') ||
+            msg.includes('row-level security') ||
+            msg.includes('row level security') ||
+            msg.includes('insert privilege'),
+        ).toBe(true);
+      }
+      expect(rejected).toBe(true);
+    } finally {
+      await cx[Symbol.asyncDispose]();
     }
-    expect(rejected).toBe(true);
   });
 
   it('SECURITY DEFINER cron function CAN INSERT (CR-06 + CR-07 combined)', async () => {
