@@ -38,6 +38,9 @@
  *            .planning/phases/04-kerndomein/04-PATTERNS.md §Cross-Cutting §2
  *            src/server/db/schema/idempotency.ts (table contract)
  */
+import { createHash } from 'node:crypto';
+
+import { TRPCError } from '@trpc/server';
 import { and, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -54,6 +57,44 @@ const META_KEY_SCHEMA = z.object({
     .optional(),
 });
 
+/**
+ * Stable JSON canonicalisation — sort object keys recursively so two
+ * structurally-identical inputs produce byte-identical strings regardless
+ * of key insertion order. Required for sha256 stability across language
+ * runtimes (Node vs browser tRPC client) and across sessions.
+ *
+ * Limitations:
+ *   - Date/Set/Map/Buffer/etc are not stable under JSON.stringify; the
+ *     middleware accepts raw JSON-serialisable input only (which is what
+ *     the tRPC HTTP transport sends after JSON encoding).
+ *   - undefined values are dropped by JSON.stringify; this matches the
+ *     wire transport's behaviour, so the canonicalised form is what the
+ *     server actually receives.
+ *
+ * Reference: .planning/phases/04-kerndomein/04-REVIEW.md §CR-02
+ */
+function canonicaliseJson(value: unknown): unknown {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(canonicaliseJson);
+  return Object.keys(value as Record<string, unknown>)
+    .sort()
+    .reduce<Record<string, unknown>>((acc, k) => {
+      acc[k] = canonicaliseJson((value as Record<string, unknown>)[k]);
+      return acc;
+    }, {});
+}
+
+/**
+ * Phase 4 CR-02 — sha256 of the canonicalised raw input. Persisted on
+ * cache-MISS insert and compared on cache-HIT lookup. Mismatch raises
+ * CONFLICT (errors.idempotency.inputMismatch).
+ */
+function hashInput(raw: unknown): string {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicaliseJson(raw)))
+    .digest('hex');
+}
+
 export const idempotencyMiddleware = (endpointName: string) =>
   middleware(async ({ ctx, next, getRawInput }) => {
     // Anonymous callers (publicProcedure) — no scope to attribute the key to.
@@ -67,6 +108,10 @@ export const idempotencyMiddleware = (endpointName: string) =>
     const key = parsed.success ? parsed.data._meta?.idempotencyKey : undefined;
     if (!key) return next();
 
+    // Phase 4 CR-02: canonicalise input + sha256 so cache-HIT lookups can
+    // verify same-input-same-cached-response. Mismatch → CONFLICT.
+    const inputHash = hashInput(raw);
+
     // ctx.db is typed `unknown` in CallerContext (see trpc.ts rationale);
     // narrow here. Fall back to rawDb only outside withRlsContext, which
     // shouldn't happen on the procedures this middleware is composed onto,
@@ -75,10 +120,15 @@ export const idempotencyMiddleware = (endpointName: string) =>
     const now = new Date();
 
     // 1. Cache lookup — gate on (key, userId, endpoint) and require unexpired.
+    // Do NOT add eq(requestHash, inputHash) to the WHERE chain — we want to
+    // find the row regardless of hash so a mismatch can be reported as
+    // CONFLICT (rather than silently treated as cache MISS, which would
+    // cause double-execution side effects).
     const existing = await dbHandle
       .select({
         responseBody: idempotencyKeys.responseBody,
         expiresAt: idempotencyKeys.expiresAt,
+        storedRequestHash: idempotencyKeys.requestHash,
       })
       .from(idempotencyKeys)
       .where(
@@ -92,6 +142,19 @@ export const idempotencyMiddleware = (endpointName: string) =>
       .limit(1);
 
     if (existing[0]) {
+      const stored = existing[0].storedRequestHash;
+      // Phase 4 CR-02: If a row exists for (key, userId, endpoint) AND has a
+      // stored request_hash that does NOT match the new request's hash, the
+      // client is replaying the same key with different input — reject with
+      // CONFLICT so the client either generates a fresh key or fixes the
+      // mismatched payload. Legacy rows pre-CR-02 fix have stored === null;
+      // accept those for the 24h grace window (TTL purges them).
+      if (stored !== null && stored !== inputHash) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'errors.idempotency.inputMismatch',
+        });
+      }
       // Cache HIT — write idempotency_replay audit row (Phase 4 audit code
       // #14) and return the cached body. The tRPC client receives a
       // structurally-identical response to the original call. We surface
@@ -141,7 +204,10 @@ export const idempotencyMiddleware = (endpointName: string) =>
         responseBody: ((result as any)?.data ?? (result as any) ?? null) as
           | Record<string, unknown>
           | null,
-        // Optional sha256 — defer to v2 if replay-tampering becomes a concern.
+        // Phase 4 CR-02: bind cache key to canonicalised input hash so
+        // replay verification is enforced on next lookup.
+        requestHash: inputHash,
+        // response_hash remains v2-reserved (response-tamper detection — WR-08).
         responseHash: null,
         createdAt: now,
         // 24h TTL — matches `idempotency_keys.expiresAt` contract (Phase 1
