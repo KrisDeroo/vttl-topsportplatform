@@ -13,6 +13,7 @@
  *            row), 04-CONTEXT.md D-78.
  */
 import { Award } from 'lucide-react';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,11 +33,14 @@ type Ctx = Awaited<ReturnType<typeof createContext>>;
 interface TournamentResultsLeaderboardProps {
   ctx: Ctx;
   tournamentEventId: string;
+  /** Locale for constructing per-player result links. Defaults to 'nl'. */
+  locale?: string;
 }
 
 export async function TournamentResultsLeaderboard({
   ctx,
   tournamentEventId,
+  locale = 'nl',
 }: TournamentResultsLeaderboardProps) {
   const t = await getTranslations('tournament.leaderboard');
   const tLookupOutcome = await getTranslations('lookup.outcomeLevel');
@@ -99,7 +103,20 @@ export async function TournamentResultsLeaderboard({
                 }
                 return (
                   <TableRow key={`${r.playerUserId}-${idx}`}>
-                    <TableCell>{r.playerUserId}</TableCell>
+                    <TableCell>
+                      {/*
+                        CR-03 (Plan 04-12 Task 4): each result row links to
+                        the per-player result route with `?mode=read&playerId=`
+                        — peers see a read-only view; TD/trainer flips to edit
+                        via the participants panel link (no `mode=read`).
+                      */}
+                      <Link
+                        href={`/${locale}/tournaments/${tournamentEventId}/result?mode=read&playerId=${r.playerUserId}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {r.playerUserId}
+                      </Link>
+                    </TableCell>
                     <TableCell>{outcomeLabel}</TableCell>
                     <TableCell className="tabular-nums">{total}</TableCell>
                     <TableCell className="tabular-nums">{won}</TableCell>

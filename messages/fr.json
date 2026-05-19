@@ -714,7 +714,8 @@
       "remove": "Supprimer",
       "searchPlaceholder": "Chercher joueur...",
       "empty": "Aucun participant enregistré.",
-      "tdReadOnlyHint": "Seul le DT peut inscrire des participants."
+      "tdReadOnlyHint": "Seul le DT peut inscrire des participants.",
+      "enterResult": "Saisir le résultat"
     },
     "result": {
       "title": "Saisir le résultat du tournoi",

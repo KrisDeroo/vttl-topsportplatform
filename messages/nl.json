@@ -714,7 +714,8 @@
       "remove": "Verwijderen",
       "searchPlaceholder": "Zoek speler...",
       "empty": "Geen deelnemers geregistreerd.",
-      "tdReadOnlyHint": "Alleen de TD kan deelnemers registreren."
+      "tdReadOnlyHint": "Alleen de TD kan deelnemers registreren.",
+      "enterResult": "Resultaat invoeren"
     },
     "result": {
       "title": "Toernooiresultaat invoeren",

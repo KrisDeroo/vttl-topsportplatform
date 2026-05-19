@@ -714,7 +714,8 @@
       "remove": "Remove",
       "searchPlaceholder": "Search player...",
       "empty": "No participants registered.",
-      "tdReadOnlyHint": "Only the TD can register participants."
+      "tdReadOnlyHint": "Only the TD can register participants.",
+      "enterResult": "Enter result"
     },
     "result": {
       "title": "Enter tournament result",
