@@ -181,9 +181,9 @@
         "scopeAll": "All events in the series (Phase 4)",
         "scopeTitle": "How to apply to the series?",
         "scopeBody": "You are editing an appointment that belongs to a series. Choose how to apply the changes:",
-        "scopeThisPreview": "Only the appointment on **{date}** is changed. The rest of the series remains unchanged.",
-        "scopeFuturePreview": "Changes apply to **{date}** and all future appointments in this series. Earlier appointments remain unchanged.",
-        "scopeAllPreview": "Changes apply to all appointments in this series — past, present and future — but **already-entered attendance and scores remain unchanged**.",
+        "scopeThisPreview": "Only the appointment on <b>{date}</b> is changed. The rest of the series remains unchanged.",
+        "scopeFuturePreview": "Changes apply to <b>{date}</b> and all future appointments in this series. Earlier appointments remain unchanged.",
+        "scopeAllPreview": "Changes apply to all appointments in this series — past, present and future — but <b>already-entered attendance and scores remain unchanged</b>.",
         "apply": "Apply",
         "cancel": "Cancel"
       },
@@ -692,7 +692,14 @@
       "filterBy": "Filter by"
     },
     "detail": {
-      "title": "Tournament detail"
+      "title": "Tournament detail",
+      "label": {
+        "startDate": "Start date",
+        "endDate": "End date",
+        "type": "Type",
+        "ageCategory": "Age category",
+        "participants": "Participants"
+      }
     },
     "create": {
       "title": "Create new tournament",
@@ -861,13 +868,13 @@
   "nudge": {
     "trainerScore": {
       "day0to6": "You have {n} trainings missing scores.",
-      "day7to9": "**Heads up:** {n} trainings have been waiting over a week for your scores.",
-      "day10to12": "⚠ **{n} trainings** — only **{daysLeft} days left** to score before the deadline expires."
+      "day7to9": "<b>Heads up:</b> {n} trainings have been waiting over a week for your scores.",
+      "day10to12": "⚠ <b>{n} trainings</b> — only <b>{daysLeft} days left</b> to score before the deadline expires."
     },
     "playerResult": {
       "day0to6": "You have {n} tournaments with results not yet entered.",
-      "day7to9": "**Heads up:** {n} tournaments have been waiting over a week for result entry.",
-      "day10to12": "⚠ Only **{daysLeft} days left** to enter your tournament results — after that, only the TD or trainer can do it."
+      "day7to9": "<b>Heads up:</b> {n} tournaments have been waiting over a week for result entry.",
+      "day10to12": "⚠ Only <b>{daysLeft} days left</b> to enter your tournament results — after that, only the TD or trainer can do it."
     },
     "cta": {
       "scoreNow": "Score now",

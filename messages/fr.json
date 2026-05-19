@@ -181,9 +181,9 @@
         "scopeAll": "Tous les événements de la série (Phase 4)",
         "scopeTitle": "Comment appliquer à la série ?",
         "scopeBody": "Vous modifiez un rendez-vous qui fait partie d'une série. Choisissez comment appliquer les modifications :",
-        "scopeThisPreview": "Seul le rendez-vous du **{date}** est modifié. Le reste de la série reste inchangé.",
-        "scopeFuturePreview": "Les modifications s'appliquent au rendez-vous du **{date}** et à tous les rendez-vous futurs. Les précédents restent inchangés.",
-        "scopeAllPreview": "Les modifications s'appliquent à tous les rendez-vous — passés, présents et futurs — mais **les présences et scores déjà saisis restent inchangés**.",
+        "scopeThisPreview": "Seul le rendez-vous du <b>{date}</b> est modifié. Le reste de la série reste inchangé.",
+        "scopeFuturePreview": "Les modifications s'appliquent au rendez-vous du <b>{date}</b> et à tous les rendez-vous futurs. Les précédents restent inchangés.",
+        "scopeAllPreview": "Les modifications s'appliquent à tous les rendez-vous — passés, présents et futurs — mais <b>les présences et scores déjà saisis restent inchangés</b>.",
         "apply": "Appliquer",
         "cancel": "Annuler"
       },
@@ -692,7 +692,14 @@
       "filterBy": "Filtrer par"
     },
     "detail": {
-      "title": "Détail du tournoi"
+      "title": "Détail du tournoi",
+      "label": {
+        "startDate": "Date de début",
+        "endDate": "Date de fin",
+        "type": "Type",
+        "ageCategory": "Catégorie d'âge",
+        "participants": "Participants"
+      }
     },
     "create": {
       "title": "Créer un nouveau tournoi",
@@ -861,13 +868,13 @@
   "nudge": {
     "trainerScore": {
       "day0to6": "Vous avez {n} entraînements sans scores.",
-      "day7to9": "**Attention :** {n} entraînements attendent vos scores depuis plus d'une semaine.",
-      "day10to12": "⚠ **{n} entraînements** — plus que **{daysLeft} jours** pour saisir les scores avant l'expiration."
+      "day7to9": "<b>Attention :</b> {n} entraînements attendent vos scores depuis plus d'une semaine.",
+      "day10to12": "⚠ <b>{n} entraînements</b> — plus que <b>{daysLeft} jours</b> pour saisir les scores avant l'expiration."
     },
     "playerResult": {
       "day0to6": "Vous avez {n} tournois dont les résultats n'ont pas été saisis.",
-      "day7to9": "**Attention :** {n} tournois attendent la saisie des résultats depuis plus d'une semaine.",
-      "day10to12": "⚠ Plus que **{daysLeft} jours** pour saisir vos résultats — ensuite, seul le DT ou l'entraîneur pourra le faire."
+      "day7to9": "<b>Attention :</b> {n} tournois attendent la saisie des résultats depuis plus d'une semaine.",
+      "day10to12": "⚠ Plus que <b>{daysLeft} jours</b> pour saisir vos résultats — ensuite, seul le DT ou l'entraîneur pourra le faire."
     },
     "cta": {
       "scoreNow": "Saisir les scores",

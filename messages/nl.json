@@ -181,9 +181,9 @@
         "scopeAll": "Alle afspraken in de reeks (Fase 4)",
         "scopeTitle": "Hoe toepassen op de reeks?",
         "scopeBody": "Je wijzigt een afspraak die deel uitmaakt van een reeks. Kies hoe je wijzigingen wilt toepassen:",
-        "scopeThisPreview": "Alleen de afspraak op **{date}** wordt aangepast. De rest van de reeks blijft ongewijzigd.",
-        "scopeFuturePreview": "Wijzigingen worden toegepast op de afspraak van **{date}** én alle toekomstige afspraken in deze reeks. Eerdere afspraken blijven ongewijzigd.",
-        "scopeAllPreview": "Wijzigingen worden toegepast op alle afspraken in deze reeks — verleden, heden en toekomst — maar **reeds ingevulde aanwezigheid en scores blijven onaangetast**.",
+        "scopeThisPreview": "Alleen de afspraak op <b>{date}</b> wordt aangepast. De rest van de reeks blijft ongewijzigd.",
+        "scopeFuturePreview": "Wijzigingen worden toegepast op de afspraak van <b>{date}</b> én alle toekomstige afspraken in deze reeks. Eerdere afspraken blijven ongewijzigd.",
+        "scopeAllPreview": "Wijzigingen worden toegepast op alle afspraken in deze reeks — verleden, heden en toekomst — maar <b>reeds ingevulde aanwezigheid en scores blijven onaangetast</b>.",
         "apply": "Toepassen",
         "cancel": "Annuleren"
       },
@@ -692,7 +692,14 @@
       "filterBy": "Filter op"
     },
     "detail": {
-      "title": "Toernooidetail"
+      "title": "Toernooidetail",
+      "label": {
+        "startDate": "Startdatum",
+        "endDate": "Einddatum",
+        "type": "Type",
+        "ageCategory": "Leeftijdscategorie",
+        "participants": "Deelnemers"
+      }
     },
     "create": {
       "title": "Nieuw toernooi aanmaken",
@@ -861,13 +868,13 @@
   "nudge": {
     "trainerScore": {
       "day0to6": "Je hebt {n} trainingen waarvoor scores ontbreken.",
-      "day7to9": "**Let op:** {n} trainingen wachten al meer dan een week op je scores.",
-      "day10to12": "⚠ **{n} trainingen** — nog **{daysLeft} dagen** om te scoren voordat de deadline verstrijkt."
+      "day7to9": "<b>Let op:</b> {n} trainingen wachten al meer dan een week op je scores.",
+      "day10to12": "⚠ <b>{n} trainingen</b> — nog <b>{daysLeft} dagen</b> om te scoren voordat de deadline verstrijkt."
     },
     "playerResult": {
       "day0to6": "Je hebt {n} toernooien waarvan het resultaat nog niet is ingevoerd.",
-      "day7to9": "**Let op:** {n} toernooien wachten al meer dan een week op resultaat-invoer.",
-      "day10to12": "⚠ Nog **{daysLeft} dagen** om je toernooiresultaten in te voeren — daarna kan alleen de TD of trainer dit nog doen."
+      "day7to9": "<b>Let op:</b> {n} toernooien wachten al meer dan een week op resultaat-invoer.",
+      "day10to12": "⚠ Nog <b>{daysLeft} dagen</b> om je toernooiresultaten in te voeren — daarna kan alleen de TD of trainer dit nog doen."
     },
     "cta": {
       "scoreNow": "Score nu",
