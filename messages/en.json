@@ -450,7 +450,8 @@
       "splitDateRequired": "An anchor date is required for this edit.",
       "notRecurring": "This event is not a recurring series.",
       "roleCannotEditType": "Your role cannot edit this event type.",
-      "unknownScope": "Unknown edit scope."
+      "unknownScope": "Unknown edit scope.",
+      "cannotMoveSeriesToPast": "You cannot move a series to a past date — historical sessions remain unchanged."
     },
     "training": {
       "scoreWindowExpired": "The scoring window for this training has expired (14 days).",

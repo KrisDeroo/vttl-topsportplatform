@@ -450,7 +450,8 @@
       "splitDateRequired": "Une date d'ancrage est requise pour cette modification.",
       "notRecurring": "Ce rendez-vous n'est pas une série récurrente.",
       "roleCannotEditType": "Votre rôle ne peut pas modifier ce type de rendez-vous.",
-      "unknownScope": "Portée d'édition inconnue."
+      "unknownScope": "Portée d'édition inconnue.",
+      "cannotMoveSeriesToPast": "Vous ne pouvez pas déplacer une série vers une date passée — les sessions historiques restent inchangées."
     },
     "training": {
       "scoreWindowExpired": "La fenêtre de saisie pour cet entraînement est expirée (14 jours).",

@@ -450,7 +450,8 @@
       "splitDateRequired": "Een ankerdatum is verplicht voor deze bewerking.",
       "notRecurring": "Deze afspraak is geen herhalende reeks.",
       "roleCannotEditType": "Je rol mag dit type afspraak niet bewerken.",
-      "unknownScope": "Onbekende bewerkings-scope."
+      "unknownScope": "Onbekende bewerkings-scope.",
+      "cannotMoveSeriesToPast": "Je kunt een reeks niet naar een datum in het verleden verplaatsen — historische sessies blijven onaangetast."
     },
     "training": {
       "scoreWindowExpired": "Het scoren-venster voor deze training is verstreken (14 dagen).",
