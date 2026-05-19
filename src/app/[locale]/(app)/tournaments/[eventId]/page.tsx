@@ -23,6 +23,8 @@ interface PageProps {
 export default async function TournamentDetailPage(props: PageProps) {
   const { locale, eventId } = await props.params;
   const t = await getTranslations({ locale, namespace: 'tournament.detail' });
+  const tLookupType = await getTranslations({ locale, namespace: 'lookups.tournamentType' });
+  const tLookupAge = await getTranslations({ locale, namespace: 'lookups.ageCategory' });
   const ctx = await createContext();
   if (!ctx.scope) notFound();
 
@@ -36,6 +38,22 @@ export default async function TournamentDetailPage(props: PageProps) {
   if (!tournament) notFound();
 
   const isTd = ctx.scope.role === 'technical_director';
+
+  // WR-06: lookup-code → i18n label resolution. If the code is missing from the
+  // catalog (drift), fall back to the raw code so the page still renders.
+  const lookupOrCode = (
+    translator: (key: string) => string,
+    code: string | null | undefined,
+  ): string => {
+    if (!code) return '—';
+    try {
+      const translated = translator(code);
+      // next-intl returns the key path back when missing — guard against that.
+      return translated && translated !== code ? translated : code;
+    } catch {
+      return code;
+    }
+  };
 
   return (
     <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 space-y-4">
@@ -53,27 +71,27 @@ export default async function TournamentDetailPage(props: PageProps) {
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
           <div>
-            <span className="text-muted-foreground">Startdatum:</span>{' '}
+            <span className="text-muted-foreground">{t('label.startDate')}:</span>{' '}
             {new Date(tournament.startsAt).toLocaleDateString(
               locale === 'en' ? 'en-GB' : `${locale}-BE`,
             )}
           </div>
           <div>
-            <span className="text-muted-foreground">Einddatum:</span>{' '}
+            <span className="text-muted-foreground">{t('label.endDate')}:</span>{' '}
             {new Date(tournament.endsAt).toLocaleDateString(
               locale === 'en' ? 'en-GB' : `${locale}-BE`,
             )}
           </div>
           <div>
-            <span className="text-muted-foreground">Type:</span>{' '}
-            {tournament.tournamentTypeCode ?? '—'}
+            <span className="text-muted-foreground">{t('label.type')}:</span>{' '}
+            {lookupOrCode(tLookupType, tournament.tournamentTypeCode)}
           </div>
           <div>
-            <span className="text-muted-foreground">Leeftijdscategorie:</span>{' '}
-            {tournament.ageCategoryCode ?? '—'}
+            <span className="text-muted-foreground">{t('label.ageCategory')}:</span>{' '}
+            {lookupOrCode(tLookupAge, tournament.ageCategoryCode)}
           </div>
           <div>
-            <span className="text-muted-foreground">Deelnemers:</span>{' '}
+            <span className="text-muted-foreground">{t('label.participants')}:</span>{' '}
             {tournament.participantCount}
           </div>
         </CardContent>

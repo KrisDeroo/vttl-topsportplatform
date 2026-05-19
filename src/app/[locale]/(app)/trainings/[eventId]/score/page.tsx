@@ -41,6 +41,8 @@ export default async function ScorePage(props: PageProps) {
   const occurrenceDate = sp.occurrenceDate ?? defaultOccurrenceDate();
 
   const t = await getTranslations({ locale, namespace: 'training.score' });
+  const tLookupTrainingType = await getTranslations({ locale, namespace: 'lookups.trainingType' });
+  const tLookupOrg = await getTranslations({ locale, namespace: 'lookups.organisation' });
   const ctx = await createContext();
   if (!ctx.scope) notFound();
   const caller = appRouter.createCaller(ctx);
@@ -80,9 +82,39 @@ export default async function ScorePage(props: PageProps) {
               ),
             })}
           </span>
-          <span>{t('metadataType', { type: session.event.trainingTypeCode ?? '—' })}</span>
           <span>
-            {t('metadataOrg', { org: session.event.organisationCode ?? '—' })}
+            {t('metadataType', {
+              type: session.event.trainingTypeCode
+                ? (() => {
+                    try {
+                      const translated = tLookupTrainingType(
+                        session.event.trainingTypeCode,
+                      );
+                      return translated && translated !== session.event.trainingTypeCode
+                        ? translated
+                        : session.event.trainingTypeCode;
+                    } catch {
+                      return session.event.trainingTypeCode;
+                    }
+                  })()
+                : '—',
+            })}
+          </span>
+          <span>
+            {t('metadataOrg', {
+              org: session.event.organisationCode
+                ? (() => {
+                    try {
+                      const translated = tLookupOrg(session.event.organisationCode);
+                      return translated && translated !== session.event.organisationCode
+                        ? translated
+                        : session.event.organisationCode;
+                    } catch {
+                      return session.event.organisationCode;
+                    }
+                  })()
+                : '—',
+            })}
           </span>
         </div>
       </header>
