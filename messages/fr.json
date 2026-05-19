@@ -463,7 +463,8 @@
       "outcomeRequired": "Sélectionnez un classement final.",
       "setRange": "La somme des sets gagnés et perdus doit être entre 1 et 7.",
       "videoLink": "Le lien vidéo doit être une URL valide (max 500 caractères).",
-      "duplicateMatch": "Ce match est déjà saisi."
+      "duplicateMatch": "Ce match est déjà saisi.",
+      "notChildOfParent": "Interdit : le joueur n'est pas un enfant de ce parent."
     },
     "ranking": {
       "unknownType": "Type de classement inconnu.",
@@ -728,7 +729,10 @@
       "addMatch": "+ Ajouter un match",
       "save": "Enregistrer le résultat",
       "overwriteBadge": "Écraser (DT)",
-      "backfillBadge": "Saisie a posteriori (entraîneur)"
+      "backfillBadge": "Saisie a posteriori (entraîneur)",
+      "pickPlayer": "Choisissez un joueur pour saisir ou consulter son résultat.",
+      "noParticipants": "Aucun participant trouvé pour ce tournoi.",
+      "playerIdRequired": "ID joueur requis pour cette action."
     },
     "matchResults": {
       "column": {

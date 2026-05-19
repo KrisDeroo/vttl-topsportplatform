@@ -463,7 +463,8 @@
       "outcomeRequired": "Select a final outcome.",
       "setRange": "Sets won + lost must be between 1 and 7.",
       "videoLink": "Video link must be a valid URL (max 500 characters).",
-      "duplicateMatch": "This match has already been entered."
+      "duplicateMatch": "This match has already been entered.",
+      "notChildOfParent": "Forbidden: player is not a child of this parent."
     },
     "ranking": {
       "unknownType": "Unknown ranking type.",
@@ -728,7 +729,10 @@
       "addMatch": "+ Add match",
       "save": "Save result",
       "overwriteBadge": "Overwrite (TD)",
-      "backfillBadge": "Backfill (trainer)"
+      "backfillBadge": "Backfill (trainer)",
+      "pickPlayer": "Pick a player to enter or view their result.",
+      "noParticipants": "No participants found for this tournament.",
+      "playerIdRequired": "Player ID required for this action."
     },
     "matchResults": {
       "column": {

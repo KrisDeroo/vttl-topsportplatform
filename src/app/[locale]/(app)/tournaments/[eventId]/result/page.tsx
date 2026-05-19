@@ -23,7 +23,10 @@ import { createContext } from '@/server/trpc/server-context';
 
 interface PageProps {
   params: Promise<{ locale: string; eventId: string }>;
-  searchParams: Promise<{ mode?: string | undefined }>;
+  searchParams: Promise<{
+    mode?: string | undefined;
+    playerId?: string | undefined;
+  }>;
 }
 
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
@@ -62,7 +65,70 @@ export default async function ResultPage(props: PageProps) {
     existing = null;
   }
 
-  const targetPlayerId = isPlayer ? callerId : (existing?.results[0]?.playerUserId ?? callerId);
+  // CR-03 (Plan 04-12 Task 2): player caller is always own subject; non-player
+  // callers MUST supply ?playerId in the URL. No fallback to an arbitrary
+  // other player's row — that fallback was the silent-overwrite bug.
+  const requestedPlayerId = sp.playerId;
+  const resolvedPlayerId: string | null = isPlayer
+    ? callerId
+    : (requestedPlayerId ?? null);
+
+  // CR-03 (Plan 04-12 Task 2): non-player caller without ?playerId — render a
+  // Pick-Player selector listing the tournament's participants. Task 1
+  // extended `tournament.get` with `participants: Array<{userId, userName}>`,
+  // which backs the picker even when no `tournament_results` rows exist yet
+  // (the first-result-of-tournament case — WARNING-3 Path A resolution).
+  if (!resolvedPlayerId) {
+    const participantsList = (tournament.participants ?? []) as Array<{
+      userId: string;
+      userName: string | null;
+    }>;
+    // Union: registered participants from `tournament.get` PLUS any orphan
+    // result rows whose participant_event row was removed after entry.
+    // Defensive — unlikely in practice but keeps the picker honest.
+    const pickerOptions = [
+      ...participantsList,
+      ...(existing?.results ?? [])
+        .filter(
+          (r) =>
+            !participantsList.some((p) => p.userId === r.playerUserId),
+        )
+        .map((r) => ({
+          userId: r.playerUserId,
+          userName: null as string | null,
+        })),
+    ];
+
+    return (
+      <main className="mx-auto max-w-screen-xl px-4 py-6 md:px-6 space-y-4">
+        <header className="mb-2">
+          <h1 className="text-2xl font-semibold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('pickPlayer')}</p>
+        </header>
+        <ul className="space-y-2 rounded-md border p-3">
+          {pickerOptions.length === 0 ? (
+            <li className="text-sm text-muted-foreground">
+              {t('noParticipants')}
+            </li>
+          ) : (
+            pickerOptions.map((p) => (
+              <li key={p.userId}>
+                <a
+                  className="text-sm underline-offset-2 hover:underline"
+                  href={`/${locale}/tournaments/${eventId}/result?playerId=${p.userId}`}
+                >
+                  {p.userName ?? p.userId}
+                </a>
+              </li>
+            ))
+          )}
+        </ul>
+      </main>
+    );
+  }
+
+  // Narrowed: from here on, targetPlayerId is a non-null string.
+  const targetPlayerId: string = resolvedPlayerId;
 
   const playerResult = existing?.results.find((r) => r.playerUserId === targetPlayerId);
   const playerMatches =

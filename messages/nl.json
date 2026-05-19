@@ -463,7 +463,8 @@
       "outcomeRequired": "Kies een eindrangschikking.",
       "setRange": "Sets gewonnen + verloren moet tussen 1 en 7 liggen.",
       "videoLink": "Videolink moet een geldige URL zijn (max 500 tekens).",
-      "duplicateMatch": "Deze wedstrijd is al ingevoerd."
+      "duplicateMatch": "Deze wedstrijd is al ingevoerd.",
+      "notChildOfParent": "Niet bevoegd: speler is geen kind van deze ouder."
     },
     "ranking": {
       "unknownType": "Onbekend ranking-type.",
@@ -728,7 +729,10 @@
       "addMatch": "+ Wedstrijd toevoegen",
       "save": "Resultaat opslaan",
       "overwriteBadge": "Overschrijven (TD)",
-      "backfillBadge": "Achteraf invullen (trainer)"
+      "backfillBadge": "Achteraf invullen (trainer)",
+      "pickPlayer": "Kies een speler om het resultaat in te voeren of te bekijken.",
+      "noParticipants": "Geen deelnemers gevonden voor dit toernooi.",
+      "playerIdRequired": "Speler-ID is verplicht voor deze actie."
     },
     "matchResults": {
       "column": {
