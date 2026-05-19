@@ -38,6 +38,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, gt, isNull, lte, sql } from 'drizzle-orm';
 
+import { formatOccurrenceDate } from '@/lib/rrule';
 import type { DbClient } from '@/server/db/client';
 import { users } from '@/server/db/schema/auth';
 import {
@@ -67,17 +68,24 @@ const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 /**
- * Format a Date as YYYY-MM-DD using UTC components. Used for the
- * `occurrence_date` column (date type in Postgres — no time component).
+ * Format a Date as YYYY-MM-DD in the canonical platform timezone
+ * (Europe/Brussels) for the `occurrence_date` column (date type in
+ * Postgres — no time component).
  *
- * IMPORTANT: uses UTC slice, not local-time slice. The 14d wall is computed
- * against the UTC `ends_at` timestamp; the date stored on the row is the
- * UTC date of the session start. Locale-time slicing would introduce a
- * one-day drift across DST boundaries — same defect Phase 3 D-55 horizon
- * was hardened against.
+ * WR-02 fix (CR-09 family): the previous implementation used a UTC slice
+ * `.toISOString().slice(0, 10)`. For a Brussels evening session ending
+ * after 23:00 UTC = past midnight Brussels, this picked the previous
+ * calendar day, mis-routing the score form's `occurrence_date` and
+ * potentially orphaning the row from its calendar exception. Now
+ * delegates to {@link formatOccurrenceDate} which uses
+ * `Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels' })`.
+ *
+ * All call sites continue to pass `Date` inputs; the output is now the
+ * Brussels-anchored YYYY-MM-DD that matches the calendar view the
+ * trainer sees.
  */
 function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return formatOccurrenceDate(d);
 }
 
 /**

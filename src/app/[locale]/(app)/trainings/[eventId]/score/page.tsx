@@ -19,6 +19,7 @@ import {
   BulkAttendanceScoreForm,
   type ParticipantRow,
 } from '@/components/training/bulk-attendance-score-form';
+import { formatOccurrenceDate } from '@/lib/rrule';
 import { appRouter } from '@/server/trpc/routers/_app';
 import { createContext } from '@/server/trpc/server-context';
 
@@ -28,8 +29,10 @@ interface PageProps {
 }
 
 function defaultOccurrenceDate(): string {
-  // Today's ISO date (UTC slice — matches training router toIsoDate).
-  return new Date().toISOString().slice(0, 10);
+  // Today's Brussels-anchored ISO date — matches training router toIsoDate
+  // (post WR-02 fix; see formatOccurrenceDate in src/lib/rrule.ts for the
+  // canonical Brussels-anchored helper).
+  return formatOccurrenceDate(new Date());
 }
 
 export default async function ScorePage(props: PageProps) {

@@ -40,6 +40,8 @@ import { db, type DbClient } from '@/server/db/client';
 import { ageCategories } from '@/server/db/schema/lookups';
 import { ageCategoryHistory } from '@/server/db/schema/players';
 
+import { formatOccurrenceDate } from './rrule';
+
 export interface AgeCategoryResult {
   code: string;
   year: number;
@@ -99,7 +101,14 @@ export async function getAgeCategoryAt(
   date: Date,
   dbHandle: DbClient = db,
 ): Promise<AgeCategoryResult | null> {
-  const dateIso = date.toISOString().slice(0, 10); // YYYY-MM-DD
+  // CR-09: Brussels-anchored YYYY-MM-DD via formatOccurrenceDate.
+  // The previous `date.toISOString().slice(0, 10)` returned the UTC day,
+  // which drifted one day for evening events in Brussels (a tournament
+  // starting 2026-01-01 02:00 Brussels = 2025-12-31 23:00 UTC would have
+  // queried age_category_history at '2025-12-31', picking up the 2025 row
+  // instead of the 2026 row). DOM-CAT-02 snapshot now resolves the
+  // calendar day on the canonical platform timezone.
+  const dateIso = formatOccurrenceDate(date); // Brussels-anchored YYYY-MM-DD
 
   const row = await dbHandle.query.ageCategoryHistory.findFirst({
     where: and(

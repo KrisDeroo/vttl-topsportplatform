@@ -42,6 +42,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { formatOccurrenceDate } from '@/lib/rrule';
 import { trpc } from '@/lib/trpc-client';
 
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
@@ -199,9 +200,15 @@ export function EventDetailSheet() {
                 const showViewResult =
                   event.event.typeCode === 'event_type_tournament' &&
                   !showEnterResult;
-                const occurrenceDate = new Date(event.event.startsAt)
-                  .toISOString()
-                  .slice(0, 10);
+                // WR-02 (CR-09 family): Brussels-anchored YYYY-MM-DD —
+                // see formatOccurrenceDate doc-comment in src/lib/rrule.ts
+                // for the DST/timezone rationale. IN-02 (recurring-series
+                // dtstart vs clicked occurrence) is deferred to Phase 5+;
+                // this patch only fixes the UTC drift on the date the
+                // sheet currently computes from event.startsAt.
+                const occurrenceDate = formatOccurrenceDate(
+                  new Date(event.event.startsAt),
+                );
                 return (
                   <>
                     {showOpenScoring && (

@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatOccurrenceDate } from '@/lib/rrule';
 import { appRouter } from '@/server/trpc/routers/_app';
 import type { createContext } from '@/server/trpc/server-context';
 
@@ -41,7 +42,11 @@ interface TeScorenOverviewProps {
 }
 
 function isoDateOf(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  // WR-02 (CR-09 family): Brussels-anchored YYYY-MM-DD via the canonical
+  // formatOccurrenceDate helper. The previous `toISOString().slice(0, 10)`
+  // drifted by one day for evening events in Brussels, sending trainers
+  // to the wrong occurrence's score form.
+  return formatOccurrenceDate(d);
 }
 
 export async function TeScorenOverview({ ctx, scope, locale }: TeScorenOverviewProps) {
