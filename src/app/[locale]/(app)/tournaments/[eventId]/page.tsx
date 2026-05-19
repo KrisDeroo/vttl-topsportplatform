@@ -80,10 +80,15 @@ export default async function TournamentDetailPage(props: PageProps) {
       </Card>
       <TournamentParticipantsPanel
         tournamentEventId={eventId}
-        participants={[]}
+        participants={tournament.participants ?? []}
         canEdit={isTd}
+        locale={locale}
       />
-      <TournamentResultsLeaderboard ctx={ctx} tournamentEventId={eventId} />
+      <TournamentResultsLeaderboard
+        ctx={ctx}
+        tournamentEventId={eventId}
+        locale={locale}
+      />
     </main>
   );
 }

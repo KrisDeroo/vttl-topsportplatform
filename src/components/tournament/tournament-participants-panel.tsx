@@ -31,6 +31,8 @@ export interface TournamentParticipantsPanelProps {
   tournamentEventId: string;
   participants: TournamentParticipant[];
   canEdit: boolean; // true when caller is TD
+  /** Locale for constructing per-participant result-route links. */
+  locale: string;
 }
 
 function initials(name: string | null): string {
@@ -45,6 +47,7 @@ export function TournamentParticipantsPanel({
   tournamentEventId,
   participants: initialParticipants,
   canEdit,
+  locale,
 }: TournamentParticipantsPanelProps) {
   const t = useTranslations('tournament.participants');
   const utils = trpc.useUtils();
@@ -92,23 +95,38 @@ export function TournamentParticipantsPanel({
                   </Avatar>
                   <span className="text-sm">{p.userName ?? p.userId}</span>
                 </div>
-                {canEdit && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() =>
-                      removeMutation.mutate({
-                        tournamentEventId,
-                        playerUserId: p.userId,
-                      })
-                    }
-                    disabled={removeMutation.isPending}
-                    aria-label={t('remove')}
-                  >
-                    <Trash2 className="size-4" />
+                <div className="flex items-center gap-1">
+                  {/*
+                    CR-03 (Plan 04-12 Task 4): explicit `?playerId=` carries
+                    the subject through to result/page.tsx. TD/trainer flow
+                    enters or overwrites the result for THIS participant
+                    (Task 2's targetPlayerId narrowing).
+                  */}
+                  <Button asChild variant="ghost" size="sm">
+                    <a
+                      href={`/${locale}/tournaments/${tournamentEventId}/result?playerId=${p.userId}`}
+                    >
+                      {t('enterResult')}
+                    </a>
                   </Button>
-                )}
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        removeMutation.mutate({
+                          tournamentEventId,
+                          playerUserId: p.userId,
+                        })
+                      }
+                      disabled={removeMutation.isPending}
+                      aria-label={t('remove')}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
