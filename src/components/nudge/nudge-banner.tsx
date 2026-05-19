@@ -15,6 +15,13 @@
  * the count + daysLeft number — three signifiers; color alone never
  * carries meaning (T-04-52 mitigation).
  *
+ * CR-08 fix (Phase 4 gap closure 04-15): bold copy now renders via next-intl
+ * t.rich with a `<b>` chunk → `<strong>` JSX. No raw-HTML innerHTML sink.
+ *
+ * WR-10 fix (Phase 4 gap closure 04-15): daysLeft uses Math.ceil on the raw
+ * ms delta. Day 14 (when wall is strict-greater) still shows "nog 1 dag";
+ * day 15 shows 0 (and writes are already blocked by the server-side wall).
+ *
  * Reference: 04-UI-SPEC.md §Component Inventory (NudgeBanner row),
  *            04-CONTEXT.md D-67 channel 1 + UI4-D08.
  */
@@ -25,6 +32,8 @@ import * as React from 'react';
 
 import { trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
+
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 export interface NudgeBannerProps {
   kind: 'trainer_score' | 'player_result';
@@ -38,13 +47,13 @@ function escalationLevel(maxDaysSinceEnd: number): 'yellow' | 'orange' | 'red' {
   return 'yellow';
 }
 
+const boldChunk = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
+
 export function NudgeBanner({ kind, href, scope = 'self' }: NudgeBannerProps) {
   const tTrainer = useTranslations('nudge.trainerScore');
   const tPlayer = useTranslations('nudge.playerResult');
   const tCta = useTranslations('nudge.banner');
 
-  // Live count — refetch every 30s per RESEARCH §Pitfall 7. Reads from the
-  // same predicate the pg_cron job uses for inbox materialization (Plan 04-07).
   const trainerPending = trpc.training.listPending.useQuery(
     { scope },
     {
@@ -72,13 +81,21 @@ export function NudgeBanner({ kind, href, scope = 'self' }: NudgeBannerProps) {
       );
       return Math.max(acc, days);
     }, 0);
+    const maxMsSinceEnd = sessions.reduce((acc, s) => {
+      return Math.max(acc, now - new Date(s.endsAt).getTime());
+    }, 0);
+    const msLeft = FOURTEEN_DAYS_MS - maxMsSinceEnd;
+    const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
     const level = escalationLevel(maxDaysSinceEnd);
-    const daysLeft = Math.max(0, 14 - maxDaysSinceEnd);
-    let body: string;
-    if (level === 'red') body = tTrainer('day10to12', { n: sessions.length, daysLeft });
-    else if (level === 'orange') body = tTrainer('day7to9', { n: sessions.length });
-    else body = tTrainer('day0to6', { n: sessions.length });
-    return <BannerRow level={level} body={body} href={href} cta={tCta('viewLink')} />;
+
+    const bodyNode =
+      level === 'red'
+        ? tTrainer.rich('day10to12', { n: sessions.length, daysLeft, b: boldChunk })
+        : level === 'orange'
+          ? tTrainer.rich('day7to9', { n: sessions.length, b: boldChunk })
+          : tTrainer.rich('day0to6', { n: sessions.length, b: boldChunk });
+
+    return <BannerRow level={level} bodyNode={bodyNode} href={href} cta={tCta('viewLink')} />;
   }
 
   const pending = playerPending.data?.pending ?? [];
@@ -90,23 +107,31 @@ export function NudgeBanner({ kind, href, scope = 'self' }: NudgeBannerProps) {
     );
     return Math.max(acc, days);
   }, 0);
+  const maxMsSinceEnd = pending.reduce((acc, p) => {
+    return Math.max(acc, now - new Date(p.endsAt).getTime());
+  }, 0);
+  const msLeft = FOURTEEN_DAYS_MS - maxMsSinceEnd;
+  const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
   const level = escalationLevel(maxDaysSinceEnd);
-  const daysLeft = Math.max(0, 14 - maxDaysSinceEnd);
-  let body: string;
-  if (level === 'red') body = tPlayer('day10to12', { n: pending.length, daysLeft });
-  else if (level === 'orange') body = tPlayer('day7to9', { n: pending.length });
-  else body = tPlayer('day0to6', { n: pending.length });
-  return <BannerRow level={level} body={body} href={href} cta={tCta('viewLink')} />;
+
+  const bodyNode =
+    level === 'red'
+      ? tPlayer.rich('day10to12', { n: pending.length, daysLeft, b: boldChunk })
+      : level === 'orange'
+        ? tPlayer.rich('day7to9', { n: pending.length, b: boldChunk })
+        : tPlayer.rich('day0to6', { n: pending.length, b: boldChunk });
+
+  return <BannerRow level={level} bodyNode={bodyNode} href={href} cta={tCta('viewLink')} />;
 }
 
 interface BannerRowProps {
   level: 'yellow' | 'orange' | 'red';
-  body: string;
+  bodyNode: React.ReactNode;
   href: string;
   cta: string;
 }
 
-function BannerRow({ level, body, href, cta }: BannerRowProps) {
+function BannerRow({ level, bodyNode, href, cta }: BannerRowProps) {
   const bgClass =
     level === 'red'
       ? 'bg-state-nudge-critical-bg text-state-nudge-critical-fg border-state-nudge-critical-border'
@@ -124,7 +149,7 @@ function BannerRow({ level, body, href, cta }: BannerRowProps) {
       )}
     >
       <AlertTriangle className="size-4 shrink-0" aria-hidden />
-      <p className="flex-1 text-sm" dangerouslySetInnerHTML={{ __html: body }} />
+      <p className="flex-1 text-sm">{bodyNode}</p>
       <Link
         href={href}
         className="text-sm font-medium underline-offset-2 hover:underline"

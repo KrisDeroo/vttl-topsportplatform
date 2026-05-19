@@ -45,6 +45,8 @@ export interface RruleScopePickerDialogProps {
   locale?: string;
 }
 
+const boldChunk = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
+
 export function RruleScopePickerDialog({
   open,
   onOpenChange,
@@ -80,12 +82,9 @@ export function RruleScopePickerDialog({
                 <Label htmlFor="scope-single" className="font-medium">
                   {t('scopeThis')}
                 </Label>
-                <p
-                  className="text-xs text-muted-foreground"
-                  dangerouslySetInnerHTML={{
-                    __html: t('scopeThisPreview', { date: dateStr }),
-                  }}
-                />
+                <p className="text-xs text-muted-foreground">
+                  {t.rich('scopeThisPreview', { date: dateStr, b: boldChunk })}
+                </p>
               </div>
             </div>
           </div>
@@ -96,12 +95,9 @@ export function RruleScopePickerDialog({
                 <Label htmlFor="scope-future" className="font-medium">
                   {t('scopeFuture')}
                 </Label>
-                <p
-                  className="text-xs text-muted-foreground"
-                  dangerouslySetInnerHTML={{
-                    __html: t('scopeFuturePreview', { date: dateStr }),
-                  }}
-                />
+                <p className="text-xs text-muted-foreground">
+                  {t.rich('scopeFuturePreview', { date: dateStr, b: boldChunk })}
+                </p>
               </div>
             </div>
           </div>
@@ -112,12 +108,9 @@ export function RruleScopePickerDialog({
                 <Label htmlFor="scope-all" className="font-medium">
                   {t('scopeAll')}
                 </Label>
-                <p
-                  className="text-xs text-muted-foreground"
-                  dangerouslySetInnerHTML={{
-                    __html: t('scopeAllPreview'),
-                  }}
-                />
+                <p className="text-xs text-muted-foreground">
+                  {t.rich('scopeAllPreview', { b: boldChunk })}
+                </p>
               </div>
             </div>
           </div>
